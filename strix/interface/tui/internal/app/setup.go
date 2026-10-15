@@ -362,56 +362,98 @@ func (m Model) setupHeaderView(fit setupFit) string {
 	var rows []string
 	switch fit.logo {
 	case logoFull:
-		// The banner is tall enough to want air under it.
 		rows = append(rows, center.Render(wordmark()))
-		if fit.tagline {
-			rows = append(rows, "")
-		}
 	case logoCompact:
-		compactLogo := lipgloss.NewStyle().Bold(true).Foreground(red).Render("RED") +
+		compactLogo := lipgloss.NewStyle().Bold(true).Foreground(red).Render("☻ RED") +
 			lipgloss.NewStyle().Bold(true).Foreground(brightWhite).Render("JOHN") +
 			render.Dim().Render(" · ") +
-			lipgloss.NewStyle().Bold(true).Foreground(red).Render("BETA Enterprise")
+			lipgloss.NewStyle().Bold(true).Foreground(red).Render(versionLabel())
 		rows = append(rows, center.Render(compactLogo))
-	}
-	if fit.tagline {
-		diamond := lipgloss.NewStyle().Foreground(red).Bold(true).Render("◈")
-		rule := render.Dim().Render("━━━ ")
-		ruleEnd := render.Dim().Render(" ━━━")
-		sub := rule + diamond +
-			lipgloss.NewStyle().Foreground(white).Bold(true).Render("  AUTONOMOUS P2P OFFENSIVE SWARM  ") +
-			render.Dim().Render("│  ") +
-			lipgloss.NewStyle().Foreground(red).Bold(true).Render(versionLabel()) +
-			"  " + diamond + ruleEnd
-		rows = append(rows, center.Render(truncate(sub, fit.width)))
+		if fit.tagline {
+			rows = append(rows, center.Render(render.Dim().Render("Autonomous P2P Multi-Agent Offensive Swarm")))
+		}
 	}
 	return strings.Join(rows, "\n")
 }
 
+// smileyRows is the 27x13 half-block Red John bloody smiley face with eye and
+// mouth blood drips.
+var smileyRows = []string{
+	"        ▄▄█████▄▄▄▄        ",
+	"    ▄█████▀▀▀▀▀▀▀████▄     ",
+	"  ▄████▀▀          ▀██▄▄   ",
+	" ████▀          ▄▄▄  ▀███  ",
+	"▄███▀   ▄██▄   █████   ██▄ ",
+	"████   █████   ▀███▀  ▄███ ",
+	" ███   ▀███      ██  ▄█▀██ ",
+	" ███ ▄█▄ █        ▄▄██▀ ██ ",
+	" ▀███▀█████▄▄▄▄▄████▀  ▄█▀ ",
+	"  ▀████ ▀▀▀████▀▀▀▀  ▄██▀  ",
+	"    █▀██▄▄▄▄▄▄ ▄▄▄▄███▀    ",
+	"       ▀▀▀▀▀▀████▀▀▀       ",
+	"             █  ▀          ",
+}
+
 // banner is the crisp geometric half-block REDJOHN wordmark (no bevel shadow pipes,
 // open 'D' interior so it always reads clearly as REDJOHN).
-const banner = `█████▄  ██████  █████▄      ██  ▄████▄  ██  ██  ███  ██
-██  ██  ██      ██  ██      ██  ██  ██  ██  ██  ████ ██
-█████▀  █████   ██  ██      ██  ██  ██  ██████  ██ ████
-██  ██  ██      ██  ██  ██  ██  ██  ██  ██  ██  ██  ███
-██  ██  ██████  █████▀  ▀████▀  ▀████▀  ██  ██  ██   ██`
+var bannerRows = []string{
+	"█████▄  ██████  █████▄      ██  ▄████▄  ██  ██  ███  ██",
+	"██  ██  ██      ██  ██      ██  ██  ██  ██  ██  ████ ██",
+	"█████▀  █████   ██  ██      ██  ██  ██  ██████  ██ ████",
+	"██  ██  ██      ██  ██  ██  ██  ██  ██  ██  ██  ██  ███",
+	"██  ██  ██████  █████▀  ▀████▀  ▀████▀  ██  ██  ██   ██",
+}
 
-// wordmark renders "RED" in bold crimson and "JOHN" in bright white so the two
-// halves of RedJohn stand out with a distinct tactical aesthetic.
+// wordmark renders the iconic Red John bloody smiley on the left and the
+// two-tone REDJOHN + BETA Enterprise tactical block on the right.
 var wordmarkOnce = sync.OnceValue(func() string {
-	redStyle := lipgloss.NewStyle().Bold(true).Foreground(red)
+	bloodBright := lipgloss.NewStyle().Bold(true).Foreground(red)
+	bloodDeep := lipgloss.NewStyle().Bold(true).Foreground(crimson)
 	johnStyle := lipgloss.NewStyle().Bold(true).Foreground(brightWhite)
-	lines := strings.Split(banner, "\n")
-	rows := make([]string, len(lines))
-	for index, line := range lines {
-		padded := line + strings.Repeat(" ", max(0, wordmarkWidth()-lipgloss.Width(line)))
-		runes := []rune(padded)
+	dimStyle := lipgloss.NewStyle().Foreground(dim)
+	whiteStyle := lipgloss.NewStyle().Foreground(white)
+	boldWhite := lipgloss.NewStyle().Bold(true).Foreground(white)
+
+	renderWordmarkRow := func(line string) string {
+		runes := []rune(line)
 		const redCut = 22 // "█████▄  ██████  █████▄" = R E D
 		if len(runes) > redCut {
-			rows[index] = redStyle.Render(string(runes[:redCut])) + johnStyle.Render(string(runes[redCut:]))
-		} else {
-			rows[index] = redStyle.Render(padded)
+			return bloodBright.Render(string(runes[:redCut])) + johnStyle.Render(string(runes[redCut:]))
 		}
+		return bloodBright.Render(line)
+	}
+
+	rule := dimStyle.Render(strings.Repeat("━", 55))
+	rightPlainWidth := 55
+	rightLines := []string{
+		"",
+		bloodBright.Render("◈") + boldWhite.Render("  R E D J O H N   O F F E N S I V E   S W A R M  ") + bloodBright.Render("◈"),
+		rule,
+		renderWordmarkRow(bannerRows[0]),
+		renderWordmarkRow(bannerRows[1]),
+		renderWordmarkRow(bannerRows[2]),
+		renderWordmarkRow(bannerRows[3]),
+		renderWordmarkRow(bannerRows[4]),
+		rule,
+		bloodBright.Render("▪") + dimStyle.Render(" Edition : ") + bloodBright.Render(versionLabel()),
+		bloodBright.Render("▪") + dimStyle.Render(" Engine  : ") + whiteStyle.Render("Parallel P2P Specialist Swarm (Live Bus)"),
+		bloodBright.Render("▪") + dimStyle.Render(" Arsenal : ") + whiteStyle.Render("170 Offensive Skills · Kali Native MCP"),
+		"",
+	}
+
+	totalWidth := 27 + 3 + rightPlainWidth
+	rows := make([]string, len(smileyRows))
+	for i, sRow := range smileyRows {
+		// Alternate arterial/crimson shades down the smiley for a painted blood texture
+		sStyled := bloodBright.Render(sRow)
+		if i >= 9 {
+			sStyled = bloodDeep.Render(sRow)
+		}
+		rStyled := rightLines[i]
+		rPad := max(0, rightPlainWidth-lipgloss.Width(rStyled))
+		composed := sStyled + "   " + rStyled + strings.Repeat(" ", rPad)
+		cPad := max(0, totalWidth-lipgloss.Width(composed))
+		rows[i] = composed + strings.Repeat(" ", cPad)
 	}
 	return strings.Join(rows, "\n")
 })
@@ -420,11 +462,7 @@ func wordmark() string { return wordmarkOnce() }
 
 // wordmarkWidth is the cell width of the widest banner row.
 var wordmarkWidth = sync.OnceValue(func() int {
-	block := 0
-	for _, line := range strings.Split(banner, "\n") {
-		block = max(block, lipgloss.Width(line))
-	}
-	return block
+	return 27 + 3 + 55
 })
 
 // setupComposer draws the prompt as a rounded panel that lights up crimson while

@@ -51,10 +51,25 @@ def _positive_int(value: str) -> int:
     return parsed
 
 
+REDJOHN_CLI_BANNER = """\x1b[1;31m        ▄▄█████▄▄▄▄        \x1b[0m
+\x1b[1;31m    ▄█████▀▀▀▀▀▀▀████▄     \x1b[0m   \x1b[1;31m◈\x1b[0m  \x1b[1;37mR E D J O H N   O F F E N S I V E   S W A R M\x1b[0m  \x1b[1;31m◈\x1b[0m
+\x1b[1;31m  ▄████▀▀          ▀██▄▄   \x1b[0m   \x1b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\x1b[0m
+\x1b[1;31m ████▀          ▄▄▄  ▀███  \x1b[0m   \x1b[1;31m█████▄  ██████  █████▄\x1b[0m\x1b[1;97m      ██  ▄████▄  ██  ██  ███  ██\x1b[0m
+\x1b[1;31m▄███▀   ▄██▄   █████   ██▄ \x1b[0m   \x1b[1;31m██  ██  ██      ██  ██\x1b[0m\x1b[1;97m      ██  ██  ██  ██  ██  ████ ██\x1b[0m
+\x1b[1;31m████   █████   ▀███▀  ▄███ \x1b[0m   \x1b[1;31m█████▀  █████   ██  ██\x1b[0m\x1b[1;97m      ██  ██  ██  ██████  ██ ████\x1b[0m
+\x1b[1;31m ███   ▀███      ██  ▄█▀██ \x1b[0m   \x1b[1;31m██  ██  ██      ██  ██\x1b[0m\x1b[1;97m  ██  ██  ██  ██  ██  ██  ██  ███\x1b[0m
+\x1b[1;31m ███ ▄█▄ █        ▄▄██▀ ██ \x1b[0m   \x1b[1;31m██  ██  ██████  █████▀\x1b[0m\x1b[1;97m  ▀████▀  ▀████▀  ██  ██  ██   ██\x1b[0m
+\x1b[1;31m ▀███▀█████▄▄▄▄▄████▀  ▄█▀ \x1b[0m   \x1b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\x1b[0m
+\x1b[31m  ▀████ ▀▀▀████▀▀▀▀  ▄██▀  \x1b[0m   \x1b[1;31m▪\x1b[0m \x1b[90mEdition :\x1b[0m \x1b[1;31mBETA Enterprise\x1b[0m
+\x1b[31m    █▀██▄▄▄▄▄▄ ▄▄▄▄███▀    \x1b[0m   \x1b[1;31m▪\x1b[0m \x1b[90mEngine  :\x1b[0m \x1b[37mParallel P2P Specialist Swarm (Live Bus)\x1b[0m
+\x1b[31m       ▀▀▀▀▀▀████▀▀▀       \x1b[0m   \x1b[1;31m▪\x1b[0m \x1b[90mArsenal :\x1b[0m \x1b[37m170 Offensive Skills · Kali Native MCP\x1b[0m
+\x1b[31m             █  ▀          \x1b[0m"""
+
+
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog="redjohn",
-        description="RedJohn Multi-Agent Autonomous Penetration Testing Swarm",
+        description=REDJOHN_CLI_BANNER,
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -86,7 +101,7 @@ Examples:
         "-v",
         "--version",
         action="version",
-        version=f"redjohn {get_version()}",
+        version=f"RedJohn {get_version()}",
     )
 
     parser.add_argument(

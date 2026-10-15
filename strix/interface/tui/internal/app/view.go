@@ -86,7 +86,7 @@ func (m Model) redJohnHeaderBlock(width int) string {
 	if len(m.snapshot.Targets) > 0 && strings.TrimSpace(m.snapshot.Targets[0]) != "" {
 		targetLabel = strings.TrimSpace(m.snapshot.Targets[0])
 	}
-	brandLeft := lipgloss.NewStyle().Bold(true).Foreground(red).Render("RedJohn") +
+	brandLeft := lipgloss.NewStyle().Bold(true).Foreground(red).Render("☻ RedJohn") +
 		lipgloss.NewStyle().Foreground(dim).Render(" / ") +
 		lipgloss.NewStyle().Bold(true).Foreground(white).Render(targetLabel) +
 		lipgloss.NewStyle().Foreground(dim).Render("  │  RJ-001")
