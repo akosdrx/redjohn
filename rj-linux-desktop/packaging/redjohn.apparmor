@@ -1,0 +1,13 @@
+abi <abi/4.0>,
+include <tunables/global>
+
+# Ubuntu 24+ restricts user namespaces for unknown applications. Allow the
+# application and its bundled Chromium to use their normal browser sandbox.
+profile "${executable}" "/opt/${sanitizedProductName}/${executable}" flags=(unconfined) {
+  userns,
+  include if exists <local/${executable}>
+}
+
+# No bundled Chromium: the browser tool is optional and resolved from the system
+# (its own packaged AppArmor profile applies) or downloaded on demand into the
+# user profile, so there is no fixed /opt/.../resources/tools browser path to allow.

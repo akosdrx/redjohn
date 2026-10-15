@@ -1,0 +1,10 @@
+{
+  "name": "redjohn-bundled-mcp",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "@playwright/mcp": "0.0.83",
+    "@modelcontextprotocol/server-filesystem": "1.0.0",
+    "@openai/codex": "0.162.1"
+  }
+}

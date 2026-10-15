@@ -1,0 +1,52 @@
+{
+  "name": "@redjohn/app",
+  "version": "0.1.0",
+  "private": true,
+  "author": "RedJohn",
+  "description": "RedJohn desktop Electron application",
+  "type": "module",
+  "main": "./dist/main/index.js",
+  "scripts": {
+    "build": "pnpm run build:schema-check && pnpm run build:main && pnpm run build:preload && pnpm run build:renderer",
+    "build:schema-check": "node scripts/check-schema.mjs",
+    "build:main": "node scripts/build-main.mjs",
+    "build:preload": "node scripts/build-preload.mjs",
+    "build:renderer": "vite build renderer",
+    "dev:main": "node scripts/build-main.mjs --watch",
+    "dev:preload": "node scripts/build-preload.mjs --watch",
+    "dev:renderer": "vite renderer",
+    "schema:generate": "node scripts/generate-schema.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p renderer/tsconfig.json --noEmit",
+    "test": "vitest run",
+    "package": "electron-builder --config ../packaging/electron-builder.yml",
+    "package:mac": "electron-builder --config ../packaging/electron-builder.yml --mac",
+    "package:linux": "electron-builder --config ../packaging/electron-builder.yml --linux"
+  },
+  "dependencies": {
+    "@redjohn/ui": "workspace:*",
+    "@tanstack/react-query": "^5.104.1",
+    "electron-store": "^11.0.2",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "zustand": "^5.0.15"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@types/js-yaml": "^4.0.9",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "@xterm/xterm": "^6.0.0",
+    "electron": "^44.7.0",
+    "electron-builder": "^26.15.3",
+    "esbuild": "^0.28.2",
+    "js-yaml": "^5.4.3",
+    "jsdom": "^30.1.2",
+    "openapi-typescript": "^7.13.0",
+    "tailwindcss": "^4.3.3",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.3"
+  }
+}

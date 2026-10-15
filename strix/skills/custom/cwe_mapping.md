@@ -1,0 +1,64 @@
+---
+name: cwe_mapping
+description: CWE mapping (canonical table) (from cve_exploit_intel specialist reference
+  library)
+---
+
+# CWE mapping (canonical table)
+
+Canonical CWE classification for every class this library tests. Use the
+number + official name; prefer the specific child over the class parent;
+justify the pick in one line in the finding row. Never invent an id.
+
+| Finding class | CWE | One-line justification |
+|---|---|---|
+| SQL injection | CWE-89 Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection') | Canonical class for untrusted input reaching a SQL interpreter (SQLi trees live in `40`) |
+| NoSQL operator injection | CWE-943 Improper Neutralization of Special Elements in Data Query Logic | Query-logic injection outside SQL — the precise child for Mongo-style operator abuse |
+| LDAP injection | CWE-90 Improper Neutralization of Special Elements used in an LDAP Query ('LDAP Injection') | Canonical class for LDAP filter injection |
+| XSS (reflected/stored/DOM) | CWE-79 Improper Neutralization of Input During Web Page Generation ('Cross-site Scripting') | Canonical class for attacker HTML/JS executing in a victim browser |
+| LFI / path traversal | CWE-22 Improper Limitation of a Pathname to a Restricted Directory ('Path Traversal') | Traversal to escape a base directory; use for read-side LFI findings |
+| LFI reaching execution (PHP includes) | CWE-98 Improper Control of Filename for Include/Require Statement in PHP Program ('PHP File Inclusion') | The precise child when inclusion executes the traversed file (`45` section 4) |
+| OS command injection | CWE-78 Improper Neutralization of Special Elements used in an OS Command ('OS Command Injection') | Injection into a shell/OS command interpreter; chosen over CWE-77 (neutralization of host-language commands) because the sink is the OS |
+| Code injection (generic eval-class) | CWE-94 Improper Control of Generation of Code ('Code Injection') | Attacker syntax evaluated by the application runtime when no template engine is involved |
+| SSTI — template engine container flaw | CWE-1336 Improper Neutralization of Special Elements Used in a Template Engine | The template-engine-specific child; matches `40`'s SSTI convention |
+| SSTI — expression-language evaluation flaw | CWE-917 Improper Neutralization of Special Elements used in an Expression Language Statement ('Expression Language Injection') | When the flaw is the EL evaluation itself (OGNL/SpEL/MVEL-style engines) |
+| XXE | CWE-611 Improper Restriction of XML External Entity Reference | Canonical class for external-entity processing in an XML parser |
+| SSRF | CWE-918 Server-Side Request Forgery | Canonical class for server-side fetch of attacker-controlled URLs |
+| CSRF | CWE-352 Cross-Site Request Forgery (CSRF) | Canonical class for state-changing requests riding a victim session |
+| Open redirect | CWE-601 URL Redirection to Untrusted Site ('Open Redirect') | Canonical class for redirect parameters trusting arbitrary destinations |
+| Broken access control (umbrella) | CWE-284 Improper Access Control | Class parent only — use when the specific child cannot be determined |
+| Missing authorization check | CWE-862 Missing Authorization | Check not performed at all (endpoint reachable without any authz) |
+| Incorrect authorization check | CWE-863 Incorrect Authorization | Check performed but wrong (role comparison, tenant filter, object-level gap) |
+| IDOR / BOLA | CWE-639 Authorization Bypass Through User-Controlled Key | The precise child for user-controlled ids reaching other users' objects (`30` matrix) |
+| Exposed files / directory listing | CWE-548 Exposure of Information Through Directory Listing | A listing or file path exposure specifically; CWE-200 only for information exposure with no listing mechanism |
+| Weak crypto strength | CWE-326 Inadequate Encryption Strength | Too-short keys / weak primitives for the protection claimed (`35`) |
+| Broken/risky crypto algorithm | CWE-327 Use of a Broken or Risky Cryptographic Algorithm | MD5/SHA-1/RC4/DES/ECB chosen as algorithms — pick this over CWE-326 when the algorithm itself is broken |
+| Hardcoded credentials | CWE-798 Use of Hard-coded Credentials | Secrets baked into source or shipped config |
+| Deserialization | CWE-502 Deserialization of Untrusted Data | Canonical class for gadget-chain findings (`45` section 2) |
+| Dangerous file upload | CWE-434 Unrestricted Upload of File with Dangerous Type | Canonical class for upload-validation bypasses (`45` section 3) |
+| TOCTOU race | CWE-367 Time-of-check Time-of-use (TOCTOU) Race Condition | Check-then-act windows on the same resource (`58`) |
+| Concurrent-state race (non-TOCTOU) | CWE-362 Concurrent Execution using Shared Resource with Improper Synchronization | Business-logic races/double-spends where no TOCTOU window exists |
+| Unrestricted authentication attempts | CWE-307 Improper Restriction of Excessive Authentication Attempts | Brute-force exposure on login/reset endpoints (`30`) |
+| Mass assignment | CWE-915 Improperly Controlled Modification of Dynamically-Determined Object Attributes | Hidden/extra object fields accepted on write (`58`); NOT CWE-1051 (hard-coded network resource config — a different flaw entirely) |
+
+## Choice rules
+
+1. **Child over parent**: CWE-862/863 (or CWE-639) beat CWE-284 whenever the
+   mechanism is observable; the umbrella exists for incomplete evidence, and
+   the finding row says which part was not observable.
+2. **Mechanism over symptom**: CWE-78 vs CWE-94 decided by the sink (OS
+   interpreter vs application runtime), not by the payload shape.
+3. **SSTI split**: CWE-1336 for the template-engine flaw, CWE-917 when the
+   engine is an expression language and the evaluation layer is the bug,
+   CWE-94 when neither template nor EL applies. Record the engine
+   fingerprint next to the pick.
+4. **Crypto split**: CWE-327 when a broken algorithm is used; CWE-326 when
+   the algorithm is acceptable but the strength (key size, parameters) is
+   not; cite both only when both are independently true.
+5. **One CWE per finding row**: a chain (e.g. SSRF -> internal RCE) files
+   the chain head as the finding; chain steps are described in the impact
+   narrative, not as extra CWE tags.
+6. When no row fits, do not force one — hand the finding to the operator
+   review with the closest three candidates and what evidence would decide
+   between them.
+

@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://redjohn.dev/contracts/run-event.schema.json",
+  "title": "RedJohn RunEvent envelope",
+  "description": "Canonical event envelope (schema_version=1). seq is assigned server-side per run; business state + event persist in one transaction and reach clients via the outbox.",
+  "type": "object",
+  "required": ["schema_version", "event_id", "workspace_id", "run_id", "seq", "occurred_at", "type", "data"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "event_id": { "type": "string", "pattern": "^evt_[0-9a-f]{24}$" },
+    "workspace_id": { "type": "string" },
+    "run_id": { "type": "string" },
+    "seq": { "type": "integer", "minimum": 1 },
+    "occurred_at": { "type": "string", "format": "date-time" },
+    "type": {
+      "type": "string",
+      "enum": [
+        "run.status",
+        "agent.status",
+        "agent.activity",
+        "agent.message",
+        "tool.invocation.started",
+        "tool.invocation.output",
+        "tool.invocation.completed",
+        "finding.created",
+        "finding.updated",
+        "target.updated",
+        "service.status",
+        "terminal.output",
+        "usage.event"
+      ]
+    },
+    "agent_id": { "type": ["string", "null"] },
+    "correlation_id": { "type": ["string", "null"] },
+    "data": { "type": "object" }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "type": { "const": "agent.message" } } },
+      "then": {
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": ["message_id", "from_agent_id", "to_agent_id", "body"],
+            "properties": {
+              "message_id": { "type": "string" },
+              "from_agent_id": { "type": "string" },
+              "to_agent_id": { "type": "string" },
+              "kind": { "type": "string", "enum": ["instruction", "result", "query", "broadcast"] },
+              "body": { "type": "string" },
+              "summary_ref": { "type": ["string", "null"] }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "type": { "enum": ["tool.invocation.started", "tool.invocation.output", "tool.invocation.completed"] } } },
+      "then": {
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": ["invocation_id", "tool"],
+            "properties": {
+              "invocation_id": { "type": "string" },
+              "tool": { "type": "string" },
+              "status": { "type": "string", "enum": ["started", "completed", "failed", "timed_out", "cancelled", "unknown"] },
+              "chunk": { "type": "string", "description": "output chunk for .output events" },
+              "exit_code": { "type": ["integer", "null"] }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "type": { "enum": ["finding.created", "finding.updated"] } } },
+      "then": {
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": ["finding_id", "code", "title", "severity", "status"],
+            "properties": {
+              "finding_id": { "type": "string" },
+              "code": { "type": "string" },
+              "title": { "type": "string" },
+              "severity": { "type": "string", "enum": ["critical", "high", "medium", "low", "info"] },
+              "status": { "type": "string", "enum": ["observation", "suspected", "verified", "ready_for_review", "resolved", "false_positive"] },
+              "target": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "type": { "const": "service.status" } } },
+      "then": {
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": ["service", "state"],
+            "properties": {
+              "service": { "type": "string" },
+              "state": { "type": "string", "enum": ["live", "starting", "degraded", "down", "not_configured"] },
+              "detail": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "type": { "const": "terminal.output" } } },
+      "then": {
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": ["terminal_id", "chunk"],
+            "properties": {
+              "terminal_id": { "type": "string" },
+              "agent_id": { "type": ["string", "null"] },
+              "chunk": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

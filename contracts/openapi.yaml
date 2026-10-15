@@ -1,0 +1,1096 @@
+openapi: 3.1.0
+info:
+  title: RedJohn API
+  version: 0.1.0
+  description: |
+    Canonical RedJohn API contract (contract version: v1, schema_version=1 for events).
+    Implemented by the rj-cli local engine (`redjohn serve`) and extended by rj-cloud.
+    Cloud-only extension routes live in `cloud-ext.openapi.yaml`.
+    Conventions:
+    - Cursor pagination: `?cursor=&limit=` -> `{items, next_cursor, total}`.
+    - Mutating POSTs accept `Idempotency-Key` header (required on run create/start and message post).
+    - Errors are typed: `{error: {code, message, details, request_id}}`.
+    - Workspace/authorization context comes from the authenticated server-side
+      session, never from client-supplied tenant fields.
+servers:
+  - url: http://127.0.0.1:8720/api/v1
+    description: local engine (loopback only, token-authenticated)
+tags:
+  - name: meta
+  - name: projects
+  - name: pentests
+  - name: findings
+  - name: evidence
+  - name: integrations
+  - name: settings
+  - name: reports
+
+paths:
+  /status:
+    get:
+      tags: [meta]
+      summary: Service health overview (API, OpenViking, MCPs, worker)
+      operationId: getStatus
+      responses:
+        "200":
+          description: Service states; "live" only for fresh, authorized, usable connections
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [services, contract_version]
+                properties:
+                  contract_version: { type: string, example: "1" }
+                  engine_version: { type: string }
+                  services:
+                    type: array
+                    items: { $ref: "#/components/schemas/ServiceStatus" }
+
+  /capabilities:
+    get:
+      tags: [meta]
+      summary: Engine capabilities and configured limits
+      operationId: getCapabilities
+      responses:
+        "200":
+          description: Capability descriptor
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  environment: { $ref: "#/components/schemas/RunEnvironment" }
+                  limits: { $ref: "#/components/schemas/AgentLimits" }
+                  openviking: { type: boolean, description: "real OpenViking server configured" }
+                  mcp_transports:
+                    type: array
+                    items: { type: string, enum: [stdio, streamable_http] }
+                  pty: { type: boolean }
+                  reports:
+                    type: array
+                    items: { type: string, enum: [html, json, pdf] }
+
+  /projects:
+    get:
+      tags: [projects]
+      operationId: listProjects
+      parameters: [{ $ref: "#/components/parameters/Cursor" }, { $ref: "#/components/parameters/Limit" }]
+      responses:
+        "200":
+          description: Page of projects
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ListPage"
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: "#/components/schemas/Project" }
+    post:
+      tags: [projects]
+      operationId: createProject
+      parameters: [{ $ref: "#/components/parameters/IdempotencyKey" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+                description: { type: string }
+      responses:
+        "201":
+          description: Created
+          content: { application/json: { schema: { $ref: "#/components/schemas/Project" } } }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /projects/{project_id}:
+    get:
+      tags: [projects]
+      operationId: getProject
+      parameters: [{ $ref: "#/components/parameters/ProjectId" }]
+      responses:
+        "200":
+          description: Project with targets and scope
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  project: { $ref: "#/components/schemas/Project" }
+                  targets:
+                    type: array
+                    items: { $ref: "#/components/schemas/Target" }
+                  scope: { $ref: "#/components/schemas/ScopePolicy" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [projects]
+      operationId: updateProject
+      parameters: [{ $ref: "#/components/parameters/ProjectId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                description: { type: string }
+      responses:
+        "200":
+          description: Updated
+          content: { application/json: { schema: { $ref: "#/components/schemas/Project" } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /projects/{project_id}/targets:
+    post:
+      tags: [projects]
+      operationId: addTarget
+      parameters: [{ $ref: "#/components/parameters/ProjectId" }, { $ref: "#/components/parameters/IdempotencyKey" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [value, kind]
+              properties:
+                value: { type: string }
+                kind: { $ref: "#/components/schemas/TargetKind" }
+                note: { type: string }
+      responses:
+        "201":
+          description: Created
+          content: { application/json: { schema: { $ref: "#/components/schemas/Target" } } }
+    delete:
+      tags: [projects]
+      operationId: removeTarget
+      parameters: [{ $ref: "#/components/parameters/ProjectId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [target_id]
+              properties:
+                target_id: { type: string }
+      responses:
+        "204": { description: Removed }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /projects/{project_id}/scope:
+    get:
+      tags: [projects]
+      operationId: getScope
+      parameters: [{ $ref: "#/components/parameters/ProjectId" }]
+      responses:
+        "200":
+          description: Current scope policy (latest version)
+          content: { application/json: { schema: { $ref: "#/components/schemas/ScopePolicy" } } }
+    put:
+      tags: [projects]
+      operationId: replaceScope
+      summary: Creates a new scope version. Active runs keep their pinned version.
+      parameters: [{ $ref: "#/components/parameters/ProjectId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ScopePolicy" }
+      responses:
+        "200":
+          description: New scope version
+          content: { application/json: { schema: { $ref: "#/components/schemas/ScopePolicy" } } }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /pentests:
+    get:
+      tags: [pentests]
+      operationId: listRuns
+      parameters:
+        - { $ref: "#/components/parameters/Cursor" }
+        - { $ref: "#/components/parameters/Limit" }
+        - name: project_id
+          in: query
+          schema: { type: string }
+        - name: status
+          in: query
+          schema: { $ref: "#/components/schemas/RunStatus" }
+        - name: archived
+          in: query
+          schema: { type: boolean, default: false }
+      responses:
+        "200":
+          description: Page of runs
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ListPage"
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: "#/components/schemas/Run" }
+    post:
+      tags: [pentests]
+      operationId: createRun
+      summary: Create a pentest run (status=created). Idempotent via Idempotency-Key.
+      parameters: [{ $ref: "#/components/parameters/IdempotencyKey" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                project_id: { type: string }
+                name: { type: string }
+                task: { type: string, default: "" }
+                scan_mode: { $ref: "#/components/schemas/ScanMode" }
+                authorized_target: { type: string, description: "Required when project_id is omitted" }
+                target_kind: { $ref: "#/components/schemas/PentestTargetKind" }
+                environment: { $ref: "#/components/schemas/RunEnvironment" }
+                limits: { $ref: "#/components/schemas/AgentLimits" }
+      responses:
+        "201":
+          description: Created (scope pinned to current project scope version)
+          content: { application/json: { schema: { $ref: "#/components/schemas/Run" } } }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /pentests/{run_id}:
+    get:
+      tags: [pentests]
+      operationId: getRun
+      parameters: [{ $ref: "#/components/parameters/RunId" }]
+      responses:
+        "200":
+          description: Run detail
+          content: { application/json: { schema: { $ref: "#/components/schemas/Run" } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+    delete:
+      tags: [pentests]
+      operationId: deleteRun
+      summary: Stop any active agents and delete the session and its owned artifacts.
+      parameters: [{ $ref: "#/components/parameters/RunId" }]
+      responses:
+        "204": { description: Session deleted }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /pentests/{run_id}/evidence:
+    get:
+      tags: [evidence]
+      operationId: listRunEvidence
+      summary: List every artifact captured for this session, including artifacts without findings.
+      parameters:
+        - { $ref: "#/components/parameters/RunId" }
+        - { $ref: "#/components/parameters/Cursor" }
+        - { $ref: "#/components/parameters/Limit" }
+      responses:
+        "200":
+          description: Page of session evidence
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ListPage"
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: "#/components/schemas/Evidence" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /pentests/{run_id}/archive:
+    post:
+      tags: [pentests]
+      operationId: archiveRun
+      summary: Stop an active session and archive it while retaining all results.
+      parameters: [{ $ref: "#/components/parameters/RunId" }]
+      responses:
+        "200":
+          description: Archived session
+          content: { application/json: { schema: { $ref: "#/components/schemas/Run" } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /pentests/{run_id}/unarchive:
+    post:
+      tags: [pentests]
+      operationId: unarchiveRun
+      summary: Restore an archived session to the session list.
+      parameters: [{ $ref: "#/components/parameters/RunId" }]
+      responses:
+        "200":
+          description: Restored session
+          content: { application/json: { schema: { $ref: "#/components/schemas/Run" } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /pentests/{run_id}/start:
+    post:
+      tags: [pentests]
+      operationId: startRun
+      summary: Start the run. Idempotent via Idempotency-Key.
+      parameters: [{ $ref: "#/components/parameters/RunId" }, { $ref: "#/components/parameters/IdempotencyKey" }]
+      responses:
+        "200":
+          description: Run transitioning to starting/running
+          content: { application/json: { schema: { $ref: "#/components/schemas/Run" } } }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /pentests/{run_id}/stop:
+    post:
+      tags: [pentests]
+      operationId: stopRun
+      summary: "Stop run: blocks new delegation, then stops children and tool processes. Existing findings remain available."
+      parameters: [{ $ref: "#/components/parameters/RunId" }]
+      responses:
+        "200":
+          description: Run transitioning to stopping/stopped
+          content: { application/json: { schema: { $ref: "#/components/schemas/Run" } } }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /pentests/{run_id}/agents:
+    get:
+      tags: [pentests]
+      operationId: listAgents
+      parameters: [{ $ref: "#/components/parameters/RunId" }]
+      responses:
+        "200":
+          description: Agents of the run (tree via parent_agent_id)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/Agent" }
+    post:
+      tags: [pentests]
+      operationId: createAgent
+      summary: Server-side validated agent creation (supervisor). Enforces depth/scope/tool/budget narrowing and capacity limits.
+      parameters: [{ $ref: "#/components/parameters/RunId" }, { $ref: "#/components/parameters/IdempotencyKey" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [parent_agent_id, name, task, role]
+              properties:
+                parent_agent_id: { type: string }
+                name: { type: string }
+                role: { $ref: "#/components/schemas/AgentRole" }
+                task: { type: string }
+                allowed_targets: { type: array, items: { type: string } }
+                allowed_tools: { type: array, items: { type: string } }
+      responses:
+        "201":
+          description: Created
+          content: { application/json: { schema: { $ref: "#/components/schemas/Agent" } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /pentests/{run_id}/messages:
+    post:
+      tags: [pentests]
+      operationId: postMessage
+      summary: Send a model message to an agent (not a shell command). Idempotent via Idempotency-Key.
+      parameters: [{ $ref: "#/components/parameters/RunId" }, { $ref: "#/components/parameters/IdempotencyKey" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [to_agent_id, body]
+              properties:
+                to_agent_id: { type: string }
+                body: { type: string }
+                correlation_id: { type: string }
+      responses:
+        "201":
+          description: Queued
+          content: { application/json: { schema: { $ref: "#/components/schemas/AgentMessage" } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /pentests/{run_id}/findings:
+    get:
+      tags: [pentests]
+      operationId: listRunFindings
+      parameters:
+        - { $ref: "#/components/parameters/RunId" }
+        - { $ref: "#/components/parameters/Cursor" }
+        - { $ref: "#/components/parameters/Limit" }
+        - name: severity
+          in: query
+          schema: { $ref: "#/components/schemas/FindingSeverity" }
+        - name: status
+          in: query
+          schema: { $ref: "#/components/schemas/FindingStatus" }
+      responses:
+        "200":
+          description: Page of findings
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ListPage"
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: "#/components/schemas/Finding" }
+
+  /pentests/{run_id}/targets:
+    get:
+      tags: [pentests]
+      operationId: listRunTargets
+      parameters: [{ $ref: "#/components/parameters/RunId" }]
+      responses:
+        "200":
+          description: Effective targets of the run (pinned scope resolution)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/Target" }
+
+  /pentests/{run_id}/snapshot:
+    get:
+      tags: [pentests]
+      operationId: getRunSnapshot
+      summary: Consistent state snapshot + event cursor for (re)hydration
+      parameters: [{ $ref: "#/components/parameters/RunId" }]
+      responses:
+        "200":
+          description: Snapshot with event cursor
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [run, agents, cursor]
+                properties:
+                  run: { $ref: "#/components/schemas/Run" }
+                  agents:
+                    type: array
+                    items: { $ref: "#/components/schemas/Agent" }
+                  findings:
+                    type: array
+                    items: { $ref: "#/components/schemas/Finding" }
+                  services:
+                    type: array
+                    items: { $ref: "#/components/schemas/ServiceStatus" }
+                  cursor: { type: integer, description: "last included event seq" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /pentests/{run_id}/events:
+    get:
+      tags: [pentests]
+      operationId: getRunEvents
+      summary: Replay events after seq (gap fill on reconnect)
+      parameters:
+        - { $ref: "#/components/parameters/RunId" }
+        - name: after_seq
+          in: query
+          schema: { type: integer, default: 0 }
+        - { $ref: "#/components/parameters/Limit" }
+      responses:
+        "200":
+          description: Ordered events; 410 when cursor expired by retention (resnapshot)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/RunEvent" }
+                  cursor: { type: integer }
+        "410":
+          description: Cursor expired; client must refetch snapshot
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+
+  /pentests/{run_id}/stream:
+    get:
+      tags: [pentests]
+      operationId: streamRun
+      summary: WebSocket live stream of RunEvents (backpressure-aware; replay+live handoff without loss)
+      parameters:
+        - { $ref: "#/components/parameters/RunId" }
+        - name: after_seq
+          in: query
+          schema: { type: integer, default: 0 }
+      responses:
+        "101": { description: WebSocket upgrade }
+
+  /findings/{finding_id}:
+    get:
+      tags: [findings]
+      operationId: getFinding
+      parameters: [{ $ref: "#/components/parameters/FindingId" }]
+      responses:
+        "200":
+          description: Finding detail
+          content: { application/json: { schema: { $ref: "#/components/schemas/Finding" } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [findings]
+      operationId: updateFinding
+      parameters: [{ $ref: "#/components/parameters/FindingId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status: { $ref: "#/components/schemas/FindingStatus" }
+                severity: { $ref: "#/components/schemas/FindingSeverity" }
+                remediation: { type: string }
+      responses:
+        "200":
+          description: Updated
+          content: { application/json: { schema: { $ref: "#/components/schemas/Finding" } } }
+
+  /evidence/{evidence_id}:
+    get:
+      tags: [evidence]
+      operationId: getEvidence
+      summary: Metadata; content via ?download=1 with access check
+      parameters: [{ $ref: "#/components/parameters/EvidenceId" }]
+      responses:
+        "200":
+          description: Evidence metadata (hash, mime, size, source, access rule)
+          content: { application/json: { schema: { $ref: "#/components/schemas/Evidence" } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /evidence:
+    get:
+      tags: [evidence]
+      operationId: listEvidence
+      parameters:
+        - name: run_id
+          in: query
+          required: true
+          schema: { type: string }
+        - { $ref: "#/components/parameters/Cursor" }
+        - { $ref: "#/components/parameters/Limit" }
+      responses:
+        "200":
+          description: Page of evidence metadata
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ListPage"
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: "#/components/schemas/Evidence" }
+
+  /mcps:
+    get:
+      tags: [integrations]
+      operationId: listMCPs
+      responses:
+        "200":
+          description: Configured MCP connections with live status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/MCPConnection" }
+    post:
+      tags: [integrations]
+      operationId: createMCP
+      summary: Local products only; cloud uses provider-managed catalog
+      parameters: [{ $ref: "#/components/parameters/IdempotencyKey" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MCPConnection" }
+      responses:
+        "201":
+          description: Created
+          content: { application/json: { schema: { $ref: "#/components/schemas/MCPConnection" } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /mcps/{mcp_id}:
+    delete:
+      tags: [integrations]
+      operationId: deleteMCP
+      parameters:
+        - name: mcp_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "204": { description: Deleted }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      tags: [integrations]
+      operationId: reconnectMCP
+      summary: Re-initialize connection and re-discover tools
+      parameters:
+        - name: mcp_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Connection status after reconnect
+          content: { application/json: { schema: { $ref: "#/components/schemas/MCPConnection" } } }
+
+  /skills:
+    get:
+      tags: [integrations]
+      operationId: listSkills
+      summary: Search/filter/paginate skills (backed by OpenViking)
+      parameters:
+        - name: query
+          in: query
+          schema: { type: string }
+        - { $ref: "#/components/parameters/Cursor" }
+        - { $ref: "#/components/parameters/Limit" }
+      responses:
+        "200":
+          description: Page of skill metadata
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ListPage"
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: "#/components/schemas/SkillRef" }
+
+  /skills/{skill_id}:
+    get:
+      tags: [integrations]
+      operationId: getSkill
+      summary: Skill detail; content loaded on demand
+      parameters:
+        - name: skill_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Skill with content when requested
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  skill: { $ref: "#/components/schemas/SkillRef" }
+                  content: { type: string, description: "only when ?include_content=1" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /settings:
+    get:
+      tags: [settings]
+      operationId: getSettings
+      responses:
+        "200":
+          description: Redacted settings (secrets never returned)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Settings" }
+    patch:
+      tags: [settings]
+      operationId: patchSettings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Settings" }
+      responses:
+        "200":
+          description: Updated, redacted settings
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Settings" }
+
+  /pentests/{run_id}/reports:
+    post:
+      tags: [reports]
+      operationId: createReport
+      parameters: [{ $ref: "#/components/parameters/RunId" }, { $ref: "#/components/parameters/IdempotencyKey" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [format]
+              properties:
+                format: { type: string, enum: [html, json, pdf] }
+      responses:
+        "201":
+          description: Report artifact
+          content: { application/json: { schema: { $ref: "#/components/schemas/Report" } } }
+
+  /reports/{report_id}:
+    get:
+      tags: [reports]
+      operationId: getReport
+      parameters:
+        - name: report_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Report artifact
+          content: { application/json: { schema: { $ref: "#/components/schemas/Report" } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /reports:
+    get:
+      tags: [reports]
+      operationId: listReports
+      parameters:
+        - name: run_id
+          in: query
+          required: true
+          schema: { type: string }
+        - { $ref: "#/components/parameters/Cursor" }
+        - { $ref: "#/components/parameters/Limit" }
+      responses:
+        "200":
+          description: Page of reports
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ListPage"
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: "#/components/schemas/Report" }
+
+components:
+  parameters:
+    Cursor:
+      name: cursor
+      in: query
+      schema: { type: string }
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, default: 50, maximum: 200 }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      schema: { type: string }
+    ProjectId:
+      name: project_id
+      in: path
+      required: true
+      schema: { type: string }
+    RunId:
+      name: run_id
+      in: path
+      required: true
+      schema: { type: string }
+    FindingId:
+      name: finding_id
+      in: path
+      required: true
+      schema: { type: string }
+    EvidenceId:
+      name: evidence_id
+      in: path
+      required: true
+      schema: { type: string }
+  responses:
+    NotFound:
+      description: Not found
+      content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+    Conflict:
+      description: State conflict (e.g. invalid transition, duplicate idempotency key with different payload)
+      content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+    Forbidden:
+      description: Authorization / scope / entitlement denial
+      content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+    ValidationError:
+      description: Validation error
+      content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+  schemas:
+    ListPage:
+      type: object
+      properties:
+        next_cursor: { type: string, nullable: true }
+        total: { type: integer, nullable: true }
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string }
+            message: { type: string }
+            details: { type: object }
+            request_id: { type: string }
+    RunEnvironment: { type: string, enum: [local, cloud_managed] }
+    RunStatus: { type: string, enum: [created, starting, running, stopping, stopped, completed, failed] }
+    AgentStatus: { type: string, enum: [pending, queued, running, waiting, complete, failed, stopped] }
+    AgentRole: { type: string, enum: [coordinator, specialist, worker] }
+    TargetKind: { type: string, enum: [domain, url, ipv4, ipv6, cidr, hostname, local_project, github_repository] }
+    PentestTargetKind: { type: string, enum: [local_project, github_repository, web_application] }
+    ScanMode: { type: string, enum: [low, standard, high, deep], default: standard }
+    VerificationStatus: { type: string, enum: [unverified, pending, verified, rejected] }
+    FindingSeverity: { type: string, enum: [critical, high, medium, low, info] }
+    FindingStatus: { type: string, enum: [observation, suspected, verified, ready_for_review, resolved, false_positive] }
+    ServiceState: { type: string, enum: [live, starting, degraded, down, not_configured] }
+    MCPTransport: { type: string, enum: [stdio, streamable_http] }
+    Workspace:
+      type: object
+      required: [workspace_id, name, slug]
+      properties:
+        workspace_id: { type: string }
+        name: { type: string }
+        slug: { type: string }
+        kind: { type: string, enum: [local, cloud] }
+        created_at: { type: string, format: date-time }
+    Project:
+      type: object
+      required: [project_id, workspace_id, name]
+      properties:
+        project_id: { type: string }
+        workspace_id: { type: string }
+        name: { type: string }
+        description: { type: string }
+        created_at: { type: string, format: date-time }
+    Target:
+      type: object
+      required: [target_id, project_id, value, kind]
+      properties:
+        target_id: { type: string }
+        project_id: { type: string }
+        value: { type: string }
+        kind: { $ref: "#/components/schemas/TargetKind" }
+        verification: { $ref: "#/components/schemas/VerificationStatus" }
+        note: { type: string }
+        created_at: { type: string, format: date-time }
+    ScopePolicy:
+      type: object
+      required: [scope_id, project_id, version]
+      properties:
+        scope_id: { type: string }
+        project_id: { type: string }
+        version: { type: integer }
+        allowed_targets: { type: array, items: { type: string } }
+        allowed_tools: { type: array, items: { type: string } }
+        denied_tools: { type: array, items: { type: string } }
+        max_agents: { type: integer, default: 24 }
+        max_concurrent_agents: { type: integer, default: 6 }
+        max_depth: { type: integer, default: 3 }
+        notes: { type: string }
+        created_at: { type: string, format: date-time }
+    AgentLimits:
+      type: object
+      properties:
+        max_concurrent_agents: { type: integer, default: 6 }
+        max_total_agents: { type: integer, default: 24 }
+        max_delegation_depth: { type: integer, default: 3 }
+        time_budget_seconds: { type: integer, nullable: true }
+        token_budget: { type: integer, nullable: true }
+    Run:
+      type: object
+      required: [run_id, workspace_id, project_id, name, status, scope]
+      properties:
+        run_id: { type: string }
+        workspace_id: { type: string }
+        project_id: { type: string }
+        name: { type: string }
+        ref: { type: string, description: "short human ref, e.g. RJ-024 (per-workspace sequence)" }
+        task: { type: string }
+        scan_mode: { $ref: "#/components/schemas/ScanMode" }
+        authorized_target: { type: string, nullable: true }
+        target_kind: { allOf: [{ $ref: "#/components/schemas/PentestTargetKind" }], nullable: true }
+        session_project: { type: boolean, default: false }
+        archived_at: { type: string, format: date-time, nullable: true }
+        status: { $ref: "#/components/schemas/RunStatus" }
+        scope: { $ref: "#/components/schemas/ScopePolicy" }
+        limits: { $ref: "#/components/schemas/AgentLimits" }
+        environment: { $ref: "#/components/schemas/RunEnvironment" }
+        created_at: { type: string, format: date-time }
+        started_at: { type: string, format: date-time, nullable: true }
+        finished_at: { type: string, format: date-time, nullable: true }
+        error: { type: string, nullable: true }
+    Agent:
+      type: object
+      required: [agent_id, run_id, name, task, status, depth]
+      properties:
+        agent_id: { type: string }
+        run_id: { type: string }
+        parent_agent_id: { type: string, nullable: true }
+        role: { $ref: "#/components/schemas/AgentRole" }
+        name: { type: string }
+        task: { type: string }
+        status: { $ref: "#/components/schemas/AgentStatus" }
+        depth: { type: integer }
+        allowed_targets: { type: array, items: { type: string } }
+        allowed_tools: { type: array, items: { type: string } }
+        current_activity: { type: string }
+        ov_session_uri: { type: string, nullable: true }
+        created_at: { type: string, format: date-time }
+        finished_at: { type: string, format: date-time, nullable: true }
+    AgentMessage:
+      type: object
+      required: [message_id, run_id, from_agent_id, to_agent_id, body, status]
+      properties:
+        message_id: { type: string }
+        run_id: { type: string }
+        from_agent_id: { type: string }
+        to_agent_id: { type: string }
+        correlation_id: { type: string, nullable: true }
+        kind: { type: string, enum: [instruction, result, query, broadcast] }
+        body: { type: string }
+        summary_ref: { type: string, nullable: true }
+        evidence_refs: { type: array, items: { type: string } }
+        status: { type: string, enum: [queued, delivered, read, failed] }
+        created_at: { type: string, format: date-time }
+        delivered_at: { type: string, format: date-time, nullable: true }
+    ToolInvocation:
+      type: object
+      required: [invocation_id, run_id, agent_id, tool, status]
+      properties:
+        invocation_id: { type: string }
+        run_id: { type: string }
+        agent_id: { type: string }
+        tool: { type: string }
+        args: { type: object }
+        status: { type: string, enum: [started, completed, failed, timed_out, cancelled, unknown] }
+        attempt: { type: integer }
+        exit_code: { type: integer, nullable: true }
+        output_ref: { type: string, nullable: true }
+        evidence_refs: { type: array, items: { type: string } }
+        started_at: { type: string, format: date-time }
+        finished_at: { type: string, format: date-time, nullable: true }
+        error: { type: string, nullable: true }
+    Finding:
+      type: object
+      required: [finding_id, run_id, code, title, severity, status]
+      properties:
+        finding_id: { type: string }
+        run_id: { type: string }
+        code: { type: string }
+        title: { type: string }
+        severity: { $ref: "#/components/schemas/FindingSeverity" }
+        status: { $ref: "#/components/schemas/FindingStatus" }
+        target: { type: string }
+        source_agent_id: { type: string, nullable: true }
+        description: { type: string }
+        evidence_refs: { type: array, items: { type: string } }
+        remediation: { type: string }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    Evidence:
+      type: object
+      required: [evidence_id, run_id, sha256, mime, size_bytes, source, storage_ref]
+      properties:
+        evidence_id: { type: string }
+        run_id: { type: string }
+        sha256: { type: string }
+        mime: { type: string }
+        size_bytes: { type: integer }
+        source: { type: string }
+        storage_ref: { type: string }
+        access: { type: string, enum: [workspace, run, restricted] }
+        redacted: { type: boolean }
+        created_at: { type: string, format: date-time }
+    SkillRef:
+      type: object
+      required: [skill_id, name, version]
+      properties:
+        skill_id: { type: string }
+        name: { type: string }
+        version: { type: string }
+        description: { type: string }
+        source: { type: string }
+        ov_uri: { type: string, nullable: true }
+        content_hash: { type: string }
+        required_tools: { type: array, items: { type: string } }
+        environments: { type: array, items: { type: string, enum: [local, cloud_worker, any] } }
+        execution_rules: { type: string }
+    MCPConnection:
+      type: object
+      required: [mcp_id, name, transport, status]
+      properties:
+        mcp_id: { type: string }
+        name: { type: string }
+        transport: { $ref: "#/components/schemas/MCPTransport" }
+        command: { type: array, items: { type: string } }
+        url: { type: string, nullable: true }
+        status: { $ref: "#/components/schemas/ServiceState" }
+        tools: { type: array, items: { type: string } }
+        error: { type: string, nullable: true }
+        created_at: { type: string, format: date-time }
+    ServiceStatus:
+      type: object
+      required: [service, state]
+      properties:
+        service: { type: string }
+        state: { $ref: "#/components/schemas/ServiceState" }
+        detail: { type: string }
+        latency_ms: { type: integer, nullable: true }
+        checked_at: { type: string, format: date-time }
+    RunEvent:
+      type: object
+      required: [schema_version, event_id, workspace_id, run_id, seq, occurred_at, type, data]
+      properties:
+        schema_version: { type: integer, const: 1 }
+        event_id: { type: string }
+        workspace_id: { type: string }
+        run_id: { type: string }
+        seq: { type: integer }
+        occurred_at: { type: string, format: date-time }
+        type:
+          type: string
+          enum: [run.status, agent.status, agent.activity, agent.message, tool.invocation.started, tool.invocation.output, tool.invocation.completed, finding.created, finding.updated, target.updated, service.status, terminal.output, usage.event]
+        agent_id: { type: string, nullable: true }
+        correlation_id: { type: string, nullable: true }
+        data: { type: object }
+    Settings:
+      type: object
+      properties:
+        model_provider: { type: string, description: "e.g. anthropic; API keys never returned" }
+        model_name: { type: string }
+        openviking_url: { type: string }
+        data_profile: { type: string }
+        log_level: { type: string }
+    Report:
+      type: object
+      required: [report_id, run_id, format, created_at]
+      properties:
+        report_id: { type: string }
+        run_id: { type: string }
+        format: { type: string, enum: [html, json, pdf] }
+        storage_ref: { type: string }
+        created_at: { type: string, format: date-time }

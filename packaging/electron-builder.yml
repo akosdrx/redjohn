@@ -1,0 +1,38 @@
+# electron-builder configuration for RedJohn Kali Linux Desktop.
+appId: dev.redjohn.app
+productName: RedJohn
+copyright: Copyright © RedJohn
+
+directories:
+  output: ../release
+  buildResources: ../packaging/build-resources
+
+files:
+  - dist/**
+  - "!dist/**/*.map"
+  - package.json
+
+extraResources:
+  - from: ../resources/engine
+    to: engine
+    filter: ["redjohn-engine"]
+  - from: ../packages/ui/assets/redjohn-logo.png
+    to: assets/redjohn-logo.png
+
+beforePack: scripts/check-engine-bundle.mjs
+
+asar: true
+
+linux:
+  executableName: redjohn
+  category: Development
+  target:
+    - deb
+    - AppImage
+  icon: ../packaging/build-resources/icon.png
+  description: RedJohn — Autonomous Security Assessment & Pentest Engine for Kali Linux
+  synopsis: RedJohn Kali Linux Desktop
+
+npmRebuild: false
+electronDownload:
+  cache: ../resources/.electron-cache

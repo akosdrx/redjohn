@@ -1,0 +1,83 @@
+---
+name: cve_confidence_rules
+description: CVE confidence rules (from cve_exploit_intel specialist reference library)
+---
+
+# CVE confidence rules
+
+Tier definitions, the claim ladder, and the version-range checking pitfalls
+that decide which rung a correlation may print. These rules bind every CVE
+statement this skill emits; `scripts/cve_correlate.py` implements them.
+
+## 1. Version-confidence tiers (inherited from `10-recon-endpoint-mapping`)
+
+| Tier | Name | Evidence required | Permits in this skill |
+|---|---|---|---|
+| 1 | exact | Version read from a manifest (`package.json`, `composer.json`), changelog, `/actuator/info` build block, or a vendor version endpoint | CVE correlation with CPE handoff; "likely vulnerable" rung |
+| 2 | banner | Explicit version string in `Server`, `X-Powered-By`, `X-AspNet-Version`, generator meta | CVE correlation with "banner-sourced" caveat; "version in range, impact unverified" rung |
+| 3 | banner+behavior | Family from banner/cookie + behavior probe narrowing a range | Nothing here: no CVE claim. Re-fingerprint via `10` |
+| 4 | source | Inferred from layout/cookies/console path only | Nothing here: inventory registration only |
+
+Banner stripping (`Server:` removed) usually drops a host to tier 3/4 —
+record that; do not guess versions to force a tier upgrade. Only tier <= 2
+rows are handed into this skill at all (master dispatch negative routing).
+
+## 2. Claim ladder (the only permitted sentences)
+
+| Rung | Exact sentence | Requirements |
+|---|---|---|
+| 1 | "confirmed vulnerable" | Tier <= 2 version proof AND in-scope D2 reproduction of the advisory behavior (benign probe per `45` doctrine). Correlation alone NEVER reaches this rung |
+| 2 | "likely vulnerable" | Tier 1 (exact) version inside the advisory's affected range AND the advisory (vendor page or NVD, cross-checked) confirms the affected versions |
+| 3 | "version in range, impact unverified" | Tier 2 (banner) version inside the range, OR any caveat below is present (suffix, substring product match, range edge) |
+| - | "no claim" (lead only) | Anything weaker — record the correlation with source and date |
+
+Rules:
+
+- A CVE claim always cites: version proof evidence file, advisory id
+  (CVE + vendor bulletin/DSA/RHSA/USN where relevant), and a "verified
+  against NVD/vendor advisory at authoring time" note.
+- Version-proof failures (tier 3/4 input) are refused, not downgraded.
+- The ladder only moves up with new evidence (tier upgrade via `10`, or D2
+  reproduction via `45`), never with more searching.
+
+## 3. Version-range checking pitfalls
+
+Each of these is implemented (and flagged, not guessed) by
+`cve_correlate.py`; the same list applies when reading advisories by hand.
+
+1. **`v` prefix**: `v2.3.0` == `2.3.0`. Strip a leading `v`/`V` before
+   comparing; advisory text is inconsistent about it.
+2. **Build metadata and pre-release suffixes**: `2.3.0-beta.1`,
+   `2.3.0+build.5`. The tool compares the numeric core and emits a caveat.
+   Semver says `2.3.0-beta.1 < 2.3.0`, but many advisories mean "the 2.3.0
+   line" — when the membership decision depends on the suffix, read the
+   advisory text and quote it in the card.
+3. **Missing components / padding**: `2.3` is compared as `2.3.0`. For some
+   products `2.3` is a distinct release line, not `2.3.0` — caveat when the
+   compared sides have different component counts.
+4. **Wildcard prefix trap**: `1.2.x` matches `1.2.9` but NOT `1.20.0` or
+   `1.2-rc1`. Compare per numeric component, never as string prefixes.
+5. **Letter-suffix components**: `1.0.1f` (OpenSSL-style). Ordered as
+   `(1, "") < (1, "f") < (1, "g")` and `1.0.1 < 1.0.1f < 1.0.2`.
+6. **Comparator semantics**: `<2.4.0` excludes `2.4.0` itself; the fixed
+   version is usually the exclusive bound. When an advisory says "through
+   2.3.31", that is `<=2.3.31`. Restate the advisory's exact bounds in the
+   card rather than trusting paraphrase.
+7. **Banner truthfulness**: fronting proxies, load balancers, and configured
+   `Server` strings can report a frozen or forwarded version. Tier 2 claims
+   keep the banner caveat forever.
+8. **Distro backports**: RHEL/Debian/Ubuntu packages keep the upstream
+   version and silently carry the patch. A version in a CVE range can be
+   NOT vulnerable (patched) and an older version can be vulnerable. For
+   distro-packaged software the claim cites the distro tracker (RHSA/DSA/
+   USN/Changelog) — upstream ranges alone are insufficient.
+9. **Multi-branch advisories**: real advisories often list disjoint branches
+   (e.g. Struts CVE-2017-5638: 2.3.5-2.3.31 AND 2.5-2.5.10 — verified
+   against NVD at authoring time). Match against every listed range, not
+   just the first.
+10. **Product name matching**: match on normalized names (case/punctuation
+    insensitive); substring matches (component "struts" vs advisory product
+    "Apache Struts") get a caveat to confirm the CPE, because substring
+    matching also produces false families (`log4j` vs `log4j2` are different
+    products with different CVE sets).
+

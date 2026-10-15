@@ -1,0 +1,10 @@
+{
+  "engagement": "example-engagement-id",
+  "allowed": [
+    { "host": "target.example.com" },
+    { "host": "api.target.example.com" },
+    { "cidr": "203.0.113.0/24" },
+    { "host": "localhost", "note": "local lab fixture only" }
+  ],
+  "notes": "Documentation-example scope file. Hosts use RFC 2606/5737 ranges. Copy per engagement, list every in-scope host/CIDR explicitly; the guard fails closed on anything else."
+}

@@ -1,0 +1,68 @@
+@import "tailwindcss";
+
+/*
+ * RedJohn Tailwind 4 theme — mirrors src/tokens.ts.
+ * Utility classes: bg-rj-panel, text-rj-text-2, border-rj-border, etc.
+ */
+@theme {
+  --color-rj-bg: #0e1216;
+  --color-rj-bg-app: #13181d;
+  --color-rj-sidebar: #10151a;
+  --color-rj-panel: #1a2128;
+  --color-rj-panel-sunken: #151b21;
+  --color-rj-panel-hover: #202832;
+  --color-rj-terminal: #0d1116;
+  --color-rj-border: #242d36;
+  --color-rj-border-strong: #2e3944;
+
+  --color-rj-text: #e8ebee;
+  --color-rj-text-2: #9aa7b0;
+  --color-rj-text-3: #66727d;
+
+  --color-rj-accent: #e5484d;
+  --color-rj-accent-strong: #f0353f;
+  --color-rj-accent-subtle: #2a1518;
+  --color-rj-accent-border: #5a2327;
+
+  --color-rj-live: #46c78c;
+  --color-rj-starting: #e0c04b;
+  --color-rj-degraded: #e0863c;
+  --color-rj-down: #f05353;
+  --color-rj-idle: #6b7680;
+
+  --color-rj-critical: #ff5c77;
+  --color-rj-high: #e5484d;
+  --color-rj-medium: #e0a83c;
+  --color-rj-low: #4f9fd8;
+  --color-rj-info: #8a949e;
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+/* Base app chrome — token-driven only, no global element restyling beyond this. */
+.rj-root {
+  background-color: var(--color-rj-bg-app);
+  color: var(--color-rj-text);
+  font-family: var(--font-sans);
+}
+
+/* Visible keyboard focus everywhere inside the app. */
+.rj-root :focus-visible {
+  outline: 2px solid var(--color-rj-accent);
+  outline-offset: 1px;
+  border-radius: 4px;
+}
+
+/* Thin scrollbars matching the graphite theme. */
+.rj-root ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.rj-root ::-webkit-scrollbar-thumb {
+  background: var(--color-rj-border-strong);
+  border-radius: 4px;
+}
+.rj-root ::-webkit-scrollbar-track {
+  background: transparent;
+}

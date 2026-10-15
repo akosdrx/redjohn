@@ -1,0 +1,43 @@
+[project]
+name = "redjohn-core"
+version = "0.1.0"
+description = "Canonical RedJohn engine: run manager, agent supervisor, scheduler, mailbox, event store, tool runner, MCP manager, OpenViking integration, model gateway, FastAPI surface."
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn>=0.32",
+    "websockets>=14",
+    "pydantic>=2.10",
+    "sqlalchemy[asyncio]>=2.0",
+    "alembic>=1.14",
+    "aiosqlite>=0.20",
+    "langgraph>=1.2.2",
+    "langgraph-checkpoint-sqlite>=2.0",
+    "openviking-sdk==0.1.14",
+    "mcp>=2.0,<3",
+    "httpx>=0.28",
+    "openai>=1.59",
+    "jinja2>=3.1",
+    "python-json-logger>=3.2",
+    "cryptography>=44.0",
+    "jsonschema>=4.23",
+]
+
+[project.optional-dependencies]
+anthropic = ["anthropic>=0.71"]
+openai = ["openai>=1.59"]
+pdf = ["weasyprint>=64.0"]
+secrets = ["keyring>=25.5"]
+postgres = ["asyncpg>=0.30"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/redjohn_core"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"migrations" = "redjohn_core/migrations"
+"../../contracts/run-event.schema.json" = "redjohn_core/contracts/run-event.schema.json"
+"../../skills" = "redjohn_core/skill_library"
