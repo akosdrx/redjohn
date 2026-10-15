@@ -595,16 +595,16 @@ func (m Model) splashView() string {
 		start.WriteString(lipgloss.NewStyle().Foreground(color).Bold(bold).Render(string(char)))
 	}
 	welcome := lipgloss.NewStyle().Bold(true).Foreground(white).Render("Welcome to ") +
-		lipgloss.NewStyle().Bold(true).Foreground(red).Render("RedJohn") +
-		lipgloss.NewStyle().Bold(true).Foreground(white).Render("!")
-	version := lipgloss.NewStyle().Foreground(white).Faint(true).Render("v" + appVersion)
-	tagline := lipgloss.NewStyle().Foreground(white).Faint(true).Render("Autonomous Multi-Agent Penetration Testing Swarm")
-	url := lipgloss.NewStyle().Bold(true).Foreground(red).Render("redjohn.local")
+		lipgloss.NewStyle().Bold(true).Foreground(red).Render("RED") +
+		lipgloss.NewStyle().Bold(true).Foreground(brightWhite).Render("JOHN")
+	version := lipgloss.NewStyle().Bold(true).Foreground(red).Render("◈  " + versionLabel() + "  ◈")
+	tagline := lipgloss.NewStyle().Foreground(white).Faint(true).Render("Autonomous P2P Multi-Agent Offensive Swarm")
+	url := lipgloss.NewStyle().Foreground(dim).Render("170 Skills  ·  P2P Signal Bus  ·  Kali Native")
 	// The wordmark is shared with the launch screen so the two read as one moment.
 	content := wordmark() + "\n\n" +
 		welcome + "\n" + version + "\n" + tagline + "\n\n" +
 		start.String() + "\n\n" + url
-	panel := lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(red).Padding(1, 6).Align(lipgloss.Center).Render(content)
+	panel := lipgloss.NewStyle().Border(lipgloss.DoubleBorder()).BorderForeground(red).Padding(1, 6).Align(lipgloss.Center).Render(content)
 	// #splash_screen background is solid black.
 	return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, panel,
 		lipgloss.WithWhitespaceBackground(black))
@@ -901,7 +901,7 @@ func (m Model) statsView() string {
 	if b.Len() > 0 {
 		b.WriteString("\n")
 	}
-	b.WriteString(w.Render("v" + appVersion))
+	b.WriteString(lipgloss.NewStyle().Bold(true).Foreground(red).Render(versionLabel()))
 	return b.String()
 }
 

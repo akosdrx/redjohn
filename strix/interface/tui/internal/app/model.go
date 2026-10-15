@@ -42,17 +42,26 @@ type collectionAssembly struct {
 }
 
 // appVersion is the package version string shown on the splash and stats panel.
-// It is set by main from the STRIX_VERSION env var (see go_tui.py), matching
-// Python's get_package_version() which reads the installed "strix-agent" version
-// and falls back to "dev".
-var appVersion = "dev"
+var appVersion = "BETA Enterprise"
 
-// SetVersion overrides the displayed version; empty values are ignored so the
-// "dev" fallback survives when the launcher does not provide one.
+// SetVersion overrides the displayed version; empty or legacy numeric values
+// normalize to "BETA Enterprise".
 func SetVersion(v string) {
-	if strings.TrimSpace(v) != "" {
-		appVersion = strings.TrimSpace(v)
+	trimmed := strings.TrimSpace(v)
+	if trimmed != "" && trimmed != "dev" && trimmed != "1.7.0" {
+		appVersion = trimmed
 	}
+}
+
+func versionLabel() string {
+	v := strings.TrimSpace(appVersion)
+	if v == "" || v == "dev" || v == "1.7.0" {
+		return "BETA Enterprise"
+	}
+	if v[0] >= '0' && v[0] <= '9' {
+		return "v" + v
+	}
+	return v
 }
 
 type modalMode int

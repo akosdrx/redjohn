@@ -368,30 +368,50 @@ func (m Model) setupHeaderView(fit setupFit) string {
 			rows = append(rows, "")
 		}
 	case logoCompact:
-		rows = append(rows, center.Render(lipgloss.NewStyle().Bold(true).Foreground(red).Render("REDJOHN")))
+		compactLogo := lipgloss.NewStyle().Bold(true).Foreground(red).Render("RED") +
+			lipgloss.NewStyle().Bold(true).Foreground(brightWhite).Render("JOHN") +
+			render.Dim().Render(" · ") +
+			lipgloss.NewStyle().Bold(true).Foreground(red).Render("BETA Enterprise")
+		rows = append(rows, center.Render(compactLogo))
 	}
 	if fit.tagline {
-		rows = append(rows, center.Render(render.Dim().Render("Autonomous Multi-Agent Penetration Testing Swarm")))
+		diamond := lipgloss.NewStyle().Foreground(red).Bold(true).Render("◈")
+		rule := render.Dim().Render("━━━ ")
+		ruleEnd := render.Dim().Render(" ━━━")
+		sub := rule + diamond +
+			lipgloss.NewStyle().Foreground(white).Bold(true).Render("  AUTONOMOUS P2P OFFENSIVE SWARM  ") +
+			render.Dim().Render("│  ") +
+			lipgloss.NewStyle().Foreground(red).Bold(true).Render(versionLabel()) +
+			"  " + diamond + ruleEnd
+		rows = append(rows, center.Render(truncate(sub, fit.width)))
 	}
 	return strings.Join(rows, "\n")
 }
 
-// banner is the RedJohn wordmark: block letters with a bevelled edge.
-const banner = ` ██████╗ ███████╗██████╗      ██╗ ██████╗ ██╗  ██╗███╗   ██╗
- ██╔══██╗██╔════╝██╔══██╗     ██║██╔═══██╗██║  ██║████╗  ██║
- ██████╔╝█████╗  ██████╔╝     ██║██║   ██║███████║██╔██╗ ██║
- ██╔══██╗██╔══╝  ██╔══██╗██   ██║██║   ██║██╔══██║██║╚██╗██║
- ██║  ██║███████╗██████╔╝╚█████╔╝╚██████╔╝██║  ██║██║ ╚████║
- ╚═╝  ╚═╝╚══════╝╚═════╝  ╚════╝  ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═══╝`
+// banner is the crisp geometric half-block REDJOHN wordmark (no bevel shadow pipes,
+// open 'D' interior so it always reads clearly as REDJOHN).
+const banner = `█████▄  ██████  █████▄      ██  ▄████▄  ██  ██  ███  ██
+██  ██  ██      ██  ██      ██  ██  ██  ██  ██  ████ ██
+█████▀  █████   ██  ██      ██  ██  ██  ██████  ██ ████
+██  ██  ██      ██  ██  ██  ██  ██  ██  ██  ██  ██  ███
+██  ██  ██████  █████▀  ▀████▀  ▀████▀  ██  ██  ██   ██`
 
-// wordmark renders the banner in solid RedJohn crimson. Every row is padded out to
-// the full block so centering cannot ripple the letterforms out of alignment.
+// wordmark renders "RED" in bold crimson and "JOHN" in bright white so the two
+// halves of RedJohn stand out with a distinct tactical aesthetic.
 var wordmarkOnce = sync.OnceValue(func() string {
-	brand := lipgloss.NewStyle().Foreground(red)
+	redStyle := lipgloss.NewStyle().Bold(true).Foreground(red)
+	johnStyle := lipgloss.NewStyle().Bold(true).Foreground(brightWhite)
 	lines := strings.Split(banner, "\n")
 	rows := make([]string, len(lines))
 	for index, line := range lines {
-		rows[index] = brand.Render(line + strings.Repeat(" ", wordmarkWidth()-lipgloss.Width(line)))
+		padded := line + strings.Repeat(" ", max(0, wordmarkWidth()-lipgloss.Width(line)))
+		runes := []rune(padded)
+		const redCut = 22 // "█████▄  ██████  █████▄" = R E D
+		if len(runes) > redCut {
+			rows[index] = redStyle.Render(string(runes[:redCut])) + johnStyle.Render(string(runes[redCut:]))
+		} else {
+			rows[index] = redStyle.Render(padded)
+		}
 	}
 	return strings.Join(rows, "\n")
 })
@@ -447,6 +467,7 @@ func (m Model) setupSummaryView(width int) string {
 		chips = append(chips, render.Col(amber).Render("○ no model")+
 			render.Dim().Render(" · set STRIX_LLM or configure one in your config"))
 	}
+	chips = append(chips, render.Col(red).Render("◈")+render.Dim().Render(" P2P Swarm · 170 Skills"))
 	if m.snapshot.MaxBudgetUSD != nil {
 		chips = append(chips, render.Dim().Render(fmt.Sprintf("$%.2f budget", *m.snapshot.MaxBudgetUSD)))
 	}
@@ -509,7 +530,7 @@ func (m Model) setupHintsView(width int) string {
 	if lipgloss.Width(left) > inner {
 		left = hint("enter", "launch scan")
 	}
-	right := label("v" + appVersion)
+	right := lipgloss.NewStyle().Foreground(red).Bold(true).Render(versionLabel())
 	gap := inner - lipgloss.Width(left) - lipgloss.Width(right)
 	if gap < 2 {
 		return pad + left

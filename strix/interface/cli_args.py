@@ -26,12 +26,7 @@ FAIL_ON_SEVERITIES = ("critical", "high", "medium", "low", "info")
 
 
 def get_version() -> str:
-    try:
-        from importlib.metadata import version
-
-        return version("strix-agent")
-    except Exception:
-        return "unknown"
+    return "BETA Enterprise"
 
 
 def _positive_budget(value: str) -> float:
