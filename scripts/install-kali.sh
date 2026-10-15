@@ -173,6 +173,13 @@ if command -v zaproxy >/dev/null 2>&1 && ! command -v zap.sh >/dev/null 2>&1; th
   ln -sf "$(command -v zaproxy)" "$SHIM_DIR/zap.sh"
 fi
 
+if command -v nuclei >/dev/null 2>&1; then
+  echo "    Syncing Nuclei vulnerability templates..."
+  nuclei -update-templates -silent >/dev/null 2>&1 || true
+fi
+
+"$VENV_PY" -c "from strix.tools.mcp.loader import ensure_default_mcp_servers_file; p = ensure_default_mcp_servers_file(); print(f'    Configured RedJohn MCP servers (redjohn_scanners, redjohn_vuln_intel) -> {p}')"
+
 for cmd_name in strix redjohn rj; do
   WRAPPER="$HOME/.local/bin/$cmd_name"
   cat > "$WRAPPER" <<EOF
@@ -212,7 +219,7 @@ if [ "$BUILD_DESKTOP" -eq 1 ]; then
     echo "    WARNING: pnpm not found. Install Node.js + pnpm to build the Electron .deb package." >&2
   fi
 else
-  echo "==> [6/6] CLI + TUI + Web Viewer + agent-browser ready! (Pass --desktop to also build the Electron .deb app)"
+  echo "==> [6/6] CLI + TUI + Web Viewer + MCP Servers + agent-browser ready! (Pass --desktop to also build the Electron .deb app)"
 fi
 
 echo ""
@@ -220,6 +227,7 @@ echo "==========================================================================
 echo " RedJohn / Strix is ready on Kali Linux (${ARCH_RAW})!"
 echo "   - Launch interactive TUI : rj   (or: redjohn / strix)"
 echo "   - Launch Web Viewer      : strix view"
+echo "   - Active MCP Servers     : ~/.strix/mcp-servers.json (redjohn_scanners, redjohn_vuln_intel)"
 echo "   - Verify agent-browser   : agent-browser doctor --offline --quick"
 echo "   - Headless scan          : strix -n -t <target>"
 echo "=============================================================================="

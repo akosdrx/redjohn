@@ -41,7 +41,8 @@ from .opsec_guard import (
     wrap_untrusted_target_data,
 )
 from .scope import url_in_scope
-from .tool_catalog import native_tools_root, tool_command
+from .source_inspection import scan_local_ast_sinks
+from .tool_catalog import native_tools_root, resolve_nuclei_templates_root, tool_command
 
 Seconds = Annotated[int, Field(ge=10, le=900)]
 Rate = Annotated[int, Field(ge=1, le=100)]
@@ -62,6 +63,11 @@ WEB_TOOLS = {
     "metasploit_search",
     "metasploit_info",
     "metasploit_assess",
+    "nmap_scan",
+    "wpscan_scan",
+    "gobuster_scan",
+    "nikto_scan",
+    "ast_sink_search",
     "scan_status",
     "stop_scan",
     "tool_inventory",
@@ -95,13 +101,14 @@ class SessionTools:
 
     def url(self, value: str) -> str:
         parsed = urlsplit(value)
+        wildcard_scope = not self.targets or "*" in self.targets
         if (
             parsed.scheme not in ("http", "https")
             or not parsed.hostname
             or parsed.username
             or parsed.password
             or any(c.isspace() for c in value)
-            or not url_in_scope(value, self.targets)
+            or (not wildcard_scope and not url_in_scope(value, self.targets))
         ):
             raise ToolError("URL must be inside this pentest's authorized web target.")
         return value
@@ -597,25 +604,31 @@ def create_server(runtime: SessionTools) -> MCPServer:
         rate: Rate = 10,
         timeout_seconds: Seconds = 180,
     ) -> dict[str, Any]:
-        """Run bundled official HTTP vulnerability templates.
+        """Run official HTTP vulnerability templates via Nuclei.
 
-        Template is a relative YAML path; empty selects the HTTP library.
+        Template is a relative YAML path; empty selects the HTTP library (or Kali's default templates).
         Optionally filter by comma-separated tags (e.g. 'rce,ssti,cve') or a specific cve_id.
-        Returns a job to poll.
+        Returns a job to poll via scan_status.
         """
-        root = native_tools_root() / "nuclei-templates"
-        selected = (root / (template or "http")).resolve()
-        if (
-            not selected.is_relative_to(root.resolve())
-            or not selected.exists()
-            or (template and selected.suffix not in (".yaml", ".yml"))
-        ):
-            raise ToolError("Choose a YAML template inside the bundled official template library.")
+        root = resolve_nuclei_templates_root()
         args = [
             "-u",
             runtime.url(url),
-            "-t",
-            str(selected),
+        ]
+        if root.is_dir():
+            selected = (root / (template or "http")).resolve()
+            if (
+                not selected.is_relative_to(root.resolve())
+                or not selected.exists()
+                or (template and selected.suffix not in (".yaml", ".yml"))
+            ):
+                raise ToolError("Choose a YAML template inside the Nuclei template library.")
+            args += ["-t", str(selected)]
+        elif template:
+            if ".." in template or not re.fullmatch(r"[a-zA-Z0-9_./-]+", template):
+                raise ToolError("Invalid Nuclei template path.")
+            args += ["-t", template]
+        args += [
             "-j",
             "-o",
             "{job}/nuclei.jsonl",
@@ -652,10 +665,10 @@ def create_server(runtime: SessionTools) -> MCPServer:
         severity: str = "",
         limit: Annotated[int, Field(ge=1, le=50)] = 20,
     ) -> dict[str, Any]:
-        """Search local bundled nuclei-templates by CVE ID, product keyword, tags, or severity."""
+        """Search local nuclei-templates by CVE ID, product keyword, tags, or severity."""
         from .vuln_intel_mcp import search_nuclei_directory
 
-        root = native_tools_root() / "nuclei-templates"
+        root = resolve_nuclei_templates_root()
         matches = search_nuclei_directory(
             root, query=query, cve_id=cve_id, tags=tags, severity=severity, limit=limit
         )
@@ -908,13 +921,124 @@ def create_server(runtime: SessionTools) -> MCPServer:
         )
         return runtime.launch("metasploit", url, ["-q", "-n", "-x", script], timeout_seconds)
 
+    @server.tool()
+    async def nmap_scan(
+        target: str,
+        ports: str = "top-100",
+        service_version: bool = True,
+        timeout_seconds: Seconds = 180,
+    ) -> dict[str, Any]:
+        """Run a TCP connect / service version scan with Nmap against an authorized target."""
+        host = target.strip()
+        if "://" in host:
+            host = urlsplit(runtime.url(host)).hostname or ""
+        if not re.fullmatch(r"[a-zA-Z0-9.:-]+", host):
+            raise ToolError("Provide a valid hostname or IP address for nmap_scan.")
+        arguments = ["-sT", "-Pn", "-oX", "{job}/nmap.xml"]
+        if service_version:
+            arguments.append("-sV")
+        if ports == "top-100":
+            arguments += ["--top-ports", "100"]
+        elif ports == "top-1000":
+            arguments += ["--top-ports", "1000"]
+        elif re.fullmatch(r"[0-9,-]{1,64}", ports):
+            arguments += ["-p", ports]
+        else:
+            raise ToolError("Use 'top-100', 'top-1000', or a comma/range port list like '80,443,8000-8080'.")
+        arguments.append(host)
+        return runtime.launch("nmap", host, arguments, timeout_seconds, result="nmap.xml")
+
+    @server.tool()
+    async def wpscan_scan(
+        url: str,
+        enumerate_targets: Literal["vp", "ap", "vt", "tt", "cb", "dbe", "u"] = "vp",
+        timeout_seconds: Seconds = 180,
+    ) -> dict[str, Any]:
+        """Assess a WordPress installation using WPScan (JSON output)."""
+        arguments = [
+            "--url",
+            runtime.url(url),
+            "--no-banner",
+            "--random-user-agent",
+            "--enumerate",
+            enumerate_targets,
+            "--format",
+            "json",
+            "--output",
+            "{job}/wpscan.json",
+        ]
+        return runtime.launch("wpscan", runtime.url(url), arguments, timeout_seconds, result="wpscan.json")
+
+    @server.tool()
+    async def gobuster_scan(
+        url: str,
+        words: Annotated[list[str], Field(min_length=1, max_length=2000)],
+        timeout_seconds: Seconds = 180,
+    ) -> dict[str, Any]:
+        """Run Gobuster directory enumeration against an authorized URL using the supplied wordlist."""
+        if any(not word or any(c in word for c in "\r\n\0") or len(word) > 120 for word in words):
+            raise ToolError("Wordlist entries must be single-line paths up to 120 characters.")
+        arguments = [
+            "dir",
+            "-u",
+            runtime.url(url),
+            "-w",
+            "{job}/wordlist.txt",
+            "-q",
+            "--no-color",
+            "-o",
+            "{job}/gobuster.txt",
+        ]
+        return runtime.launch(
+            "gobuster",
+            runtime.url(url),
+            arguments,
+            timeout_seconds,
+            result="gobuster.txt",
+            input_files={"wordlist.txt": "\n".join(words) + "\n"},
+        )
+
+    @server.tool()
+    async def nikto_scan(
+        url: str,
+        timeout_seconds: Seconds = 180,
+    ) -> dict[str, Any]:
+        """Run a Nikto web server configuration & vulnerability check against the authorized URL."""
+        arguments = [
+            "-h",
+            runtime.url(url),
+            "-maxtime",
+            f"{timeout_seconds}s",
+            "-Format",
+            "json",
+            "-o",
+            "{job}/nikto.json",
+        ]
+        return runtime.launch("nikto", runtime.url(url), arguments, timeout_seconds, result="nikto.json")
+
+    @server.tool()
+    async def ast_sink_search(
+        path: str = ".",
+        category: Literal["all", "rce", "deserialization", "sqli", "ssrf", "path_traversal", "xss"] = "all",
+        limit: Annotated[int, Field(ge=1, le=250)] = 100,
+    ) -> dict[str, Any]:
+        """Scan local source files for AST-level dangerous sinks (Python AST + polyglot JS/TS/PHP/Go/Java/Ruby)."""
+        try:
+            return await asyncio.to_thread(scan_local_ast_sinks, path, category, limit)
+        except Exception as exc:
+            raise ToolError(str(exc)) from exc
+
     return server
 
 
 def main(arguments: list[str] | None = None) -> int:
+    default_workspace = Path(
+        os.environ.get("STRIX_MCP_WORKSPACE") or (Path.home() / ".strix" / "mcp-workspace")
+    )
+    default_targets = os.environ.get("STRIX_MCP_TARGETS", '["*"]')
     parser = argparse.ArgumentParser()
-    parser.add_argument("--workspace", type=Path, required=True)
-    parser.add_argument("--targets", required=True, help="JSON array of authorized web targets")
+    parser.add_argument("--workspace", type=Path, default=default_workspace)
+    parser.add_argument("--targets", default=default_targets, help="JSON array of authorized web targets")
     args = parser.parse_args(arguments)
     targets = json.loads(args.targets)
     if not isinstance(targets, list) or not targets or not all(isinstance(t, str) and t for t in targets):

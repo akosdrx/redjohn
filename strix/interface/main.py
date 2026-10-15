@@ -490,6 +490,11 @@ def main() -> None:
     # Everything below imports the scan engine; do not race the warm-up thread.
     wait_for_import_warmup()
 
+    if not os.environ.get("STRIX_MCP_CONFIG"):
+        from strix.tools.mcp.loader import ensure_default_mcp_servers_file
+
+        ensure_default_mcp_servers_file()
+
     if args.non_interactive or not args.needs_setup:
         _bootstrap_scan(args)
 

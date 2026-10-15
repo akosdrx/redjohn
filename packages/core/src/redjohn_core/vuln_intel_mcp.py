@@ -37,7 +37,7 @@ except ImportError:
     from mcp.server.fastmcp.exceptions import ToolError  # type: ignore[no-redef]
 from pydantic import Field
 
-from .tool_catalog import native_tools_root
+from .tool_catalog import native_tools_root, resolve_nuclei_templates_root
 
 CVE_RE = re.compile(r"^CVE-(\d{4})-\d{4,}$", re.IGNORECASE)
 RCE_CWES = {"CWE-77", "CWE-78", "CWE-94", "CWE-95", "CWE-96", "CWE-434", "CWE-502", "CWE-1336"}
@@ -545,7 +545,7 @@ class VulnIntelRuntime:
         nvd_api_key: str = "",
         cache_db_path: Path | None = None,
     ) -> None:
-        self.templates_root = templates_root or (native_tools_root() / "nuclei-templates")
+        self.templates_root = templates_root or resolve_nuclei_templates_root()
         self.nvd_api_key = nvd_api_key or os.environ.get("NVD_API_KEY", "")
         self.cache = VulnIntelCache(db_path=cache_db_path)
         self._kev_cache: dict[str, dict[str, Any]] | None = None

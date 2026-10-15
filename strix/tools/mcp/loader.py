@@ -16,8 +16,9 @@ from __future__ import annotations
 import json
 import logging
 import os
+import sys
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 
 from pydantic import ValidationError
 
@@ -33,6 +34,93 @@ _PATH_ENV_VAR = "STRIX_MCP_CONFIG"
 # comma-separated list of connection names.
 _ONLY_ENV_VAR = "STRIX_MCP_ONLY"
 _EXCLUDE_ENV_VAR = "STRIX_MCP_EXCLUDE"
+
+
+def default_redjohn_mcp_entries(python_executable: str | None = None) -> list[dict[str, Any]]:
+    """Return the built-in RedJohn MCP server definitions for Kali Linux."""
+    py = python_executable or sys.executable or "python3"
+    return [
+        {
+            "name": "redjohn_scanners",
+            "transport": "stdio",
+            "command": py,
+            "args": ["-m", "redjohn_core.native_tool_mcp"],
+            "notes": (
+                "RedJohn native Kali Linux security scanners & SAST "
+                "(nuclei_scan, nuclei_search_templates, httpx_probe, http_fingerprint_probe, "
+                "ffuf_scan, katana_crawl, arjun_scan, dalfox_scan, sqlmap_scan, subfinder_search, "
+                "wayback_urls, gau_urls, zap_scan, metasploit_search, metasploit_info, "
+                "metasploit_assess, nmap_scan, wpscan_scan, gobuster_scan, nikto_scan, "
+                "ast_sink_search, tool_inventory, scan_status, stop_scan)."
+            ),
+        },
+        {
+            "name": "redjohn_vuln_intel",
+            "transport": "stdio",
+            "command": py,
+            "args": ["-m", "redjohn_core.vuln_intel_mcp"],
+            "notes": (
+                "RedJohn vulnerability intelligence & CVE/OSV/EPSS/KEV/Shodan InternetDB correlation "
+                "(vuln_query_package, vuln_query_batch, vuln_query_cve, "
+                "vuln_enrich_priority, vuln_internetdb_host, nuclei_search_templates)."
+            ),
+        },
+    ]
+
+
+def ensure_default_mcp_servers_file(
+    path: Path | None = None,
+    *,
+    python_executable: str | None = None,
+) -> Path:
+    """Ensure ``~/.strix/mcp-servers.json`` exists and contains the built-in RedJohn MCP servers.
+
+    Preserves any user-defined MCP servers already in the file while adding or
+    refreshing the Python interpreter path for ``redjohn_scanners`` and
+    ``redjohn_vuln_intel`` if missing or pointing to a dead virtualenv.
+    """
+    target = _resolve_path(path)
+    defaults = default_redjohn_mcp_entries(python_executable)
+    default_by_name = {entry["name"]: entry for entry in defaults}
+
+    existing_list: list[Any] = []
+    if target.exists():
+        try:
+            loaded = json.loads(target.read_text(encoding="utf-8"))
+            if isinstance(loaded, list):
+                existing_list = loaded
+        except (OSError, json.JSONDecodeError):
+            logger.warning("Could not parse existing %s; rebuilding with defaults", target)
+
+    updated = False
+    seen_names: set[str] = set()
+    merged: list[Any] = []
+    for item in existing_list:
+        if isinstance(item, dict) and isinstance(item.get("name"), str):
+            name = item["name"]
+            seen_names.add(name)
+            if name in default_by_name:
+                cmd = item.get("command")
+                if not isinstance(cmd, str) or not Path(cmd).exists():
+                    item = {**item, "command": default_by_name[name]["command"]}
+                    updated = True
+                if item.get("notes") != default_by_name[name]["notes"]:
+                    item = {**item, "notes": default_by_name[name]["notes"]}
+                    updated = True
+        merged.append(item)
+
+    for entry in defaults:
+        if entry["name"] not in seen_names:
+            merged.append(entry)
+            updated = True
+
+    if not target.exists() or updated:
+        try:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(json.dumps(merged, indent=2) + "\n", encoding="utf-8")
+        except OSError:
+            logger.debug("Could not write default MCP config to %s", target, exc_info=True)
+    return target
 
 
 def _resolve_path(path: Path | None) -> Path:

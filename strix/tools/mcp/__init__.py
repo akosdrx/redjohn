@@ -20,7 +20,7 @@ from strix.tools.mcp.config import (
     McpConnectionConfig,
 )
 from strix.tools.mcp.failures import FailureInfo, HttpStatusRecorder, classify
-from strix.tools.mcp.loader import load_user_mcp_configs
+from strix.tools.mcp.loader import ensure_default_mcp_servers_file, load_user_mcp_configs
 from strix.tools.mcp.naming import namespaced_tool_name
 from strix.tools.mcp.registry import (
     CALL_MCP_TOOL,
@@ -66,6 +66,7 @@ __all__ = [
     "classify",
     "connect_mcp_servers",
     "describe_mcp",
+    "ensure_default_mcp_servers_file",
     "get_mcp_tool_schema",
     "list_mcps",
     "load_user_mcp_configs",

@@ -85,6 +85,23 @@ class GoTuiRuntime:
             on_verify=self.ensure_model_verified,
             on_quit=self.quit,
         )
+        with contextlib.suppress(Exception):
+            from strix.tools.mcp import ensure_default_mcp_servers_file, load_user_mcp_configs
+
+            if not os.environ.get("STRIX_MCP_CONFIG"):
+                ensure_default_mcp_servers_file()
+            initial_mcp_roster = [
+                {
+                    "name": cfg.name,
+                    "provider": None,
+                    "tool_count": 24 if cfg.name == "redjohn_scanners" else (6 if cfg.name == "redjohn_vuln_intel" else 0),
+                    "dead": False,
+                    "state": "configured",
+                }
+                for cfg in load_user_mcp_configs()
+            ]
+            if initial_mcp_roster:
+                self.controller.set_mcp_connections(initial_mcp_roster)
         self.server = TuiBackendServer(self.controller)
 
     def init_run_state(self) -> None:

@@ -316,6 +316,75 @@ def ast_sink_search(
     )
 
 
+def scan_local_ast_sinks(
+    target_path: str | Path = ".",
+    category: str = "all",
+    limit: int = 100,
+) -> dict[str, Any]:
+    """Scan a local file or directory for AST-level dangerous sinks without requiring Run/Agent state."""
+    target = Path(target_path).expanduser().resolve()
+    if not target.exists():
+        raise RJError("validation_error", f"Source path does not exist: {target}", status=422)
+    root = target if target.is_dir() else target.parent
+    cap = min(max(limit, 1), 250)
+    cat_norm = category.strip().casefold() or "all"
+
+    candidate_files: list[Path] = []
+    if target.is_file():
+        candidate_files.append(target)
+    elif target.is_dir():
+        for directory, directories, filenames in os.walk(target, followlinks=False):
+            directories[:] = sorted(
+                d
+                for d in directories
+                if d not in EXCLUDED_DIRECTORIES and not (Path(directory) / d).is_symlink()
+            )
+            for name in sorted(filenames):
+                p = Path(directory) / name
+                if p.is_symlink():
+                    continue
+                if p.suffix.lower() in (".py", ".js", ".jsx", ".ts", ".tsx", ".php", ".go", ".java", ".rb"):
+                    candidate_files.append(p)
+                    if len(candidate_files) >= 500:
+                        break
+            if len(candidate_files) >= 500:
+                break
+
+    all_hits: list[dict[str, Any]] = []
+    for file_path in candidate_files:
+        try:
+            raw_bytes = file_path.read_bytes()[:262144]
+        except OSError:
+            continue
+        if b"\x00" in raw_bytes:
+            continue
+        text = raw_bytes.decode("utf-8", errors="replace")
+        if os.environ.get("REDJOHN_REDACT_SOURCE_SECRETS", "1") != "0":
+            text, _ = redact_sensitive_content(text)
+        rel = str(file_path.relative_to(root))
+        if file_path.suffix.lower() == ".py":
+            all_hits.extend(_scan_python_ast_sinks(rel, text, cat_norm))
+        else:
+            all_hits.extend(_scan_polyglot_sinks(rel, text, cat_norm))
+        if len(all_hits) >= cap:
+            break
+
+    return {
+        "directory": str(root),
+        "category": cat_norm,
+        "files_scanned": len(candidate_files),
+        "total_sinks": len(all_hits[:cap]),
+        "truncated": len(all_hits) > cap,
+        "external_sast_available": {
+            "ast_grep": shutil.which("sg") is not None or shutil.which("ast-grep") is not None,
+            "semgrep_cli": shutil.which("semgrep") is not None,
+            "semgrep_mode": "cli_json_only (avoids semgrep 1.159.0 --x-mcp regression)",
+        },
+        "sinks": all_hits[:cap],
+    }
+
+
+
 def github_repository(run: Run, agent: Agent) -> tuple[str, str]:
     target = getattr(run, "authorized_target", "") or ""
     parsed = urlsplit(target)

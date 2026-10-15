@@ -36,6 +36,10 @@ TOOLS = (
     Tool("waybackurls", "Waybackurls", ("waybackurls",), "https://github.com/tomnomnom/waybackurls"),
     Tool("gau", "Gau", ("gau",), "https://github.com/lc/gau"),
     Tool("metasploit", "Metasploit", ("msfconsole",), "https://docs.metasploit.com/"),
+    Tool("nmap", "Nmap", ("nmap",), "https://nmap.org/"),
+    Tool("wpscan", "WPScan", ("wpscan",), "https://wpscan.com/"),
+    Tool("gobuster", "Gobuster", ("gobuster",), "https://github.com/OJ/gobuster"),
+    Tool("nikto", "Nikto", ("nikto",), "https://cirt.net/Nikto2"),
 )
 
 
@@ -50,6 +54,25 @@ def native_tools_root(settings: Any = None) -> Path:
     if getattr(sys, "frozen", False):
         return Path(sys.executable).parent.parent / "tools"
     return Path(__file__).resolve().parents[4] / "resources" / "tools"
+
+
+def resolve_nuclei_templates_root(settings: Any = None) -> Path:
+    """Resolve Nuclei templates directory across Kali Linux, user home, and bundled roots."""
+    env_override = os.environ.get("NUCLEI_TEMPLATES_DIR")
+    if env_override and Path(env_override).is_dir():
+        return Path(env_override).resolve()
+    home = Path.home()
+    candidates = [
+        native_tools_root(settings) / "nuclei-templates",
+        home / "nuclei-templates",
+        home / ".local" / "nuclei-templates",
+        Path("/usr/share/nuclei-templates"),
+        Path("/root/nuclei-templates"),
+    ]
+    for candidate in candidates:
+        if candidate.is_dir():
+            return candidate.resolve()
+    return candidates[1]
 
 
 def _candidate_tool_roots(settings: Any = None) -> list[Path]:
