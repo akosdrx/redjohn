@@ -128,8 +128,25 @@ def _ensure_kali_tool_shims(home: Path) -> Path | None:
     return shim_dir if shim_dir.is_dir() else None
 
 
-def _apply_kali_environment_defaults(env: dict[str, str]) -> None:
-    """Populate standard Kali Linux wordlist and resource paths when present on host."""
+def _find_host_chromium() -> str | None:
+    search_path = os.pathsep.join(
+        [
+            "/usr/local/bin",
+            "/usr/bin",
+            "/bin",
+            "/opt/homebrew/bin",
+            os.environ.get("PATH", ""),
+        ]
+    )
+    for name in ("chromium", "chromium-browser", "google-chrome", "google-chrome-stable"):
+        found = shutil.which(name, path=search_path)
+        if found:
+            return str(Path(found).resolve())
+    return None
+
+
+def _apply_kali_environment_defaults(env: dict[str, str], workspace: str | None = None) -> None:
+    """Populate standard Kali Linux wordlist, resource, and agent-browser paths on host."""
     if Path("/usr/share/seclists").is_dir():
         env.setdefault("SECLISTS_DIR", "/usr/share/seclists")
     if Path("/usr/share/wordlists").is_dir():
@@ -143,6 +160,24 @@ def _apply_kali_environment_defaults(env: dict[str, str]) -> None:
     if Path("/usr/share/exploitdb").is_dir():
         env.setdefault("EXPLOITDB_DIR", "/usr/share/exploitdb")
 
+    chromium_bin = _find_host_chromium()
+    if chromium_bin:
+        env.setdefault("AGENT_BROWSER_EXECUTABLE_PATH", chromium_bin)
+        env.setdefault("CHROME_PATH", chromium_bin)
+        env.setdefault("PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH", chromium_bin)
+        env.setdefault("PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD", "1")
+    env.setdefault(
+        "AGENT_BROWSER_USER_AGENT",
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+    )
+    env.setdefault(
+        "AGENT_BROWSER_ARGS",
+        "--no-sandbox,--disable-dev-shm-usage,--disable-blink-features=AutomationControlled,--no-first-run,--no-default-browser-check,--lang=en-US",
+    )
+    screenshot_base = workspace or "/workspace"
+    env.setdefault("AGENT_BROWSER_SCREENSHOT_DIR", f"{screenshot_base}/.agent-browser-screenshots")
+    env.setdefault("AGENT_BROWSER_IDLE_TIMEOUT_MS", "180000")
+
 
 def _build_enriched_path(existing_path: str) -> str:
     home = Path.home()
@@ -151,6 +186,7 @@ def _build_enriched_path(existing_path: str) -> str:
     extra_dirs = [
         *([shim_dir] if shim_dir is not None else []),
         venv_bin,
+        home / ".npm-global" / "bin",
         Path("/opt/homebrew/bin"),
         Path("/opt/homebrew/sbin"),
         Path("/usr/local/sbin"),
@@ -250,7 +286,7 @@ class StrixLocalSandboxSession(UnixLocalSandboxSession):
         env["HOME"] = real_home
         env["WORKSPACE"] = workspace
         env["PATH"] = _build_enriched_path(env.get("PATH", os.environ.get("PATH", "")))
-        _apply_kali_environment_defaults(env)
+        _apply_kali_environment_defaults(env, workspace=workspace)
 
         proxy_url = env.get("http_proxy") or env.get("https_proxy") or ""
         if proxy_url.startswith("http://127.0.0.1:"):
@@ -325,7 +361,7 @@ class StrixLocalSandboxClient(UnixLocalSandboxClient):
         env_dict: dict[str, str] = {}
         if manifest is not None:
             env_dict.update(await manifest.environment.resolve())
-        _apply_kali_environment_defaults(env_dict)
+        _apply_kali_environment_defaults(env_dict, workspace=str(workspace_dir))
 
         caido_port: int | None = None
         caido_process: asyncio.subprocess.Process | None = None

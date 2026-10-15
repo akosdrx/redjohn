@@ -23,7 +23,7 @@ class Tool:
 TOOLS = (
     Tool("nuclei", "Nuclei", ("nuclei",), "https://github.com/projectdiscovery/nuclei"),
     Tool("zap", "OWASP ZAP", ("zaproxy", "zap.sh"), "https://www.zaproxy.org/"),
-    Tool("playwright", "Playwright", (), "https://playwright.dev/"),
+    Tool("playwright", "Browser (agent-browser / Chromium)", ("agent-browser", "chromium", "chromium-browser"), "https://playwright.dev/"),
     Tool(
         "httpx", "HTTPX", ("httpx-toolkit", "pd-httpx", "httpx"), "https://github.com/projectdiscovery/httpx"
     ),

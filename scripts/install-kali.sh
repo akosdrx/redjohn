@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# RedJohn / Strix — Native Kali Linux Installer & Desktop Builder
+# RedJohn / Strix — Native Kali Linux Installer & Desktop Builder (x64 & ARM64)
 # ==============================================================================
 # Usage:
-#   ./scripts/install-kali.sh              # Install CLI + Go TUI + Web Viewer + Kali shims
+#   ./scripts/install-kali.sh              # Install CLI + Go TUI + Web Viewer + agent-browser
 #   ./scripts/install-kali.sh --desktop    # Also build & install the Kali .deb Desktop app
-#   ./scripts/install-kali.sh --no-apt     # Skip APT package installation
+#   ./scripts/install-kali.sh --no-apt     # Skip full APT scan-tool check (still ensures chromium/npm if missing)
 # ==============================================================================
 set -euo pipefail
 
@@ -26,7 +26,7 @@ for arg in "$@"; do
     -h|--help)
       echo "Usage: ./scripts/install-kali.sh [--desktop] [--no-apt]"
       echo "  --desktop   Build and install the native Kali Linux .deb Electron Desktop app"
-      echo "  --no-apt    Skip APT system package checks/installations"
+      echo "  --no-apt    Skip full APT tool suite check"
       exit 0
       ;;
   esac
@@ -37,57 +37,73 @@ if [ "$(id -u)" -ne 0 ] && command -v sudo >/dev/null 2>&1; then
   SUDO="sudo"
 fi
 
-echo "==> [1/6] Checking Kali Linux / Debian environment..."
+echo "==> [1/6] Checking Kali Linux / Debian environment ($(uname -m))..."
 if [ -f /etc/os-release ]; then
   # shellcheck disable=SC1091
   . /etc/os-release
   echo "    Detected OS: ${PRETTY_NAME:-Linux}"
 fi
 
-if [ "$SKIP_APT" -eq 0 ] && command -v apt-get >/dev/null 2>&1; then
-  echo "==> [2/6] Installing Kali Linux system & assessment dependencies via APT..."
-  $SUDO apt-get update -qq || true
-  CORE_PKGS=(
-    python3
-    python3-venv
-    python3-pip
-    python3-dev
-    libseccomp2
-    libseccomp-dev
-    build-essential
-    ca-certificates
-    curl
-    git
-    jq
-    ripgrep
-  )
-  $SUDO apt-get install -y "${CORE_PKGS[@]}"
+if command -v apt-get >/dev/null 2>&1; then
+  if [ "$SKIP_APT" -eq 0 ]; then
+    echo "==> [2/6] Installing Kali Linux system, Chromium & assessment dependencies via APT..."
+    $SUDO apt-get update -qq || true
+    CORE_PKGS=(
+      python3
+      python3-venv
+      python3-pip
+      python3-dev
+      libseccomp2
+      libseccomp-dev
+      build-essential
+      ca-certificates
+      curl
+      git
+      jq
+      ripgrep
+      chromium
+      fonts-liberation
+      nodejs
+      npm
+    )
+    $SUDO apt-get install -y "${CORE_PKGS[@]}"
 
-  KALI_TOOLS=(
-    nmap
-    sqlmap
-    ffuf
-    nuclei
-    httpx-toolkit
-    subfinder
-    gobuster
-    nikto
-    wpscan
-    seclists
-    wordlists
-  )
-  for pkg in "${KALI_TOOLS[@]}"; do
-    if apt-cache show "$pkg" >/dev/null 2>&1; then
-      $SUDO apt-get install -y "$pkg" || true
+    KALI_TOOLS=(
+      nmap
+      sqlmap
+      ffuf
+      nuclei
+      httpx-toolkit
+      subfinder
+      gobuster
+      nikto
+      wpscan
+      seclists
+      wordlists
+    )
+    for pkg in "${KALI_TOOLS[@]}"; do
+      if apt-cache show "$pkg" >/dev/null 2>&1; then
+        $SUDO apt-get install -y "$pkg" || true
+      fi
+    done
+
+    if [ -f /usr/share/wordlists/rockyou.txt.gz ] && [ ! -f /usr/share/wordlists/rockyou.txt ]; then
+      echo "    Decompressing /usr/share/wordlists/rockyou.txt.gz..."
+      $SUDO gzip -dk /usr/share/wordlists/rockyou.txt.gz || true
     fi
-  done
-
-  if [ -f /usr/share/wordlists/rockyou.txt.gz ] && [ ! -f /usr/share/wordlists/rockyou.txt ]; then
-    echo "    Decompressing /usr/share/wordlists/rockyou.txt.gz..."
-    $SUDO gzip -dk /usr/share/wordlists/rockyou.txt.gz || true
+  else
+    # Even with --no-apt, ensure native ARM64/x64 Chromium and npm are present for agent-browser
+    MISSING_BROWSER_PKGS=()
+    command -v chromium >/dev/null 2>&1 || MISSING_BROWSER_PKGS+=(chromium fonts-liberation)
+    command -v npm >/dev/null 2>&1 || MISSING_BROWSER_PKGS+=(nodejs npm)
+    if [ "${#MISSING_BROWSER_PKGS[@]}" -gt 0 ]; then
+      echo "==> [2/6] Installing native Kali Chromium & Node/NPM (${MISSING_BROWSER_PKGS[*]})..."
+      $SUDO apt-get update -qq || true
+      $SUDO apt-get install -y "${MISSING_BROWSER_PKGS[@]}"
+    else
+      echo "==> [2/6] Native Kali Chromium & NPM already installed."
+    fi
   fi
-else
-  echo "==> [2/6] Skipping APT package installation."
 fi
 
 echo "==> [3/6] Setting up Python virtual environment (.venv)..."
@@ -101,6 +117,7 @@ VENV_PIP="$ROOT_DIR/.venv/bin/pip"
 
 "$VENV_PIP" install --upgrade pip wheel setuptools >/dev/null
 echo "    Installing Strix engine (Docker-free local runtime + 170 skills) and RedJohn Core..."
+export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 "$VENV_PIP" install -e "$ROOT_DIR" -e "$ROOT_DIR/packages/core[anthropic]"
 
 echo "==> [4/6] Configuring native Go Bubble Tea TUI binary for Linux..."
@@ -129,9 +146,24 @@ else
   echo "    WARNING: Prebuilt TUI binary not found for linux/${GO_ARCH}. Install 'golang-go' and re-run." >&2
 fi
 
-echo "==> [5/6] Configuring Kali tool shims & CLI entrypoints (strix, redjohn, rj)..."
+echo "==> [5/6] Installing agent-browser & configuring Kali native Chromium (${ARCH_RAW})..."
+NPM_GLOBAL="$HOME/.npm-global"
 SHIM_DIR="$HOME/.strix/kali-shims"
-mkdir -p "$SHIM_DIR" "$HOME/.local/bin"
+mkdir -p "$NPM_GLOBAL" "$SHIM_DIR" "$HOME/.local/bin"
+
+if command -v npm >/dev/null 2>&1; then
+  NPM_CONFIG_PREFIX="$NPM_GLOBAL" npm install -g agent-browser@0.26.0 @ast-grep/cli@latest js-beautify@latest retire@latest
+  if [ -x "$NPM_GLOBAL/bin/agent-browser" ]; then
+    ln -sf "$NPM_GLOBAL/bin/agent-browser" "$HOME/.local/bin/agent-browser"
+    if [ -n "$SUDO" ] || [ -w /usr/local/bin ]; then
+      $SUDO ln -sf "$NPM_GLOBAL/bin/agent-browser" "/usr/local/bin/agent-browser" 2>/dev/null || true
+    fi
+    echo "    Installed agent-browser -> $NPM_GLOBAL/bin/agent-browser"
+  fi
+fi
+
+CHROMIUM_BIN="$(command -v chromium || command -v chromium-browser || command -v google-chrome || echo /usr/bin/chromium)"
+echo "    Using native system Chromium (${ARCH_RAW}): $CHROMIUM_BIN"
 
 if command -v httpx-toolkit >/dev/null 2>&1; then
   ln -sf "$(command -v httpx-toolkit)" "$SHIM_DIR/httpx"
@@ -145,7 +177,12 @@ for cmd_name in strix redjohn rj; do
   WRAPPER="$HOME/.local/bin/$cmd_name"
   cat > "$WRAPPER" <<EOF
 #!/usr/bin/env bash
-export PATH="$SHIM_DIR:\$PATH"
+export PATH="$SHIM_DIR:$NPM_GLOBAL/bin:$HOME/.local/bin:\$PATH"
+export AGENT_BROWSER_EXECUTABLE_PATH="${CHROMIUM_BIN}"
+export CHROME_PATH="${CHROMIUM_BIN}"
+export PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH="${CHROMIUM_BIN}"
+export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+export AGENT_BROWSER_ARGS="--no-sandbox,--disable-dev-shm-usage,--disable-blink-features=AutomationControlled,--no-first-run,--no-default-browser-check,--lang=en-US"
 exec "$ROOT_DIR/.venv/bin/$cmd_name" "\$@"
 EOF
   chmod +x "$WRAPPER"
@@ -154,8 +191,9 @@ EOF
   fi
 done
 
-echo "    Installing Playwright Chromium browser for headless DOM/XSS verification..."
-"$ROOT_DIR/.venv/bin/playwright" install chromium || true
+if [ -x "$NPM_GLOBAL/bin/agent-browser" ]; then
+  AGENT_BROWSER_EXECUTABLE_PATH="$CHROMIUM_BIN" "$NPM_GLOBAL/bin/agent-browser" doctor --offline --quick || true
+fi
 
 if [ "$BUILD_DESKTOP" -eq 1 ]; then
   echo "==> [6/6] Building native Kali Linux Desktop (.deb & AppImage)..."
@@ -174,13 +212,14 @@ if [ "$BUILD_DESKTOP" -eq 1 ]; then
     echo "    WARNING: pnpm not found. Install Node.js + pnpm to build the Electron .deb package." >&2
   fi
 else
-  echo "==> [6/6] CLI + TUI + Web Viewer ready! (Pass --desktop to also build the Electron .deb app)"
+  echo "==> [6/6] CLI + TUI + Web Viewer + agent-browser ready! (Pass --desktop to also build the Electron .deb app)"
 fi
 
 echo ""
 echo "=============================================================================="
-echo " RedJohn / Strix is ready on Kali Linux!"
+echo " RedJohn / Strix is ready on Kali Linux (${ARCH_RAW})!"
 echo "   - Launch interactive TUI : rj   (or: redjohn / strix)"
 echo "   - Launch Web Viewer      : strix view"
+echo "   - Verify agent-browser   : agent-browser doctor --offline --quick"
 echo "   - Headless scan          : strix -n -t <target>"
 echo "=============================================================================="
