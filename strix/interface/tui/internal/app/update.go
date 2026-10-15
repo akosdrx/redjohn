@@ -13,6 +13,40 @@ func (m Model) updateMain(key tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "f1":
 		m.openModal(modalHelp)
 		return m, nil
+	case "f2", "alt+0":
+		if !m.snapshot.SetupMode && len(m.snapshot.Agents) > 0 {
+			m.allAgentsView = !m.allAgentsView
+			m.refreshViewport()
+			return m, nil
+		}
+	case "alt+1", "alt+2", "alt+3", "alt+4", "alt+5", "alt+6", "alt+7", "alt+8", "alt+9":
+		if !m.snapshot.SetupMode && len(m.snapshot.Agents) > 0 {
+			idx := int(key.String()[len(key.String())-1] - '1')
+			if idx >= 0 && idx < len(m.snapshot.Agents) {
+				m.allAgentsView = false
+				m.selectedAgent = idx
+				m.ensureAgentVisible()
+				m.refreshViewport()
+			}
+			return m, nil
+		}
+	case "0":
+		if !m.snapshot.SetupMode && m.focus != focusInput && len(m.snapshot.Agents) > 0 {
+			m.allAgentsView = !m.allAgentsView
+			m.refreshViewport()
+			return m, nil
+		}
+	case "1", "2", "3", "4", "5", "6", "7", "8", "9":
+		if !m.snapshot.SetupMode && m.focus != focusInput && len(m.snapshot.Agents) > 0 {
+			idx := int(key.String()[0] - '1')
+			if idx >= 0 && idx < len(m.snapshot.Agents) {
+				m.allAgentsView = false
+				m.selectedAgent = idx
+				m.ensureAgentVisible()
+				m.refreshViewport()
+			}
+			return m, nil
+		}
 	case "ctrl+c", "ctrl+q":
 		// Nothing to lose on the start screen; quit without confirmation.
 		if m.snapshot.SetupMode {
@@ -45,6 +79,7 @@ func (m Model) updateMain(key tea.KeyMsg) (tea.Model, tea.Cmd) {
 			entries := agentTreeEntries(m.snapshot.Agents, m.collapsedAgents)
 			row := selectedAgentRow(entries, m.selectedAgent)
 			row = max(0, min(len(entries)-1, row+delta))
+			m.allAgentsView = false
 			m.selectedAgent = entries[row].index
 			m.ensureAgentVisible()
 			m.refreshViewport()

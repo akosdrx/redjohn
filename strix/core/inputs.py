@@ -333,6 +333,30 @@ def _prompt_cache_extra_args(model_name: str) -> dict[str, Any] | None:
     }
 
 
+def _compact_parent_history(parent_history: list[Any], max_chars: int = 3200) -> str:
+    """Render parent history compactly, capping size so child agents don't inherit huge transcripts."""
+    scrubbed = scrub_images_from_items(parent_history)
+    rendered = json.dumps(scrubbed, ensure_ascii=False, default=str)
+    if len(rendered) <= max_chars:
+        return rendered
+    digest_lines: list[str] = []
+    for item in scrubbed[-8:]:
+        if isinstance(item, dict):
+            role = item.get("role") or item.get("type") or "item"
+            content = str(item.get("content") or item.get("output") or "")
+            if len(content) > 360:
+                content = content[:240] + " ... " + content[-90:]
+            if content.strip():
+                digest_lines.append(f"[{role}] {content.strip()}")
+        else:
+            text = str(item)
+            if len(text) > 360:
+                text = text[:240] + " ... " + text[-90:]
+            digest_lines.append(text)
+    summary = "\n".join(digest_lines)
+    return summary[:max_chars] if summary else rendered[:max_chars]
+
+
 def child_initial_input(
     *,
     name: str,
@@ -350,11 +374,7 @@ def child_initial_input(
     """
     parts: list[str] = []
     if parent_history:
-        rendered = json.dumps(
-            scrub_images_from_items(parent_history),
-            ensure_ascii=False,
-            default=str,
-        )
+        rendered = _compact_parent_history(parent_history)
         parts.append(
             "== Inherited context from parent (background only) ==\n"
             f"{rendered}\n"

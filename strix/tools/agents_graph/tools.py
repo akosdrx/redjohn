@@ -195,7 +195,7 @@ async def send_message_to_agent(
     reports (``list_reports``) or spawn a new agent instead of waiting.
 
     Args:
-        target_agent_id: Recipient's 8-char id.
+        target_agent_id: Recipient's 8-char id OR agent name/role (e.g. ``"Auth Hunter"``).
         message: The full message body. Be specific — include payloads,
             URLs, or what you want them to do, not just headlines.
         message_type: ``query`` (you want a reply), ``instruction``
@@ -212,7 +212,8 @@ async def send_message_to_agent(
             ensure_ascii=False,
             default=str,
         )
-    if target_agent_id == me:
+    resolved_target = coordinator.resolve_agent_id(target_agent_id) or target_agent_id
+    if resolved_target == me:
         return json.dumps(
             {
                 "success": False,
@@ -227,7 +228,7 @@ async def send_message_to_agent(
 
     msg_id = f"msg_{uuid.uuid4().hex[:8]}"
     delivered = await coordinator.send(
-        target_agent_id,
+        resolved_target,
         {
             "id": msg_id,
             "from": me,
@@ -237,7 +238,7 @@ async def send_message_to_agent(
         },
     )
     if not delivered:
-        _, status = await coordinator.reachability(target_agent_id)
+        _, status = await coordinator.reachability(resolved_target)
         if status is None:
             error = f"Target agent '{target_agent_id}' not found"
         else:
@@ -251,7 +252,7 @@ async def send_message_to_agent(
             {
                 "success": False,
                 "error": error,
-                "target_agent_id": target_agent_id,
+                "target_agent_id": resolved_target,
                 "target_status": status,
                 "delivery_status": "not_delivered",
             },
@@ -262,8 +263,106 @@ async def send_message_to_agent(
         {
             "success": True,
             "message_id": msg_id,
-            "target_agent_id": target_agent_id,
+            "target_agent_id": resolved_target,
             "delivery_status": "delivered",
+        },
+        ensure_ascii=False,
+        default=str,
+    )
+
+
+@function_tool(timeout=30)
+async def swarm_broadcast(
+    ctx: RunContextWrapper,
+    category: Literal[
+        "recon",
+        "endpoint",
+        "credential",
+        "token",
+        "cve",
+        "vuln_lead",
+        "blocker",
+        "confirmed_vuln",
+    ],
+    summary: str,
+    details: str = "",
+    target: str = "",
+) -> str:
+    """Broadcast a real-time P2P intelligence signal to all active Swarm peers.
+
+    Every running specialist agent automatically receives unseen Swarm Bus
+    signals at the start of its next LLM turn (`[SWARM BUS UPDATE]`), with zero
+    polling required. Use this immediately whenever you discover:
+    - Fingerprinted tech stack, CMS/shop versions, or hidden admin/API routes (``recon`` / ``endpoint``)
+    - Credentials, session cookies, JWT secrets, or API keys (``credential`` / ``token``)
+    - High-priority CVEs or exploit primitives another specialist can chain (``cve`` / ``vuln_lead``)
+    - Confirmed vulnerabilities or WAF/rate-limit rules (``confirmed_vuln`` / ``blocker``)
+
+    Args:
+        category: Signal classification — one of ``recon``, ``endpoint``,
+            ``credential``, ``token``, ``cve``, ``vuln_lead``, ``blocker``,
+            or ``confirmed_vuln``.
+        summary: Concise 1-line headline of the discovery (e.g.
+            ``"Admin JWT secret leaked in /api/debug"``).
+        details: Concrete actionable payload, URL, cookie, parameter name, or
+            reproduction snippet for peer agents.
+        target: Optional target URL, host, or repo path this signal applies to.
+    """
+    inner = _ctx(ctx)
+    coordinator = coordinator_from_context(inner)
+    me = inner.get("agent_id")
+    if coordinator is None or me is None:
+        return json.dumps(
+            {"success": False, "error": "Agent coordinator or agent_id missing in context"},
+            ensure_ascii=False,
+            default=str,
+        )
+    signal = await coordinator.post_swarm_signal(
+        sender_id=str(me),
+        category=category,
+        summary=summary,
+        details=details,
+        target=target,
+    )
+    return json.dumps(
+        {
+            "success": True,
+            "signal": signal,
+            "note": "Broadcast delivered to Swarm Bus; all active peer agents will receive it.",
+        },
+        ensure_ascii=False,
+        default=str,
+    )
+
+
+@function_tool(timeout=30)
+async def read_swarm_bus(
+    ctx: RunContextWrapper,
+    category: str = "",
+    limit: int = 25,
+) -> str:
+    """Read recent intelligence signals posted to the shared Swarm Bus by peer agents.
+
+    Args:
+        category: Optional category filter (``recon``, ``endpoint``,
+            ``credential``, ``token``, ``cve``, ``vuln_lead``, ``blocker``,
+            ``confirmed_vuln``). Leave empty to list all categories.
+        limit: Maximum number of recent signals to return (default 25).
+    """
+    inner = _ctx(ctx)
+    coordinator = coordinator_from_context(inner)
+    if coordinator is None:
+        return json.dumps(
+            {"success": False, "error": "Agent coordinator missing in context"},
+            ensure_ascii=False,
+            default=str,
+        )
+    signals = coordinator.get_swarm_signals(category=category or None, limit=max(1, min(limit, 100)))
+    return json.dumps(
+        {
+            "success": True,
+            "count": len(signals),
+            "signals": signals,
         },
         ensure_ascii=False,
         default=str,
@@ -496,7 +595,7 @@ async def create_agent(
     ctx: RunContextWrapper,
     name: str,
     task: str,
-    inherit_context: bool = True,
+    inherit_context: bool = False,
     skills: list[str] | None = None,
 ) -> str:
     """Spawn a specialist child agent to run in parallel.
@@ -518,8 +617,8 @@ async def create_agent(
       task genuinely spans them.
     - One skill = most focused (e.g., XSS-only). Five skills = upper
       bound.
-    - Match the ``name`` to the focus (``XSS Specialist``,
-      ``SQLi Validator``, ``Auth Specialist``).
+    - Match the ``name`` to the focus (``Recon``, ``Auth Hunter``,
+      ``RCE Striker``, ``CVE Hunter``).
 
     **When to spawn vs do it yourself:**
 
@@ -538,9 +637,10 @@ async def create_agent(
             recon already mapped, which surfaces are already covered,
             which coverage entry it is picking up. A child that is not
             told what is already known repeats it.
-        inherit_context: Default ``True``. The child receives the
-            parent's input history as background; only set ``False``
-            when starting a clean-slate task.
+        inherit_context: Default ``False`` (clean-slate context; peers
+            share discoveries via ``swarm_broadcast`` and ``notes``).
+            Set ``True`` only when a compact digest of the parent's
+            recent history is needed.
         skills: List of skill names (e.g. ``["xss", "sql_injection"]``).
             Max 5; prefer 1-3.
     """
@@ -773,7 +873,7 @@ async def stop_agent(
     a child has gone off-track and won't self-correct.
 
     Args:
-        target_agent_id: The 8-char id from ``view_agent_graph`` /
+        target_agent_id: The 8-char id or agent name from ``view_agent_graph`` /
             ``create_agent``. Cannot stop yourself.
         cascade: If ``True`` (default), also stop every descendant of
             ``target_agent_id`` leaves-first. ``False`` stops only the
@@ -790,6 +890,7 @@ async def stop_agent(
             ensure_ascii=False,
             default=str,
         )
+    target_agent_id = coordinator.resolve_agent_id(target_agent_id) or target_agent_id
     if target_agent_id == me:
         return json.dumps(
             {

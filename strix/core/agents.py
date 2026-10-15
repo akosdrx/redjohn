@@ -67,6 +67,8 @@ class AgentCoordinator:
         self.idle_resume_counts: dict[str, int] = {}
         self.wait_kinds: dict[str, WaitKind] = {}
         self.runtimes: dict[str, AgentRuntime] = {}
+        self.swarm_bus: list[dict[str, Any]] = []
+        self.swarm_read_cursor: dict[str, int] = {}
         self._parent_notified: set[str] = set()
         self._lock = asyncio.Lock()
         self._snapshot_path: Path | None = None
@@ -592,6 +594,87 @@ class AgentCoordinator:
                 dict(self.errors),
             )
 
+    def resolve_agent_id(self, target_id_or_name: str) -> str | None:
+        """Resolve an agent by exact hex ID or case-insensitive role/name match."""
+        needle = (target_id_or_name or "").strip()
+        if not needle:
+            return None
+        if needle in self.statuses:
+            return needle
+        lowered = needle.lower()
+        for aid, name in self.names.items():
+            if name.strip().lower() == lowered:
+                return aid
+        matches = [
+            aid for aid, name in self.names.items() if lowered in name.strip().lower()
+        ]
+        if len(matches) == 1:
+            return matches[0]
+        return None
+
+    async def post_swarm_signal(
+        self,
+        *,
+        sender_id: str,
+        category: str,
+        summary: str,
+        details: str = "",
+        target: str = "",
+    ) -> dict[str, Any]:
+        """Broadcast a structured P2P signal to all swarm peers."""
+        from datetime import UTC, datetime
+
+        async with self._lock:
+            sender_name = self.names.get(sender_id, sender_id)
+            prev_cursor = self.swarm_read_cursor.get(sender_id, 0)
+            was_caught_up = prev_cursor == len(self.swarm_bus)
+            signal = {
+                "id": f"sig_{len(self.swarm_bus) + 1:03d}",
+                "from_id": sender_id,
+                "from_name": sender_name,
+                "category": (category or "recon").strip().lower(),
+                "target": (target or "").strip(),
+                "summary": (summary or "").strip(),
+                "details": (details or "").strip(),
+                "timestamp": datetime.now(UTC).isoformat(),
+            }
+            self.swarm_bus.append(signal)
+            if was_caught_up:
+                self.swarm_read_cursor[sender_id] = len(self.swarm_bus)
+        await self._maybe_snapshot()
+        return signal
+
+    def drain_unseen_swarm_signals(self, agent_id: str) -> list[dict[str, Any]]:
+        """Return unseen swarm signals from other agents and advance the read cursor."""
+        cursor = self.swarm_read_cursor.get(agent_id, 0)
+        total = len(self.swarm_bus)
+        if cursor >= total:
+            return []
+        unseen = [
+            dict(sig)
+            for sig in self.swarm_bus[cursor:total]
+            if sig.get("from_id") != agent_id
+        ]
+        self.swarm_read_cursor[agent_id] = total
+        return unseen
+
+    def get_swarm_signals(
+        self,
+        *,
+        category: str | None = None,
+        limit: int = 30,
+    ) -> list[dict[str, Any]]:
+        """Return recent signals from the shared Swarm Bus."""
+        cat = (category or "").strip().lower()
+        items = [
+            dict(sig)
+            for sig in self.swarm_bus
+            if not cat or sig.get("category") == cat
+        ]
+        if limit > 0:
+            items = items[-limit:]
+        return items
+
     def _message_to_session_item(self, message: dict[str, Any]) -> TResponseInputItem:
         sender = str(message.get("from", "unknown"))
         content = str(message.get("content", ""))
@@ -631,6 +714,7 @@ class AgentCoordinator:
                 "recovery_counts": dict(self.recovery_counts),
                 "idle_resume_counts": dict(self.idle_resume_counts),
                 "wait_kinds": dict(self.wait_kinds),
+                "swarm_bus": [dict(s) for s in self.swarm_bus],
                 "mailboxes": {
                     aid: [dict(m) for m in runtime.mailbox]
                     for aid, runtime in self.runtimes.items()
@@ -653,6 +737,9 @@ class AgentCoordinator:
             self.recovery_counts = dict(snap.get("recovery_counts", {}))
             self.idle_resume_counts = dict(snap.get("idle_resume_counts", {}))
             self.wait_kinds = dict(snap.get("wait_kinds", {}))
+            raw_bus = snap.get("swarm_bus", [])
+            if isinstance(raw_bus, list):
+                self.swarm_bus = [dict(s) for s in raw_bus if isinstance(s, dict)]
             mailboxes = snap.get("mailboxes", {})
             if isinstance(mailboxes, dict):
                 for aid, msgs in mailboxes.items():

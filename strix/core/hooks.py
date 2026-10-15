@@ -202,10 +202,75 @@ class ReportUsageHooks(RunHooks[dict[str, Any]]):
             self._pause_if_limited(context)
         context.context[LLM_TURN_KEY] = int(context.context.get(LLM_TURN_KEY, 0)) + 1
         try:
+            self._age_old_tool_outputs(input_items)
+            self._maybe_inject_swarm_signals(context, input_items)
             self._maybe_warn_turns(context, input_items)
             self._maybe_warn_budget(context, input_items)
         except Exception:
             logger.exception("budget/turn warning injection failed")
+
+    def _age_old_tool_outputs(
+        self,
+        input_items: list[TResponseInputItem],
+        *,
+        keep_recent: int = 5,
+        max_old_chars: int = 1800,
+    ) -> None:
+        """Condense older tool outputs beyond the sliding window to save input tokens."""
+        tool_indices = [
+            idx
+            for idx, item in enumerate(input_items)
+            if isinstance(item, dict)
+            and item.get("type") == "function_call_output"
+            and isinstance(item.get("output"), str)
+        ]
+        if len(tool_indices) <= keep_recent:
+            return
+        for idx in tool_indices[:-keep_recent]:
+            item = input_items[idx]
+            if not isinstance(item, dict):
+                continue
+            raw_out = item.get("output")
+            if not isinstance(raw_out, str) or len(raw_out) <= max_old_chars:
+                continue
+            head = raw_out[:850]
+            tail = raw_out[-500:]
+            omitted = len(raw_out) - len(head) - len(tail)
+            aged = dict(item)
+            aged["output"] = (
+                f"{head}\n... [aged tool output: {omitted} chars condensed for token efficiency] ...\n{tail}"
+            )
+            input_items[idx] = aged  # type: ignore[call-overload]
+
+    def _maybe_inject_swarm_signals(
+        self,
+        context: RunContextWrapper[dict[str, Any]],
+        input_items: list[TResponseInputItem],
+    ) -> None:
+        """Deliver unseen P2P Swarm Bus signals to this agent at the start of its turn."""
+        ctx = context.context if isinstance(context.context, dict) else {}
+        coordinator = coordinator_from_context(ctx)
+        agent_id = ctx.get("agent_id")
+        if coordinator is None or not isinstance(agent_id, str) or not agent_id:
+            return
+        unseen = coordinator.drain_unseen_swarm_signals(agent_id)
+        if not unseen:
+            return
+        lines = [
+            "[SWARM BUS UPDATE — Live signals from peer specialists (use immediately, do not repeat work)]:"
+        ]
+        for sig in unseen[-12:]:
+            target_part = f" @ {sig['target']}" if sig.get("target") else ""
+            lines.append(
+                f"- [{sig.get('category', 'info').upper()}]{target_part} "
+                f"from {sig.get('from_name', sig.get('from_id'))}: {sig.get('summary', '')}"
+            )
+            if sig.get("details"):
+                details = str(sig["details"])
+                if len(details) > 400:
+                    details = details[:400] + "..."
+                lines.append(f"  Details: {details}")
+        input_items.append({"role": "user", "content": "\n".join(lines)})
 
     def _pause_if_limited(self, context: RunContextWrapper[dict[str, Any]]) -> None:
         """Park the agent before a paid call when the scan is at its limit or paused.

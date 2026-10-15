@@ -382,7 +382,7 @@ func TestSetupStartScreenFitsNarrowTerminal(t *testing.T) {
 	// A narrow terminal falls back to the plain wordmark, but the launch screen
 	// never gives up its identity entirely.
 	topRow := ansi.Strip(strings.SplitN(wordmark(), "\n", 2)[0])
-	if !strings.Contains(view, topRow) && !strings.Contains(view, "STRIX") {
+	if !strings.Contains(view, topRow) && !strings.Contains(view, "REDJOHN") {
 		t.Fatalf("narrow start screen logo is missing: %s", view)
 	}
 	lines := strings.Split(view, "\n")
@@ -495,7 +495,7 @@ func TestModalKeepsBackgroundVisible(t *testing.T) {
 	if !strings.Contains(view, "UNIQUE_AGENT") {
 		t.Fatalf("modal overlay hid the background agent tree")
 	}
-	if !strings.Contains(view, "Strix Help") {
+	if !strings.Contains(view, "RedJohn Help") {
 		t.Fatalf("modal content missing")
 	}
 }

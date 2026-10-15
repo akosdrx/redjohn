@@ -78,7 +78,7 @@ func (m Model) vulnerabilityTitle(index int) string {
 	if title == "" {
 		title = "Unknown Vulnerability"
 	}
-	return title
+	return fmt.Sprintf("F-%03d %s", index+1, title)
 }
 
 // vulnerabilityScrollRows reports the list length and position in rows, which is
@@ -191,13 +191,13 @@ func (m *Model) keepVulnerabilitySelectionInWindow() {
 func (m Model) modalView() string {
 	switch m.modal {
 	case modalHelp:
-		title := lipgloss.NewStyle().Bold(true).Foreground(green).Width(34).Align(lipgloss.Center).Render("Strix Help")
-		body := lipgloss.NewStyle().Foreground(textColor).Render("F1        Help\nCtrl+O    Open viewer\nCtrl+Q/C  Quit\nESC       Stop Agent\nEnter     Send / expand node\nCtrl+J    Newline in message\nTab       Switch panels\n↑/↓       Navigate tree\nDrag      Select & copy text\nClick     Expand/collapse tool\nClick ▾/⤢ Collapse / zoom panel\nClick »/« Hide / show sidebar")
+		title := lipgloss.NewStyle().Bold(true).Foreground(red).Width(34).Align(lipgloss.Center).Render("RedJohn Help")
+		body := lipgloss.NewStyle().Foreground(textColor).Render("0 / F2    All agents stream\n1-9       Switch agent (1-9)\nF1        Help\nCtrl+O    Open viewer\nCtrl+Q/C  Quit RedJohn\nESC       Stop Agent\nEnter     Send / expand node\nCtrl+J    Newline in message\nTab       Switch panels\n↑/↓       Navigate tree\nDrag      Select & copy text\nClick     Expand/collapse tool")
 		content := title + "\n\n" + body
-		return lipgloss.NewStyle().Width(38).Border(lipgloss.RoundedBorder()).BorderForeground(green).Background(black).Padding(1, 2).Render(content)
+		return lipgloss.NewStyle().Width(38).Border(lipgloss.RoundedBorder()).BorderForeground(red).Background(black).Padding(1, 2).Render(content)
 	case modalQuit:
 		// #quit_dialog: width 24, border round #333333, title #d4d4d4.
-		return m.confirmView("Quit Strix?", 24, dark, textColor)
+		return m.confirmView("Quit RedJohn?", 24, dark, textColor)
 	case modalStop:
 		name := "agent"
 		if len(m.snapshot.Agents) > 0 {

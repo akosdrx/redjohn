@@ -367,7 +367,7 @@ func TestTargetsBoxSitsUnderViewer(t *testing.T) {
 		t.Fatalf("sidebar renders %d rows, want %d", len(rows), m.height)
 	}
 	top := m.viewerHeight()
-	for i, want := range []string{"Targets 2", "▸ https://example.com", "▸ ./app"} {
+	for i, want := range []string{"Active Targets 2", "1  https://example.com", "2  ./app"} {
 		if !strings.Contains(rows[top+1+i], want) {
 			t.Fatalf("row %d missing %q:\n%s", top+1+i, want, strings.Join(rows, "\n"))
 		}
@@ -419,10 +419,10 @@ func TestTargetsViewCountsTheTargetsItCannotShow(t *testing.T) {
 	m.snapshot.Targets = []string{"a", "b", "c", "d", "e"}
 	m.snapshot.TargetCount = 5
 	for rows, want := range map[int]string{
-		2: "Targets 5\n+5 more",
-		3: "Targets 5\n▸ a\n+4 more",
-		6: "Targets 5\n▸ a\n▸ b\n▸ c\n▸ d\n+1 more",
-		9: "Targets 5\n▸ a\n▸ b\n▸ c\n▸ d\n+1 more",
+		2: "Active Targets 5\n+5 more",
+		3: "Active Targets 5\n1  a\n+4 more",
+		6: "Active Targets 5\n1  a\n2  b\n3  c\n4  d\n+1 more",
+		9: "Active Targets 5\n1  a\n2  b\n3  c\n4  d\n+1 more",
 	} {
 		if got := ansi.Strip(m.targetsView(20, rows)); got != want {
 			t.Fatalf("%d rows:\n%s\nwant:\n%s", rows, got, want)

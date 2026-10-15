@@ -1060,410 +1060,45 @@ async def create_vulnerability_report(
     fix_verification: str | None = None,
     fix_pr_body: str | None = None,
 ) -> str:
-    """File a vulnerability report — one report per fully-verified finding.
+    """File a verified vulnerability report (one report per confirmed finding).
 
-    **When to file**: you have a concrete vulnerability with a working
-    proof-of-concept and you're 100% sure it's a real issue.
+    Use for dynamically or statically proven vulnerabilities with concrete evidence
+    and a working PoC. For known-CVE third-party dependency findings in manifests/lockfiles,
+    use ``create_dependency_report`` instead. Automatic deduplication rejects duplicates
+    (use ``update_vulnerability_report`` to revise an existing report).
 
-    **When NOT to file**:
-
-    - General security observations without a specific vulnerability.
-    - Suspicions you haven't confirmed with a PoC.
-    - Tracking multiple vulnerabilities at once — one report per vuln.
-    - Re-reporting something you (or another agent) already filed.
-    - Known-CVE dependency / supply-chain findings that can't be
-      dynamically PoC'd — a vulnerable dependency version pinned in a
-      lockfile/manifest that matches a published advisory. File those
-      with ``create_dependency_report`` instead, never with this tool.
-
-    **Reporting and severity gate**:
-
-    - A reachable endpoint, unusual response, weak configuration, or
-      reconnaissance artifact is not by itself a vulnerability. File a
-      report only when the PoC demonstrates an unauthorized security
-      consequence or a realistic, fully validated path to one.
-    - Score only the reasonable final impact supported by the PoC. Do
-      not score speculative pivots or consequences that require another
-      unverified vulnerability.
-    - Network reachability and missing authentication affect
-      exploitability; neither creates Confidentiality, Integrity, or
-      Availability impact by itself.
-    - Public metadata, internal-looking names or addresses, software
-      versions, intended client-side code, and source maps without
-      secrets or restricted source normally have ``C:N``.
-    - Configuration and transport observations require a realistic
-      attacker-controlled exploit and direct security impact. Client
-      errors, compatibility issues, fingerprinting, and attack-surface
-      discovery alone should not be filed as vulnerabilities.
-    - Before filing, verify that the impact narrative, PoC, and every
-      non-None CVSS impact metric describe the same demonstrated
-      consequence. When evidence is incomplete, lower the metric or
-      continue validation; never choose a higher value "to be safe."
-
-    Automatic LLM-based **deduplication** rejects reports that describe
-    the same root cause on the same asset as an existing report. If you
-    get a ``duplicate_of`` response, do NOT retry — move on to other
-    areas. When you have learned something a filed finding does not yet
-    carry, revise that finding with ``update_vulnerability_report``
-    instead of filing this report again.
-
-    **Counterevidence pass (required before filing)**: actively build the
-    strongest case that this finding is NOT exploitable, or less severe
-    than you think — then record the result in ``counterevidence``, set
-    ``confidence`` honestly, and state what would move the severity in
-    ``severity_change_conditions``. These three fields are mandatory and
-    validated. A finding you could not execute is at best
-    ``confidence: medium``, with the gap named in
-    ``confidence_rationale``.
-
-    **Report output rules** (this content may be rendered into generated
-    reports):
-
-    - No internal/system details: never mention paths like
-      ``/workspace``, internal tools, agents, sandboxes, models, system
-      prompts, internal errors / stack traces, or tester environment.
-      Never leak internal identifiers (proxy request IDs, internal
-      report IDs) into any field.
-    - Tone: formal, objective, third-person, vendor-neutral, concise.
-      Avoid internal-guidance headings like "QUICK", "Approach", or
-      "Techniques" that read like an engineering runbook rather than a
-      client deliverable.
-    - **Use markdown in every text field**: ``**bold**`` for emphasis,
-      ``inline code`` for identifiers/values/parameters, and
-      language-tagged fenced code blocks for any code/payload/HTTP
-      excerpt. Never leave code bare/unformatted. When referencing a
-      file, annotate the opening fence with
-      ``title=app.py startLineNumber=42 endLineNumber=50`` after the language.
-    - Field discipline: ``poc_description`` is steps only — NO code (all
-      code goes in ``poc_script_code``); ``remediation_steps`` is prose
-      only — NO code/diffs (code fixes go in ``code_locations``).
-    - Numbered steps allowed only in PoC and Remediation sections.
-    - Avoid hedging language; be precise and non-vague.
-    - Follow a standard pentest report structure across the fields:
-      (1) overview (``description``), (2) severity & CVSS vector
-      (``cvss_breakdown``), (3) affected asset(s) (``target`` /
-      ``endpoint``), (4) technical details (``technical_analysis``),
-      (5) proof of concept (``poc_description`` + ``poc_script_code``),
-      (6) impact (``impact``), (7) evidence (``evidence``), and
-      (8) remediation (``remediation_steps``).
-
-    **White-box requirement**: when source is available, you MUST
-    populate ``code_locations``. See the ``code_locations`` arg below
-    for the full rules around ``fix_before`` / ``fix_after``,
-    multi-part fixes, and informational-vs-actionable entries.
-
-    **CVSS breakdown** is an object with all 8 metrics (each a single
-    uppercase letter):
-
-    - ``attack_vector``: ``N`` (Network), ``A`` (Adjacent), ``L``
-      (Local), ``P`` (Physical)
-    - ``attack_complexity``: ``L`` / ``H``
-    - ``privileges_required``: ``N`` / ``L`` / ``H``
-    - ``user_interaction``: ``N`` / ``R``
-    - ``scope``: ``U`` (Unchanged) / ``C`` (Changed)
-    - ``confidentiality`` / ``integrity`` / ``availability``: ``N`` /
-      ``L`` / ``H``
-
-    Derive the vector from the demonstrated attack, not the finding
-    category or a scanner/template severity:
-
-    - ``C:L`` requires actual access to some restricted information.
-      Reconnaissance value alone is ``C:N``. ``C:H`` requires total
-      disclosure or limited disclosure with a direct serious impact,
-      such as a usable administrator credential or private key.
-    - ``I:L`` requires demonstrated unauthorized, limited modification;
-      ``I:H`` requires total or directly serious modification. Otherwise
-      use ``I:N``.
-    - ``A:L`` requires demonstrated performance degradation or service
-      interruption; ``A:H`` requires complete or directly serious
-      denial of the affected service. Otherwise use ``A:N``.
-    - Use ``S:C`` only when exploitation demonstrably crosses into a
-      component governed by a different security authority. A separate
-      backend, downstream effect, or third-party name is insufficient.
-
-    Example::
-
-        {
-            "attack_vector": "N",
-            "attack_complexity": "L",
-            "privileges_required": "N",
-            "user_interaction": "N",
-            "scope": "U",
-            "confidentiality": "H",
-            "integrity": "H",
-            "availability": "H"
-        }
-
-    **CVSS calibration** — score the weakness you actually proved, not a
-    hypothetical worst case. Most over-rating comes from these mistakes:
-
-    - **Don't presuppose a separate compromise.** If exploitation
-      requires the attacker to already hold a victim secret (a stolen
-      session cookie/token, a leaked one-time link, intercepted traffic),
-      that acquisition is not free. Do not score it as
-      ``privileges_required:N`` with ``attack_complexity:L`` as if
-      directly reachable, and do not rate a replay-of-captured-secret
-      issue High/Critical unless the *same* finding demonstrates a
-      concrete way to obtain that secret. Issues like a session that
-      survives logout or a replayable link are session-management /
-      defense-in-depth weaknesses — usually Low/Medium on their own.
-    - **Reserve ``H`` impact for demonstrated broad impact.** ``C:H`` /
-      ``I:H`` require proof of wide or systemic read/write. A single
-      user's data, a read-only information leak, or merely confirming
-      that an account / domain / software version *exists* (enumeration)
-      is ``C:L`` (often ``I:N``) — not ``C:H``.
-    - **Model required position and interaction honestly.** An
-      adversary-in-the-middle prerequisite (e.g. cleartext transmission)
-      or a required victim action is not guaranteed — reflect it in
-      ``attack_complexity`` / ``user_interaction`` instead of assuming the
-      ideal condition always holds.
-
-    **CVE / CWE rules**: pass the bare ID only (``CVE-2024-1234``,
-    ``CWE-89``) — no name, no parenthetical. Be 100% certain; if
-    unsure, use ``web_search`` to verify the ID before passing, or omit
-    the field entirely. Always prefer the most specific child CWE over
-    a broad parent (CWE-89 not CWE-74; CWE-78 not CWE-77). Do NOT use
-    broad/parent CWEs like CWE-74, CWE-20, CWE-200, CWE-284, or
-    CWE-693.
-
-    Common CWE references (use the ID only — names are listed here
-    just for your lookup):
-
-    - **Injection**: CWE-79 XSS, CWE-89 SQLi, CWE-78 OS Command
-      Injection, CWE-94 Code Injection, CWE-77 Command Injection.
-    - **Auth / Access**: CWE-287 Improper Authentication, CWE-862
-      Missing Authorization, CWE-863 Incorrect Authorization, CWE-306
-      Missing Auth for Critical Function, CWE-639 Authz Bypass via
-      User-Controlled Key.
-    - **Web**: CWE-352 CSRF, CWE-918 SSRF, CWE-601 Open Redirect,
-      CWE-434 Unrestricted File Upload.
-    - **Memory**: CWE-787 OOB Write, CWE-125 OOB Read, CWE-416 UAF,
-      CWE-120 Classic Buffer Overflow.
-    - **Data**: CWE-502 Deserialization of Untrusted Data, CWE-22
-      Path Traversal, CWE-611 XXE.
-    - **Crypto / Config**: CWE-798 Hard-coded Credentials, CWE-327
-      Broken / Risky Crypto, CWE-311 Missing Encryption, CWE-916 Weak
-      Password Hashing.
-
-    Example (abbreviated — mirror this structure)::
-
-        title: "Reflected XSS in /search q parameter"
-        description:
-            The **`q`** parameter of `/search` reflects user input into
-            the HTML response without encoding, allowing script
-            injection.
-        technical_analysis:
-            The handler interpolates `q` directly into the page body:
-
-            ```python title=views.py startLineNumber=42 endLineNumber=44
-            html = f"<h2>Results for {q}</h2>"
-            return HttpResponse(html)
-            ```
-
-            No output encoding is applied, so `<script>` executes.
-        poc_description:
-            1. Navigate to `/search?q=<payload>`.
-            2. Observe the payload executes in the victim's browser.
-        poc_script_code:
-            ```
-            GET /search?q=<script>alert(document.domain)</script>
-            ```
-        evidence:
-            Response echoes the payload verbatim:
-
-            ```html
-            <h2>Results for <script>alert(document.domain)</script></h2>
-            ```
-        assumptions:
-            Assumes a victim can be induced to open a crafted link.
-        remediation_steps:
-            Context-encode all user input rendered into HTML; prefer the
-            template engine's auto-escaping over string interpolation.
-        counterevidence:
-            No output encoding, CSP, or WAF observed on this response;
-            payload executed in a current browser. The parameter is
-            reflected on an unauthenticated route, so no privileged
-            position is required.
-        confidence: "high"
-        severity_change_conditions:
-            A restrictive CSP that blocks inline script execution would
-            reduce impact and lower the severity.
-        fix_effort: "low"
-
-    Nice to have: for code findings, if the checkout has git history, a quick
-    ``git blame`` (quote the paths) on the vulnerable line is worth weaving into
-    ``technical_analysis`` — who last touched it, when, and in which commit, as
-    part of the prose, not a separate section. Skip it if the line is
-    uncommitted or the command fails.
+    Formatting & calibration rules:
+    - Formal third-person Markdown (``**bold**``, ``inline code``, language-tagged fenced blocks).
+    - Never mention internal paths (``/workspace``), agent names, proxy request IDs, or sandbox details in text fields.
+    - ``poc_description`` is numbered steps only (no code); all exploit code/requests go in ``poc_script_code``.
+    - ``remediation_steps`` is prose only (no code); source patches go in ``code_locations``.
+    - Score only the impact demonstrated by the PoC in ``cvss_breakdown`` (all 8 CVSS v3.1 metrics required: ``attack_vector`` N/A/L/P, ``attack_complexity`` L/H, ``privileges_required`` N/L/H, ``user_interaction`` N/R, ``scope`` U/C, ``confidentiality``/``integrity``/``availability`` N/L/H).
 
     Args:
-        title: Specific finding title (e.g.
-            ``"SQL Injection in /api/users login parameter"``). Don't
-            include the CVE number in the title.
-        description: Concise, non-technical TL;DR of the vulnerability
-            (1-3 sentences) — it appears first in the report. Deep
-            technical detail and root-cause analysis belong in
-            ``technical_analysis``, not here.
-        impact: The unauthorized result demonstrated by the PoC, the
-            affected data or operation, and its scope. Keep plausible
-            but unverified follow-on risks separate; do not use them to
-            set CVSS metrics.
-        target: Affected URL / domain / repository.
-        technical_analysis: The mechanism and root cause.
-        poc_description: Step-by-step reproduction (steps only, no code).
-        poc_script_code: Working PoC (Python preferred).
-        remediation_steps: Specific, actionable fix (prose, no code).
-        evidence: Concrete proof the issue is real and exploitable —
-            request/response excerpts, observed behavior, tool output.
-            Use fenced code blocks; no internal identifiers/paths.
-        assumptions: Short note on the assumptions/prerequisites that
-            make this finding impactful or exploitable (e.g. "assumes an
-            authenticated low-privilege user").
-        counterevidence: REQUIRED. The strongest case *against* this
-            finding, after actively looking for it — the guard you might
-            have missed, the deployment constraint, the precondition. If
-            you genuinely found nothing, say what you checked (e.g. "no
-            input validation, WAF, or authorization check found on this
-            path; tested authenticated and unauthenticated"), not just
-            "none". A generic trust claim ("the framework escapes this")
-            is not counterevidence unless you confirmed that specific
-            call in this context.
-        confidence: REQUIRED. Your calibrated confidence that this is a
-            real, exploitable issue: ``high`` (working PoC against the
-            live target, or a complete reachable source→sink trace),
-            ``medium`` (strong static evidence you could not fully
-            execute), or ``low`` (plausible with a material unresolved
-            gap). Do not inflate — an accurate ``medium`` is more useful
-            than a ``high`` that fails triage.
-        confidence_rationale: Required when ``confidence`` is not
-            ``high``. Name the specific gap (e.g. "static-only trace,
-            could not stand up the service to reproduce"; "reachability
-            of this route from unauthenticated traffic unconfirmed").
-        severity_change_conditions: REQUIRED. One concrete sentence on
-            what single piece of additional evidence would raise or
-            lower the severity (e.g. "confirmation this route is exposed
-            to unauthenticated internet traffic would raise this to
-            critical").
+        title: Specific finding title (e.g. ``"SQL Injection in /api/users login parameter"``), without CVE ID.
+        description: Concise 1-3 sentence overview of the vulnerability.
+        impact: Concrete unauthorized consequence demonstrated by the PoC and affected scope.
+        target: Affected URL, domain, or repository.
+        technical_analysis: Root cause and vulnerable mechanism (with fenced code/HTTP excerpts).
+        poc_description: Numbered step-by-step reproduction instructions (prose only, no code).
+        poc_script_code: Executed PoC script, curl command, or raw HTTP payload.
+        remediation_steps: Actionable remediation guidance (prose only, no code).
+        evidence: Verbatim proof of exploitation (response headers/body, command output) in fenced blocks.
+        assumptions: Prerequisites required for exploitation (e.g. ``"Requires low-privilege account"``).
+        counterevidence: REQUIRED. Strongest case against exploitability/severity checked before filing (WAF, guards, auth checks).
+        confidence: REQUIRED. ``high`` (working live PoC or complete reachable source-to-sink trace), ``medium`` (strong static trace not executed), or ``low``.
+        confidence_rationale: Required when ``confidence`` is not ``high``. Name the specific verification gap.
+        severity_change_conditions: REQUIRED. Concrete condition or evidence that would raise or lower severity.
         fix_effort: One of ``trivial`` / ``low`` / ``medium`` / ``high``.
-        cvss_breakdown: 8-metric object per the format above.
-        endpoint: API path / Git path (e.g. ``/api/login``).
-        method: HTTP method when relevant.
-        cve: ``CVE-YYYY-NNNNN`` if certain, else omit.
-        cwe: ``CWE-NNN`` (most specific child) if certain, else omit.
-        code_locations: White-box findings — list of location objects.
-        http_exchange_ids: Proxy request IDs that prove this finding.
-            Copy these IDs from ``list_requests`` or ``view_request``.
-            For a finding validated over HTTP, capture and inspect the
-            supporting exchanges and include their IDs here before filing.
-            Include relevant baseline/control requests as well as the exploit.
-            Omit only when the finding has no captured HTTP evidence (for
-            example a static-only code finding). Never invent IDs or drop
-            them to bypass a verification error; retry the capture instead.
-            If the result carries a ``warning`` that the IDs were not
-            stored, the finding is filed without them: attach them with
-            ``update_vulnerability_report`` once the proxy responds.
-            Keep IDs out of ``evidence`` and all other report text.
-
-            **How ``fix_before`` / ``fix_after`` work**: they're used as
-            literal GitHub/GitLab PR suggestion blocks. When a reviewer
-            accepts the suggestion, the platform replaces the **exact
-            lines from ``start_line`` to ``end_line``** with
-            ``fix_after``. Therefore:
-
-            1. ``fix_before`` must be a **VERBATIM** copy of the source
-               at those lines — same whitespace, indentation, line
-               breaks. If it doesn't match character-for-character, the
-               suggestion will corrupt the code when accepted.
-            2. ``fix_after`` is the COMPLETE replacement for that
-               entire block (may be more or fewer lines).
-            3. ``start_line`` / ``end_line`` must precisely cover the
-               lines in ``fix_before`` — no more, no less.
-
-            **Multi-part fixes**: many fixes touch multiple
-            non-contiguous parts of a file (e.g. add an import at the
-            top AND change code lower down). Since each
-            ``fix_before`` / ``fix_after`` pair covers ONE contiguous
-            block, create **separate location entries** for each
-            non-contiguous part. Use ``label`` to describe each part's
-            role (``"Add escape helper import"``, ``"Sanitize input
-            before SQL"``). Order primary fix first, supporting
-            changes (imports, config) after.
-
-            **Informational vs actionable**:
-            - With ``fix_before`` / ``fix_after``: actionable fix
-              (renders as a PR suggestion block).
-            - Without them: informational context (e.g. showing the
-              source of tainted data, or a sink that doesn't need
-              direct editing).
-
-            **Per-location fields**:
-            - ``file`` (REQUIRED): path **relative** to repo root. No
-              leading slash, no ``..``, no ``/workspace/`` prefix.
-              Right: ``"src/db/queries.ts"``. Wrong:
-              ``"/workspace/repo/src/db/queries.ts"``, ``"./src/x.py"``,
-              ``"../../etc/passwd"``.
-            - ``start_line`` (REQUIRED): 1-based; positive integer.
-              Verify against the actual file — do NOT guess.
-            - ``end_line`` (REQUIRED): 1-based; ``>= start_line``.
-              Only equal to ``start_line`` when the block truly is one
-              line.
-            - ``snippet`` (optional): verbatim source at this range.
-            - ``label`` (optional): short role description; especially
-              important for multi-part fixes.
-            - ``fix_before`` (optional): verbatim copy of the
-              vulnerable code, lines ``start_line``-``end_line``.
-            - ``fix_after`` (optional): complete replacement for that
-              block; syntactically valid.
-
-            **Common mistakes to avoid**:
-            - Guessing line numbers instead of reading the file.
-            - Paraphrasing / reformatting code in ``fix_before``.
-            - Setting ``start_line == end_line`` when the vulnerable
-              code spans multiple lines.
-            - Bundling an import addition and a far-away code change
-              into one location — split them.
-            - Padding ``fix_before`` with surrounding context lines
-              that aren't part of the fix.
-            - Duplicating the same change across multiple locations.
-        fix_verification: REQUIRED whenever any ``code_locations`` entry
-            carries a ``fix_after``. A reviewer can apply that
-            suggestion with one click, so an unverified fix ships
-            straight into the codebase. Before writing this field, work
-            the gates **in order** and never trade an earlier one for a
-            later one:
-
-            1. **Security closure** — re-trace the source → sink path
-               through the *patched* code and state why it is now
-               blocked. Re-run the PoC against the fix if you can.
-            2. **Bypass review** — re-read the diff *without* leaning on
-               the rationale that produced it. Name the sibling call
-               sites, equivalent sinks, and alternate malicious input
-               classes you checked, and try at least one.
-            3. **Preserved behavior** — name the legitimate inputs,
-               public APIs, and error semantics that must keep working,
-               and confirm the patch leaves them intact. A fix that
-               breaks the feature is not a fix.
-            4. **Repository checks** — run the narrowest relevant
-               syntax / type / lint / test check that covers the
-               changed lines.
-
-            Then write what you did: the commands you ran and their
-            results, and every gate you could only reason about rather
-            than execute, marked explicitly as a gap. Do not claim a
-            gate passed because it looks right. If a gate fails, revise
-            the patch or drop ``fix_after`` and leave the location
-            informational — never compensate for a failed security
-            closure with a smaller diff or extra prose.
-
-            Also use this field to record the narrowest-complete-change
-            judgement: prefer the smallest repository-native fix that
-            fully enforces the invariant, using existing helpers, with
-            no unrelated refactors folded in.
-        fix_pr_body: Optional. When source is available and you have a
-            concrete fix, a markdown PR-description body proposing the
-            fix (summary + rationale). Prose/markdown only — the code
-            change itself belongs in ``code_locations``. Omit for
-            black-box findings.
+        cvss_breakdown: Dict with all 8 CVSS v3.1 metrics (``attack_vector``, ``attack_complexity``, ``privileges_required``, ``user_interaction``, ``scope``, ``confidentiality``, ``integrity``, ``availability``).
+        endpoint: Affected API route or path (e.g. ``/api/login``).
+        method: HTTP method when applicable (e.g. ``POST``).
+        cve: Bare ``CVE-YYYY-NNNNN`` identifier if verified, else omit.
+        cwe: Specific child ``CWE-NNN`` identifier (e.g. ``CWE-89``, ``CWE-78``, ``CWE-502``), else omit.
+        code_locations: White-box source locations: list of dicts with repo-relative ``file``, 1-based ``start_line``/``end_line``, optional ``snippet``, ``label``, and verbatim ``fix_before``/``fix_after``.
+        http_exchange_ids: Numeric Caido proxy request IDs proving the finding (from ``list_requests``/``view_request``). Omit only when no HTTP traffic applies.
+        fix_verification: REQUIRED whenever ``code_locations`` includes ``fix_after``. Document security closure, bypass review, preserved behavior, and test checks.
+        fix_pr_body: Optional Markdown PR summary/rationale when source code fix is provided.
     """
     (
         http_exchange_ids,
@@ -2176,166 +1811,37 @@ async def create_dependency_report(
     contextual_cvss_breakdown: dict[str, str] | None = None,
     contextual_cvss_reasoning: str | None = None,
 ) -> str:
-    """File a known-CVE dependency (SCA) finding — one report per CVE x package.
+    """File a known-CVE dependency (SCA) finding (one report per CVE x package).
 
-    Use this instead of ``create_vulnerability_report`` when the finding
-    is a **known-CVE supply-chain issue**: a vulnerable third-party
-    package/version identified from a lockfile, manifest, or SBOM. Unlike
-    a dynamic finding, you do NOT need to trigger the vulnerability with a
-    live PoC — a verified advisory + the affected installed version is the
-    evidence.
-
-    **When to file**:
-
-    - A dependency is pinned to a version covered by a published CVE.
-    - You have verified the CVE ID and the installed version falls in the
-      affected range (use ``web_search`` if unsure).
-
-    **When NOT to file**:
-
-    - Dynamically-proven vulnerabilities → use
-      ``create_vulnerability_report`` (``finding_class`` dynamic).
-    - Outdated-but-not-vulnerable dependencies with no CVE.
-    - Re-reporting the same CVE/package already filed.
-
-    **Reachability**: do NOT silently downgrade or suppress a finding
-    because the vulnerable code path may be unreachable — report it, and
-    record what the usage analysis showed via the structured
-    ``reachability`` + ``reachability_evidence`` fields (see the
-    dependency-cve-scanning skill for the analysis procedure). The level
-    is an evidence ladder, never an exploitability verdict:
-
-    - ``not_imported`` — the package is never imported/required by
-      application code (strongest de-prioritization signal; still not
-      proof of safety — dynamic loading, reflection, or framework wiring
-      can evade static search).
-    - ``imported`` — application code imports the package, but usage of
-      the advisory's affected API was not confirmed.
-    - ``vulnerable_symbol_used`` — the advisory's affected
-      function/class/API appears in application code.
-    - ``reachable_call_path`` — a call-graph tool (e.g. ``govulncheck``)
-      proved a path from application code to the vulnerable function.
-    - ``unknown`` — usage analysis was not performed or was inconclusive.
-
-    Severity comes from ``contextual_cvss_breakdown`` when you provide one
-    (computed exactly like a normal finding's ``cvss_breakdown``), otherwise
-    from ``advisory_cvss``. The reachability level alone never changes the
-    rating, only prioritization.
-
-    **Formatting**: use markdown in text fields (``**bold**``, ``inline
-    code`` for package/version identifiers, fenced code blocks for
-    manifest excerpts). No internal paths/tooling/agent references.
+    Use for third-party packages pinned to a vulnerable version in a lockfile,
+    manifest, or SBOM. Dynamically exploited vulnerabilities use
+    ``create_vulnerability_report`` instead.
 
     Args:
-        title: e.g. ``"CVE-2024-1234 in lodash 4.17.20 (prototype pollution)"``.
+        title: Finding title, e.g. ``"CVE-2024-1234 in lodash 4.17.20 (prototype pollution)"``.
         description: What the CVE is and why the pinned version is affected.
         target: Affected repository / project / manifest.
-        cve: ``CVE-YYYY-NNNNN`` — required and must be verified.
+        cve: Verified ``CVE-YYYY-NNNNN`` identifier (required).
         package_name: Affected package name (e.g. ``lodash``).
-        installed_version: The version currently pinned/installed.
-        impact: What the CVE enables; business risk in this context.
-        remediation_steps: How to fix (usually upgrade to a fixed version).
-        assumptions: Exploitability/reachability assumptions & confidence.
-        package_ecosystem: e.g. ``npm`` / ``pypi`` / ``maven`` / ``go``.
+        installed_version: Currently pinned/installed version.
+        advisory_cvss: Required published advisory base score (0.0-10.0) from NVD/GHSA/Trivy.
+        impact: What the CVE enables and business risk in this codebase.
+        remediation_steps: Actionable fix (usually upgrade to fixed version).
+        assumptions: Exploitability/reachability assumptions and confidence.
+        package_ecosystem: Ecosystem name, e.g. ``npm`` / ``pypi`` / ``maven`` / ``go``.
+        manifest_path: Required repo-relative path of the manifest/lockfile (e.g. ``package-lock.json``).
         fixed_version: First non-vulnerable version, if known.
-        cwe: ``CWE-NNN`` (most specific) if certain, else omit.
-        advisory_cvss: **Required.** Published advisory base score
-            (0.0-10.0) — read it off the advisory (trivy CVSS / NVD / GHSA).
-            It is the published reference the finding is rated against and
-            rates the finding whenever you give no contextual breakdown, so
-            it must be the real published value; do not guess or omit it.
+        cwe: Specific ``CWE-NNN`` identifier if known, else omit.
         technical_analysis: Optional deeper mechanism/root-cause detail.
-        fix_effort: One of ``trivial`` / ``low`` / ``medium`` / ``high``
-            (dependency upgrades are usually ``trivial``/``low``).
-        introduced_by: For a **transitive** dependency, the direct
-            dependency (from the project's own manifest) that pulls the
-            vulnerable package in, as ``name@version`` (e.g.
-            ``express@4.18.1``). Omit when the vulnerable package is
-            itself a direct dependency.
-        dependency_path: The resolution chain from the direct dependency
-            to the vulnerable package, joined with `` > `` (e.g.
-            ``express@4.18.1 > body-parser@1.20.0 > qs@6.10.2``). Omit
-            for direct dependencies.
-        manifest_path: **Required.** The repo-relative path of the
-            lockfile/manifest where the vulnerable version was observed —
-            trivy's ``Target`` (e.g. ``package-lock.json``,
-            ``services/api/pom.xml``). Strip any scan-workspace or repo
-            checkout directory prefix so the path is relative to the
-            repository root. This binds the finding to its exact file so
-            remediation can target the right repository.
-        reachability: Usage-evidence level from static analysis — one of
-            ``not_imported`` / ``imported`` / ``vulnerable_symbol_used`` /
-            ``reachable_call_path`` / ``unknown``. Claim only what the
-            evidence proves; when in doubt use ``unknown``.
-        reachability_evidence: **Required.** The concrete proof for the
-            claimed level, or, for ``unknown``, what you searched and why
-            the result is inconclusive: repo-relative
-            ``file:line`` of the import or symbol usage, the matched
-            advisory symbols, or the govulncheck call-path excerpt.
-            Whenever you found the vulnerable symbol in use, also give the
-            **source-to-sink trace** here: start at the vulnerable package
-            call site and walk backwards hop by hop to the entry point
-            that carries untrusted input (HTTP route, CLI argument, queue
-            message, webhook, config file), going one step deeper whenever
-            a hop is a wrapper. Write it as ``entry point -> intermediate
-            call -> package call`` with a ``file:line`` per hop, name what
-            each hop enforces (auth, role check, validation, a flag that
-            is off in production), and say who controls the input. State
-            it plainly when no entry point reaches the sink — that is the
-            most useful result a reader can get.
-        code_locations: Where application code imports or calls the package —
-            the evidence behind your ``reachability`` claim. List of dicts,
-            same shape as ``create_vulnerability_report``::
-
-                {"file": "src/api/client.ts", "start_line": 14, "end_line": 14,
-                 "snippet": "const x = require('pkg')", "label": "imports it"}
-
-            Cite the repo-relative ``file`` and the exact 1-based
-            ``start_line`` where ``snippet`` actually sits — verify against
-            the real file, never guess. A location may also propose
-            the fix itself: ``fix_before`` (verbatim current code, e.g. the
-            manifest pin line) + ``fix_after`` (same lines with the fixed
-            version) — that combination requires ``fix_verification``.
-        fix_verification: Required whenever any ``code_locations`` entry
-            carries ``fix_after``. Same bar as a normal finding: security
-            closure, bypass review, preserved behavior, and how each was
-            checked.
-        contextual_cvss_breakdown: **Required.** Full CVSS v3.1 rating of this
-            CVE **in this codebase** — the same 8-metric object as
-            ``create_vulnerability_report``'s ``cvss_breakdown``:
-            ``attack_vector`` (N/A/L/P), ``attack_complexity`` (L/H),
-            ``privileges_required`` (N/L/H), ``user_interaction`` (N/R),
-            ``scope`` (U/C), ``confidentiality`` / ``integrity`` /
-            ``availability`` (N/L/H). All 8 metrics are required when the
-            field is set, and the contextual score/vector are computed
-            from them — you never supply a score. Start from the
-            advisory's published metrics and change only what the
-            **source-to-sink trace** you recorded in
-            ``reachability_evidence`` proves is different here: derive
-            ``attack_vector`` / ``privileges_required`` /
-            ``user_interaction`` from what the entry point actually
-            requires, ``attack_complexity`` from the preconditions the
-            hops enforce, and the impact metrics from the data and
-            privileges reachable at the sink. When provided, this rating
-            determines the finding's severity; ``advisory_cvss`` stays as
-            the published reference. Send it on every report: when the
-            trace does not change the published rating, or when you could
-            not complete the trace, repeat the advisory's own metrics and
-            adjust only what the usage level itself proves (a package the
-            code never imports is normally ``N`` on all three impact
-            metrics), then say so in the reasoning.
-        contextual_cvss_reasoning: **Required.** Two to four detailed
-            sentences that a reviewer can verify without opening the repo:
-            how the application uses the package, which call sites or
-            configuration you inspected (repo-relative ``file:line``),
-            which input reaches the vulnerable code and whether an
-            attacker controls it, and what the adjustment therefore
-            changes. State the source-to-sink chain explicitly, hop by
-            hop, as ``entry point -> intermediate call -> package call``
-            with a ``file:line`` for each hop. Cite concrete evidence,
-            never a generic statement such as "low risk". The user reads
-            this text next to the adjusted score, so an adjustment
-            without it is discarded.
+        fix_effort: One of ``trivial`` / ``low`` / ``medium`` / ``high``.
+        introduced_by: For transitive dependencies, direct dependency ``name@version`` pulling it in.
+        dependency_path: Resolution chain joined with `` > ``, e.g. ``express@4.18.1 > qs@6.10.2``.
+        reachability: One of ``not_imported`` / ``imported`` / ``vulnerable_symbol_used`` / ``reachable_call_path`` / ``unknown``.
+        reachability_evidence: Required concrete proof for ``reachability`` (repo-relative ``file:line`` imports/call sites and source-to-sink trace).
+        code_locations: Optional list of location dicts where the package is imported/called or manifest pin fix is proposed.
+        fix_verification: Required whenever ``code_locations`` includes ``fix_after``.
+        contextual_cvss_breakdown: Required 8-metric CVSS v3.1 dict rating the CVE in this codebase (``attack_vector``, ``attack_complexity``, ``privileges_required``, ``user_interaction``, ``scope``, ``confidentiality``, ``integrity``, ``availability``).
+        contextual_cvss_reasoning: Required 2-4 sentence justification citing repo-relative ``file:line`` call sites and source-to-sink trace.
     """
     agent_id, agent_name = _caller_identity(ctx)
 

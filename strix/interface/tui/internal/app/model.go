@@ -112,6 +112,7 @@ type Model struct {
 	errorText              string
 	fatalError             error
 	selectedAgent          int
+	allAgentsView          bool
 	selectedVuln           int
 	agentOffset            int
 	vulnOffset             int
@@ -146,6 +147,7 @@ var (
 	blue        = lipgloss.Color("#3b82f6")
 	lightBlue   = lipgloss.Color("#60a5fa")
 	red         = lipgloss.Color("#ef4444")
+	crimson     = lipgloss.Color("#dc2626")
 	orange      = lipgloss.Color("#ea580c")
 	amber       = lipgloss.Color("#d97706")
 	white       = lipgloss.Color("#fafaf9")
@@ -157,12 +159,12 @@ var (
 	black       = lipgloss.Color("#000000")
 )
 
-// Agent tree colors: a uniform label, dim guides, and a filled block cursor.
+// Agent tree colors: a uniform label, dim guides, and a filled crimson block cursor.
 const (
 	treeLabel    = lipgloss.Color("#e7e5e4")
 	treeGuide    = lipgloss.Color("#4f4f4f")
-	treeCursorFg = lipgloss.Color("#ddedf9")
-	treeCursorBg = lipgloss.Color("#0178d4")
+	treeCursorFg = lipgloss.Color("#ffffff")
+	treeCursorBg = lipgloss.Color("#dc2626")
 )
 
 // Scrollbar thumbs. The track stays blank so a scrollable panel does not gain a
@@ -181,7 +183,7 @@ const (
 // the column is too narrow to show the full one without clipping it.
 const (
 	setupPlaceholder      = "Describe what to test, or name a target"
-	setupPlaceholderShort = "What should Strix test?"
+	setupPlaceholderShort = "What should RedJohn test?"
 	chatPlaceholder       = "Send a message"
 )
 

@@ -17,7 +17,13 @@ from agents.tool_context import ToolContext
 
 from strix.core.agents import AgentCoordinator
 from strix.report.state import ReportState, set_global_report_state
-from strix.tools.agents_graph.tools import agent_finish, send_message_to_agent, wait_for_agents
+from strix.tools.agents_graph.tools import (
+    agent_finish,
+    read_swarm_bus,
+    send_message_to_agent,
+    swarm_broadcast,
+    wait_for_agents,
+)
 
 
 if TYPE_CHECKING:
@@ -256,3 +262,68 @@ async def test_agent_finish_without_report_state_still_completes() -> None:
 
     assert result["success"] is True
     assert result["filed_report_ids"] == []
+
+
+# --- P2P Swarm Signal Bus & Name Resolution --------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_swarm_broadcast_and_read_swarm_bus() -> None:
+    coordinator = await _graph(interactive=False)
+    await coordinator.register("cve-hunter", "CVE Hunter", parent_id="root")
+    await coordinator.attach_runtime("cve-hunter", resumable=False)
+
+    post_res = await _call(
+        swarm_broadcast,
+        coordinator,
+        "child",
+        {
+            "category": "recon",
+            "target": "https://example.com",
+            "summary": "PrestaShop 1.7.8.6 detected",
+            "details": "ps_checkout module v2.18.0 active",
+        },
+    )
+    assert post_res["success"] is True
+    assert post_res["signal"]["category"] == "recon"
+
+    # Sender itself does not drain its own signal as unseen
+    assert coordinator.drain_unseen_swarm_signals("child") == []
+
+    # Peer agent drains the unseen signal once
+    unseen = coordinator.drain_unseen_swarm_signals("cve-hunter")
+    assert len(unseen) == 1
+    assert unseen[0]["summary"] == "PrestaShop 1.7.8.6 detected"
+    assert coordinator.drain_unseen_swarm_signals("cve-hunter") == []
+
+    # read_swarm_bus returns signals filtered by category
+    bus_res = await _call(
+        read_swarm_bus,
+        coordinator,
+        "cve-hunter",
+        {"category": "recon", "limit": 10},
+    )
+    assert bus_res["success"] is True
+    assert bus_res["count"] == 1
+
+
+@pytest.mark.asyncio
+async def test_send_message_to_agent_by_role_name() -> None:
+    coordinator = await _graph(interactive=False)
+    await coordinator.register("rce12345", "RCE Striker", parent_id="root")
+    await coordinator.attach_runtime("rce12345", resumable=False)
+
+    res = await _call(
+        send_message_to_agent,
+        coordinator,
+        "child",
+        {
+            "target_agent_id": "RCE Striker",
+            "message": "Admin session cookie unlocked: PHPSESSID=abc",
+            "message_type": "information",
+        },
+    )
+    assert res["success"] is True
+    assert res["target_agent_id"] == "rce12345"
+    assert coordinator.pending_counts["rce12345"] == 1
+

@@ -39,70 +39,43 @@ Either way you write it with the least information anyone on this scan will ever
 
 Coverage entries are shared and mutable. Before `finish_scan`, list the `needs_follow_up` rows: each one is either work you still owe or a row somebody already resolved without updating. Assign the former to a subagent and have it call `update_coverage` on the existing entry rather than recording a second one — a stale open item sitting next to its own resolution is worse than either alone.
 
-## Agent Architecture
+## Parallel P2P Swarm Architecture
 
-Structure agents by function:
+Launch role-specialized swarm agents in parallel with `inherit_context=False` so each agent has a clean context window and communicates live discoveries horizontally over `swarm_broadcast` and `send_message_to_agent`:
 
-**Reconnaissance (Phase 1)**
-- Asset discovery and enumeration (`10-recon-endpoint-mapping`)
-- Technology and CMS/e-commerce fingerprinting (`wordpress`, `prestashop`, `joomla`, `drupal`, `05-attack-planner`)
-- Attack surface mapping
+1. **`Recon` (Attack Surface & Technology Mapper)**
+   - Skills: `10-recon-endpoint-mapping`, `05-attack-planner`
+   - Discovers ports, services, endpoints, parameters, JS assets, and technology versions.
+   - Broadcasts every detected product/version (`signal_type="fingerprint"`) and high-value route (`signal_type="endpoint"`) onto `swarm_broadcast`.
 
-**Fast-Path CVE & RCE Triage (Phase 1.5 — MANDATORY BEFORE GENERIC FUZZING)**
-- Immediately call `lookup_cve(product=..., version=...)` on every fingerprinted CMS, e-commerce shop, framework, plugin, or service
-- Spawn a dedicated **RCE & Critical CVE Fast-Path Subagent** (`45-rce-exploitation`, `70-exploit-intel`, `rce`, `ssti`, `insecure_deserialization`, `file_upload`, plus platform skill if applicable) to test Tier 1 RCE / Auth-Bypass CVEs (`fast_path_rce=True`), SSTI, deserialization, command injection, and file upload RCE **before** spending turns on slow blind SQLi extraction
+2. **`CVE Hunter` (Known-CVE & Exploit-DB Fast-Path Striker)**
+   - Skills: `70-exploit-intel`, `45-rce-exploitation` (plus platform skill such as `wordpress`, `prestashop`, `joomla`, `drupal`)
+   - Watches `fingerprint` signals on the swarm bus, queries `lookup_cve` and `redjohn_vuln_intel`, validates Tier 1 `fast_path_rce=True` and known auth-bypass CVEs immediately, and files confirmed findings directly via `create_vulnerability_report` / `create_dependency_report`.
 
-**Vulnerability Assessment (Phase 2 — Impact-Ordered)**
-- Tier 1: Remote Code Execution (command injection, SSTI, deserialization, unrestricted file upload, known CVE RCE)
-- Tier 2: Authentication bypass, MFA/TOTP bypass, JWT/OAuth flaws, and SSRF (`30-auth-access-control`, `ssrf`)
-- Tier 3: LFI/Path Traversal, XXE, and SQL/NoSQL injection (`40-injection-engine`, `sql_injection`, `path_traversal_lfi`, `xxe`)
-- Tier 4: Access control (IDOR/BOLA), race conditions, business logic flaws, XSS, CSRF
+3. **`Auth Hunter` (Identity, Session, Access Control & BOLA/IDOR Striker)**
+   - Skills: `30-auth-access-control`, `authentication_jwt`, `idor`, `broken_function_level_authorization`
+   - Tests authentication flows, JWT/OAuth/MFA bypasses, privilege escalation, and BOLA/IDOR.
+   - Broadcasts unlocked sessions, tokens, or admin routes (`signal_type="auth"`) and messages `RCE Striker` / `Web/API Striker` directly via `send_message_to_agent`.
 
-**Exploitation and Validation**
-- Proof-of-concept development with deterministic execution evidence (`90-verification-gate`)
-- Impact demonstration
-- Vulnerability chaining
+4. **`RCE Striker` (Command Injection, SSTI, Deserialization, Upload & SSRF Striker)**
+   - Skills: `45-rce-exploitation`, `rce`, `ssti`, `insecure_deserialization`, `file_upload`, `ssrf`
+   - Validates and exploits Tier 1/2 RCE, SSTI, deserialization, unrestricted upload, and SSRF vectors on both unauthenticated and `Auth Hunter`-unlocked surfaces, filing confirmed reports directly.
 
-**Reporting**
-- Finding documentation (`create_vulnerability_report` / `create_dependency_report`)
-- Remediation recommendations
+5. **`Web/API Striker` (SQLi, NoSQLi, LFI/Path Traversal, XXE & Business Logic Striker)**
+   - Skills: `40-injection-engine`, `sql_injection`, `path_traversal_lfi`, `xxe`, `business_logic`
+   - Hunts and validates SQL/NoSQL injection, LFI/config disclosure, XXE, and business logic flaws, broadcasting leaked secrets/credentials to the swarm (`signal_type="auth"`) and filing confirmed reports directly.
 
 ## Coordination Principles
 
-**Task Independence**
-
-Create agents with minimal dependencies. Parallel execution is faster than sequential.
-
-**Clear Objectives**
-
-Each agent should have a specific, measurable goal. Vague objectives lead to scope creep and redundant work.
-
-**Avoid Duplication**
-
-Before creating agents:
-1. Analyze the target scope and break into independent tasks
-2. Check existing agents to avoid overlap
-3. Create agents with clear, specific objectives
-
-**Hierarchical Delegation**
-
-Complex findings warrant specialized subagents:
-- Discovery agent finds potential vulnerability
-- Validation agent confirms exploitability
-- Reporting agent documents with reproduction steps AND supplies the fix inline (the report tool carries the patch via `code_locations`/`fix_pr_body`) — do not add a separate fix agent that re-derives the same patch
-
-**Resource Efficiency**
-
-- Avoid duplicate coverage across agents
-- Terminate agents when objectives are met or no longer relevant
-- Use message passing only when essential (requests/answers, critical handoffs)
-- Prefer batched updates over routine status messages
+- **Parallel Launch & Clean Context (`inherit_context=False`)**: Always spawn specialists with `inherit_context=False` and 1–4 focused skills so input token usage stays minimal.
+- **Direct Validation & Reporting (No 3-Agent Relay Chains)**: Do NOT spawn separate "Validation Agent" and "Reporting Agent" children for a single bug. Each specialist validates its own PoC, runs counterevidence, and calls `create_vulnerability_report` (with inline fix in white-box mode) directly.
+- **Swarm Bus Monitoring**: Monitor `[SWARM BUS UPDATE]` signals, `read_swarm_bus`, and `list_reports` to steer running strikers via `send_message_to_agent` or terminate redundant agents via `stop_agent`.
 
 ## Completion
 
-When all agents report completion:
+When all swarm agents report completion:
 
-1. Collect and deduplicate findings across agents
-2. Assess overall security posture
-3. Compile executive summary with prioritized recommendations
-4. Invoke finish tool with final report
+1. Review `list_reports` and `read_swarm_bus` across all agents
+2. Reconcile `list_coverage` so no `needs_follow_up` item is left dangling
+3. Compile the executive summary and invoke `finish_scan`
+

@@ -22,8 +22,10 @@ from strix.config.tool_call_arguments import describe_malformed_arguments
 from strix.tools.agents_graph.tools import (
     agent_finish,
     create_agent,
+    read_swarm_bus,
     send_message_to_agent,
     stop_agent,
+    swarm_broadcast,
     view_agent_graph,
     wait_for_agents,
 )
@@ -619,9 +621,27 @@ _BASE_TOOLS: tuple[Tool, ...] = (
     call_mcp,
     view_agent_graph,
     send_message_to_agent,
+    swarm_broadcast,
+    read_swarm_bus,
     wait_for_agents,
     create_agent,
     stop_agent,
+)
+
+# Leaf-only reporting & proxy tools omitted from the Root Coordinator to save tool-schema tokens.
+_ROOT_EXCLUDED_TOOL_NAMES: frozenset[str] = frozenset(
+    {
+        "create_vulnerability_report",
+        "create_dependency_report",
+        "update_vulnerability_report",
+        "delete_vulnerability_report",
+        "list_requests",
+        "view_request",
+        "repeat_request",
+        "list_sitemap",
+        "view_sitemap_entry",
+        "scope_rules",
+    }
 )
 
 
@@ -716,7 +736,8 @@ def build_strix_agent(
         # Yielding to the user is only meaningful when one is attached.
         agent_tools.append(wait_for_user)
     if is_root:
-        tools: list[Tool] = [*_BASE_TOOLS, *agent_tools, finish_tool]
+        base_for_root = [t for t in _BASE_TOOLS if t.name not in _ROOT_EXCLUDED_TOOL_NAMES]
+        tools: list[Tool] = [*base_for_root, *agent_tools, finish_tool]
     else:
         tools = [*_BASE_TOOLS, *agent_tools, agent_finish]
     _ensure_unique_tool_names(tools)

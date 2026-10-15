@@ -58,59 +58,32 @@ def _positive_int(value: str) -> int:
 
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Strix Multi-Agent Cybersecurity Penetration Testing Tool",
+        prog="redjohn",
+        description="RedJohn Multi-Agent Autonomous Penetration Testing Swarm",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
+  # Launch interactive RedJohn TUI
+  redjohn
+  rj
+
   # Web application penetration test
-  strix --target https://example.com
+  redjohn --target https://example.com
 
   # GitHub repository analysis
-  strix --target https://github.com/user/repo
-  strix --target git@github.com:user/repo.git
+  redjohn --target https://github.com/user/repo
 
-  # Local code analysis
-  strix --target ./my-project
+  # Local code analysis (white-box)
+  redjohn --target ./my-project
 
-  # API spec test (OpenAPI/Swagger file or Postman collection export)
-  strix --target ./openapi.yaml --target https://api.example.com
-  strix --target ./collection.postman_collection.json
+  # White-box + live target
+  redjohn --target ./my-project --target https://staging.example.com
 
-  # Postman collection pulled live by id (needs POSTMAN_API_KEY); optional environment
-  strix --target postman://<collection-uuid> --target https://api.example.com
-  strix --target "postman://<collection-uuid>?env=<environment-uuid>"
+  # Targets from a file
+  redjohn --target-list ./targets.txt
 
-  # Domain penetration test
-  strix --target example.com
-
-  # IP address penetration test
-  strix --target 192.168.1.42
-
-  # Multiple targets (e.g., white-box testing with source and deployed app)
-  strix --target https://github.com/user/repo --target https://example.com
-  strix --target ./my-project --target https://staging.example.com --target https://prod.example.com
-
-  # Targets from a file, one target per non-empty, non-comment line
-  strix --target-list ./targets.txt
-
-  # Custom instructions (inline)
-  strix --target example.com --instruction "Focus on authentication vulnerabilities"
-
-  # Custom instructions (from file)
-  strix --target example.com --instruction-file ./instructions.txt
-  strix --target https://app.com --instruction-file /path/to/detailed_instructions.md
-
-  # Extra files placed in the sandbox workspace
-  strix --target ./my-project --workspace-file ./wordlist.txt
-  strix --target https://app.com --workspace-file ./openapi.yaml:specs/openapi.yaml
-
-Strix Cloud:
-  strix cloud login
-  strix cloud scans start --source . --yes --wait
-  strix cloud                      # list every cloud resource
-
-  Run a pentest in Strix Cloud     https://app.strix.ai
-  Try Strix Enterprise             https://strix.ai/demo
+  # Custom instructions
+  redjohn --target example.com --instruction "Focus on Tier 1 RCE and Auth Bypass"
         """,
     )
 
@@ -118,15 +91,13 @@ Strix Cloud:
         "-v",
         "--version",
         action="version",
-        version=f"strix {get_version()}",
+        version=f"redjohn {get_version()}",
     )
 
     parser.add_argument(
         "--update",
         action="store_true",
-        help="Update strix to the latest version and exit. Self-updates the "
-        "standalone binary install; for pip/pipx/uv installs, prints the "
-        "matching upgrade command instead.",
+        help="Update redjohn to the latest version and exit.",
     )
 
     parser.add_argument(

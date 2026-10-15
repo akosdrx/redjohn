@@ -368,30 +368,30 @@ func (m Model) setupHeaderView(fit setupFit) string {
 			rows = append(rows, "")
 		}
 	case logoCompact:
-		rows = append(rows, center.Render(lipgloss.NewStyle().Bold(true).Foreground(brightGreen).Render("STRIX")))
+		rows = append(rows, center.Render(lipgloss.NewStyle().Bold(true).Foreground(red).Render("REDJOHN")))
 	}
 	if fit.tagline {
-		rows = append(rows, center.Render(render.Dim().Render("Open-source AI hackers for your apps")))
+		rows = append(rows, center.Render(render.Dim().Render("Autonomous Multi-Agent Penetration Testing Swarm")))
 	}
 	return strings.Join(rows, "\n")
 }
 
-// banner is the Strix wordmark: block letters with a bevelled edge.
-const banner = ` ███████╗████████╗██████╗ ██╗██╗  ██╗
- ██╔════╝╚══██╔══╝██╔══██╗██║╚██╗██╔╝
- ███████╗   ██║   ██████╔╝██║ ╚███╔╝
- ╚════██║   ██║   ██╔══██╗██║ ██╔██╗
- ███████║   ██║   ██║  ██║██║██╔╝ ██╗
- ╚══════╝   ╚═╝   ╚═╝  ╚═╝╚═╝╚═╝  ╚═╝`
+// banner is the RedJohn wordmark: block letters with a bevelled edge.
+const banner = ` ██████╗ ███████╗██████╗      ██╗ ██████╗ ██╗  ██╗███╗   ██╗
+ ██╔══██╗██╔════╝██╔══██╗     ██║██╔═══██╗██║  ██║████╗  ██║
+ ██████╔╝█████╗  ██████╔╝     ██║██║   ██║███████║██╔██╗ ██║
+ ██╔══██╗██╔══╝  ██╔══██╗██   ██║██║   ██║██╔══██║██║╚██╗██║
+ ██║  ██║███████╗██████╔╝╚█████╔╝╚██████╔╝██║  ██║██║ ╚████║
+ ╚═╝  ╚═╝╚══════╝╚═════╝  ╚════╝  ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═══╝`
 
-// wordmark renders the banner in solid brand green. Every row is padded out to
+// wordmark renders the banner in solid RedJohn crimson. Every row is padded out to
 // the full block so centering cannot ripple the letterforms out of alignment.
 var wordmarkOnce = sync.OnceValue(func() string {
-	green := lipgloss.NewStyle().Foreground(green)
+	brand := lipgloss.NewStyle().Foreground(red)
 	lines := strings.Split(banner, "\n")
 	rows := make([]string, len(lines))
 	for index, line := range lines {
-		rows[index] = green.Render(line + strings.Repeat(" ", wordmarkWidth()-lipgloss.Width(line)))
+		rows[index] = brand.Render(line + strings.Repeat(" ", wordmarkWidth()-lipgloss.Width(line)))
 	}
 	return strings.Join(rows, "\n")
 })
@@ -407,14 +407,13 @@ var wordmarkWidth = sync.OnceValue(func() int {
 	return block
 })
 
-// setupComposer draws the prompt as a rounded panel that lights up green while
+// setupComposer draws the prompt as a rounded panel that lights up crimson while
 // it holds focus. The scan meta and targets live inside the panel, flush under
-// the input, so everything shares one left edge - the way opencode aligns its
-// home prompt.
+// the input, so everything shares one left edge.
 func (m Model) setupComposer(width int) string {
 	border := dark
 	if m.focus == focusInput {
-		border = green
+		border = red
 	}
 	// Width covers the padding but not the border, so a box of the given total
 	// width sets width-2 here and hands the interior the width-4 that is left.
@@ -468,9 +467,12 @@ func (m Model) targetsView(width, maxRows int) string {
 	if visible < total {
 		visible = min(visible, maxRows-2)
 	}
-	rows := []string{render.Bold(green).Render("Targets") + render.Dim().Render(fmt.Sprintf(" %d", total))}
-	for _, target := range m.snapshot.Targets[:visible] {
-		rows = append(rows, render.Col(dim).Render("▸ ")+render.Col(white).Render(truncate(target, max(1, width-2))))
+	headerLeft := render.Bold(white).Render("Active Targets")
+	headerRight := render.Dim().Render(fmt.Sprintf(" %d", total))
+	rows := []string{headerLeft + headerRight}
+	for idx, target := range m.snapshot.Targets[:visible] {
+		numPrefix := render.Col(dim).Render(fmt.Sprintf("%d  ", idx+1))
+		rows = append(rows, numPrefix+render.Col(white).Render(truncate(target, max(1, width-3))))
 	}
 	if hidden := total - visible; hidden > 0 {
 		rows = append(rows, render.Dim().Render(fmt.Sprintf("+%d more", hidden)))

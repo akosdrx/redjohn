@@ -64,6 +64,147 @@ func (m *Model) renderEvent(event protocol.Event, width int, live bool) rendered
 	return entry
 }
 
+func composeHeaderRow(left, right string, width int) string {
+	if width <= 0 {
+		return ""
+	}
+	rw := lipgloss.Width(right)
+	if rw >= width {
+		return truncate(left, width)
+	}
+	maxLeft := max(1, width-rw-1)
+	left = truncate(left, maxLeft)
+	gap := max(1, width-lipgloss.Width(left)-rw)
+	return left + strings.Repeat(" ", gap) + right
+}
+
+func (m Model) redJohnHeaderBlock(width int) string {
+	if width < 20 || len(m.snapshot.Agents) == 0 {
+		return ""
+	}
+	targetLabel := "Security audit"
+	if len(m.snapshot.Targets) > 0 && strings.TrimSpace(m.snapshot.Targets[0]) != "" {
+		targetLabel = strings.TrimSpace(m.snapshot.Targets[0])
+	}
+	brandLeft := lipgloss.NewStyle().Bold(true).Foreground(red).Render("RedJohn") +
+		lipgloss.NewStyle().Foreground(dim).Render(" / ") +
+		lipgloss.NewStyle().Bold(true).Foreground(white).Render(targetLabel) +
+		lipgloss.NewStyle().Foreground(dim).Render("  │  RJ-001")
+	brandRight := lipgloss.NewStyle().Foreground(green).Render("●") +
+		lipgloss.NewStyle().Foreground(white).Render(" API Live") +
+		lipgloss.NewStyle().Foreground(dim).Render("  │  ") +
+		lipgloss.NewStyle().Foreground(green).Render("●") +
+		lipgloss.NewStyle().Foreground(white).Render(" Swarm Live")
+	row1 := composeHeaderRow(brandLeft, brandRight, width)
+
+	totalMcp := len(m.snapshot.Connections)
+	liveMcp := 0
+	for _, conn := range m.snapshot.Connections {
+		if !conn.Dead {
+			liveMcp++
+		}
+	}
+	keyStyle := lipgloss.NewStyle().Foreground(white).Background(lipgloss.Color("#262626")).Bold(true)
+	lblStyle := lipgloss.NewStyle().Foreground(mid)
+	valStyle := lipgloss.NewStyle().Foreground(lightBlue).Bold(true)
+	totalTargets := max(m.snapshot.TargetCount, len(m.snapshot.Targets))
+	row2 := truncate(
+		keyStyle.Render(" F2 ")+lblStyle.Render(" All Agents   ")+
+			keyStyle.Render(" F3 ")+lblStyle.Render(" MCPs ")+valStyle.Render(fmt.Sprintf("%d/%d", liveMcp, totalMcp))+lblStyle.Render("   ")+
+			keyStyle.Render(" F4 ")+lblStyle.Render(" Skill List ")+valStyle.Render("170")+lblStyle.Render("   ")+
+			keyStyle.Render(" F5 ")+lblStyle.Render(" Active Targets ")+valStyle.Render(strconv.Itoa(totalTargets))+lblStyle.Render("   ")+
+			keyStyle.Render(" F1 ")+lblStyle.Render(" Help"),
+		width,
+	)
+
+	rule := lipgloss.NewStyle().Foreground(dark).Render(strings.Repeat("─", width))
+
+	activeTabStyle := lipgloss.NewStyle().Background(crimson).Foreground(brightWhite).Bold(true)
+	inactiveTabStyle := lipgloss.NewStyle().Foreground(mid)
+	sep := lipgloss.NewStyle().Foreground(dark).Render(" │ ")
+	var tabs []string
+	if m.allAgentsView {
+		tabs = append(tabs, activeTabStyle.Render(" 0 All agents "))
+	} else {
+		tabs = append(tabs, inactiveTabStyle.Render(" 0 All agents "))
+	}
+	for i, agent := range m.snapshot.Agents {
+		label := fmt.Sprintf(" %d %s ", i+1, agent.Name)
+		if !m.allAgentsView && i == m.selectedAgent {
+			tabs = append(tabs, activeTabStyle.Render(label))
+		} else {
+			tabs = append(tabs, inactiveTabStyle.Render(label))
+		}
+	}
+	row4 := truncate(strings.Join(tabs, sep), width)
+
+	subLeft := lipgloss.NewStyle().Bold(true).Foreground(white).Render("Live Terminal — All Swarm Agents")
+	if !m.allAgentsView && m.selectedAgent >= 0 && m.selectedAgent < len(m.snapshot.Agents) {
+		ag := m.snapshot.Agents[m.selectedAgent]
+		subLeft = lipgloss.NewStyle().Bold(true).Foreground(white).Render("Live Terminal — "+ag.Name) +
+			lipgloss.NewStyle().Foreground(dim).Render(" / "+ag.ID)
+	}
+	subRight := lipgloss.NewStyle().Foreground(green).Render("●") + lipgloss.NewStyle().Foreground(dim).Render(" Following")
+	if !m.followOutput {
+		subRight = lipgloss.NewStyle().Foreground(amber).Render("○") + lipgloss.NewStyle().Foreground(dim).Render(" Scrollback")
+	}
+	row5 := composeHeaderRow(subLeft, subRight, width)
+
+	return strings.Join([]string{row1, row2, rule, row4, row5, rule}, "\n")
+}
+
+func (m Model) redJohnFindingCardBlock(width int) string {
+	if width < 20 || len(m.snapshot.Vulnerabilities) == 0 {
+		return ""
+	}
+	idx := min(max(0, m.selectedVuln), len(m.snapshot.Vulnerabilities)-1)
+	vuln := m.snapshot.Vulnerabilities[idx]
+	fid := lipgloss.NewStyle().Bold(true).Foreground(red).Render(fmt.Sprintf("F-%03d", idx+1))
+	title := render.StringValue(vuln["title"])
+	if title == "" {
+		title = "Confirmed Vulnerability"
+	}
+	sevRaw := strings.ToLower(render.StringValue(vuln["severity"]))
+	if sevRaw == "" {
+		sevRaw = "high"
+	}
+	sevColor, ok := panelSeverityColors[sevRaw]
+	if !ok {
+		sevColor = red
+	}
+	target := render.StringValue(vuln["endpoint"])
+	if target == "" {
+		target = render.StringValue(vuln["target"])
+	}
+	if target == "" && len(m.snapshot.Targets) > 0 {
+		target = m.snapshot.Targets[0]
+	}
+	if target == "" {
+		target = "in-scope target"
+	}
+	agentName := render.StringValue(vuln["agent_name"])
+	if agentName == "" {
+		agentName = "Swarm Specialist"
+	}
+	agentID := render.StringValue(vuln["agent_id"])
+	if agentID != "" {
+		agentName = agentName + " / " + agentID
+	}
+	rule := lipgloss.NewStyle().Foreground(dark).Render(strings.Repeat("─", width))
+	kStyle := lipgloss.NewStyle().Foreground(dim)
+	vStyle := lipgloss.NewStyle().Foreground(white)
+	lines := []string{
+		rule,
+		truncate(fid+"  "+lipgloss.NewStyle().Bold(true).Foreground(white).Render(title), width),
+		truncate(kStyle.Render("Severity    ")+lipgloss.NewStyle().Bold(true).Foreground(sevColor).Render(titleCase(sevRaw)), width),
+		truncate(kStyle.Render("Target      ")+vStyle.Render(target), width),
+		truncate(kStyle.Render("Agent       ")+vStyle.Render(agentName), width),
+		truncate(kStyle.Render("Status      ")+lipgloss.NewStyle().Foreground(green).Render("Ready for review"), width),
+		rule,
+	}
+	return strings.Join(lines, "\n")
+}
+
 func (m *Model) chatContent() string {
 	if len(m.snapshot.Agents) == 0 {
 		switch m.snapshot.ScanState {
@@ -88,6 +229,10 @@ func (m *Model) chatContent() string {
 		return ""
 	}
 	agentID := m.snapshot.Agents[m.selectedAgent].ID
+	agentNameByID := make(map[string]string, len(m.snapshot.Agents))
+	for _, ag := range m.snapshot.Agents {
+		agentNameByID[ag.ID] = ag.Name
+	}
 	events := append([]protocol.Event(nil), m.snapshot.Events...)
 	// Match _gather_agent_events: sort by (timestamp, id).
 	sort.SliceStable(events, func(i, j int) bool {
@@ -102,23 +247,37 @@ func (m *Model) chatContent() string {
 	render.SetImageWidth(contentWidth - 2)
 	// A parked agent is waiting on its latest tool call.
 	parkedOn := ""
-	if m.snapshot.Agents[m.selectedAgent].Status == "waiting" {
+	if !m.allAgentsView && m.snapshot.Agents[m.selectedAgent].Status == "waiting" {
 		for _, event := range events {
 			if event.AgentID == agentID && event.Type == "tool" {
 				parkedOn = event.ID
 			}
 		}
 	}
+	headerBlock := m.redJohnHeaderBlock(contentWidth)
 	var blocks []string
 	var spans []eventSpan
 	line := 0
+	if headerBlock != "" {
+		blocks = append(blocks, headerBlock)
+		line = strings.Count(headerBlock, "\n") + 1
+	}
+	eventBlocksCount := 0
 	for _, event := range events {
-		if event.AgentID != agentID {
+		if !m.allAgentsView && event.AgentID != agentID {
 			continue
 		}
 		entry := m.renderEvent(event, contentWidth, event.ID == parkedOn)
 		if entry.wrapped == "" {
 			continue
+		}
+		wrapped := entry.wrapped
+		if m.allAgentsView {
+			badge := lipgloss.NewStyle().Bold(true).Foreground(lightBlue).Render("[" + strings.ToUpper(agentNameByID[event.AgentID]) + "] ")
+			wrapped = truncate(badge+strings.SplitN(wrapped, "\n", 2)[0], contentWidth)
+			if rest := strings.SplitN(entry.wrapped, "\n", 2); len(rest) == 2 {
+				wrapped += "\n" + rest[1]
+			}
 		}
 		if len(blocks) > 0 {
 			line++ // blank separator line between blocks
@@ -127,11 +286,15 @@ func (m *Model) chatContent() string {
 			spans = append(spans, eventSpan{start: line, end: line + entry.height - 1, eventID: event.ID})
 		}
 		line += entry.height
-		blocks = append(blocks, entry.wrapped)
+		blocks = append(blocks, wrapped)
+		eventBlocksCount++
 	}
 	m.eventSpans = spans
-	if len(blocks) == 0 {
+	if eventBlocksCount == 0 {
 		return centeredPlaceholder("Starting agent...", m.viewport.Width, m.viewport.Height)
+	}
+	if card := m.redJohnFindingCardBlock(contentWidth); card != "" {
+		blocks = append(blocks, card)
 	}
 	return indentLines(strings.Join(blocks, "\n\n"), " ")
 }
@@ -278,7 +441,7 @@ func (m Model) viewInner() string {
 		return m.splashView()
 	}
 	if !m.ready {
-		return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, lipgloss.NewStyle().Foreground(dim).Render("Connecting to Strix…"), lipgloss.WithWhitespaceBackground(black))
+		return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, lipgloss.NewStyle().Foreground(dim).Render("Connecting to RedJohn…"), lipgloss.WithWhitespaceBackground(black))
 	}
 	main := m.mainView()
 	if m.snapshot.SetupMode {
@@ -354,7 +517,7 @@ func (m Model) toastOverlay(view string) string {
 	}
 	box := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(green).
+		BorderForeground(red).
 		Background(black).
 		Foreground(textColor).
 		Padding(0, 1).
@@ -408,7 +571,7 @@ var baseColorRestorer = strings.NewReplacer(
 )
 
 func (m Model) splashView() string {
-	shine := "Starting Strix Agent"
+	shine := "Starting RedJohn Swarm"
 	chars := []rune(shine)
 	pos := m.splashFrame % (len(chars) + 8)
 	var start strings.Builder
@@ -432,16 +595,16 @@ func (m Model) splashView() string {
 		start.WriteString(lipgloss.NewStyle().Foreground(color).Bold(bold).Render(string(char)))
 	}
 	welcome := lipgloss.NewStyle().Bold(true).Foreground(white).Render("Welcome to ") +
-		lipgloss.NewStyle().Bold(true).Foreground(green).Render("Strix") +
+		lipgloss.NewStyle().Bold(true).Foreground(red).Render("RedJohn") +
 		lipgloss.NewStyle().Bold(true).Foreground(white).Render("!")
 	version := lipgloss.NewStyle().Foreground(white).Faint(true).Render("v" + appVersion)
-	tagline := lipgloss.NewStyle().Foreground(white).Faint(true).Render("Open-source AI hackers for your apps")
-	url := lipgloss.NewStyle().Bold(true).Foreground(green).Render("strix.ai")
+	tagline := lipgloss.NewStyle().Foreground(white).Faint(true).Render("Autonomous Multi-Agent Penetration Testing Swarm")
+	url := lipgloss.NewStyle().Bold(true).Foreground(red).Render("redjohn.local")
 	// The wordmark is shared with the launch screen so the two read as one moment.
 	content := wordmark() + "\n\n" +
 		welcome + "\n" + version + "\n" + tagline + "\n\n" +
 		start.String() + "\n\n" + url
-	panel := lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(green).Padding(1, 6).Align(lipgloss.Center).Render(content)
+	panel := lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(red).Padding(1, 6).Align(lipgloss.Center).Render(content)
 	// #splash_screen background is solid black.
 	return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, panel,
 		lipgloss.WithWhitespaceBackground(black))

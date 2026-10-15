@@ -137,11 +137,11 @@ func setTerminalTitle(title string) tea.Cmd {
 func windowTitle(targets []string) string {
 	switch len(targets) {
 	case 0:
-		return "strix"
+		return "RedJohn — Terminal"
 	case 1:
-		return targets[0]
+		return "RedJohn — " + targets[0]
 	default:
-		return fmt.Sprintf("%s +%d", targets[0], len(targets)-1)
+		return fmt.Sprintf("RedJohn — %s +%d", targets[0], len(targets)-1)
 	}
 }
 
