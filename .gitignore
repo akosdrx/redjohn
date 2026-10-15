@@ -1,7 +1,7 @@
 node_modules/
-dist/
-out/
-release/
+/dist/
+/out/
+/release/
 *.log
 .env
 .DS_Store
@@ -11,8 +11,8 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 *.egg-info/
-build/
-coverage/
+/build/
+/coverage/
 playwright-report/
 test-results/
 resources/engine/
