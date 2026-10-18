@@ -9,7 +9,13 @@ Az aktív assessment-foglalásokat most egy privát, felhasználónként közös
 ledger koordinálja (`~/.redjohn/resources/host.sqlite3`). Erre a külön kampány-DB-k
 közötti atomikus kapacitáskezeléshez van szükség; nem új adatbázismotor vagy
 szolgáltatás, és nem tárol kampányt/sessiont/evidence-t. A régi interaktív runtime
-és idle cache-ek teljes közös életciklusa még nyitott.
+SDK-műveletei is ugyanazon governorhoz kötődnek: a modellek aktív hívásra,
+a Shell/PTY a teljes processz-élettartamra, az MCP stdio-kapcsolatok az idle
+időszakra is foglalnak. A CVE-cache külön korlátos RAM/disk tárolót és közös
+governorhoz kötött refresh-foglalást használ. Ez nem zárja le a generikus MCP
+szemantikai célengedélyezését vagy minden sandbox backend hálózati bekötését.
+[Jelenlegi legacy-kontraktus](redjohn-legacy-execution.md),
+[cache/session-életciklus](redjohn-legacy-cache-lifecycle.md).
 
 Az explicit `os_memory` profilban a supervisor exec előtt cgroupba helyezi az új
 CLI-controllert. Ugyanaz a scheduler és adapterlánc fut benne. A kernelhatár
@@ -54,8 +60,10 @@ lapokban olvassa, egy terv legfeljebb 512 surface-t vizsgál, és tartós cursor
 folytat. A kiválasztás és a végrehajtás modellfüggetlen. Egy batch sorosan
 indítja a kiválasztott workereket; opcionális motorlista nem indul automatikusan.
 A DB-hez tartozó POSIX flock kizárja a párhuzamos koordinátorokat ugyanazon
-assessment-adatbázison. Több, különálló processz/DB globális host-governorja
-nincs; a teljes host hard limitje külön infrastruktúrafeladat.
+assessment-adatbázison. A külön kampány-DB-k közös felhasználói host-ledgere
+atomikus foglalással és owner/processz-helyreállítással együttműködő globális
+admissiont ad. Ez nem teljes hostra érvényes kernel-RAM-korlát; az explicit
+Linux cgroup-profil külön, exec előtt alkalmazott hard limit.
 
 A lease/heartbeat tulajdonoshoz és attempthez kötött. Lejárt lease esetén
 `unknown_execution_outcome` + `inconclusive`; nincs vak újraküldés. Csak a
@@ -135,6 +143,12 @@ Automatikus evidence-retention/GC és auditrotáció még nincs; a quota blokkol
 A HTTP worker raw encoded bodyt streamel quota mellett, így nem fejt ki előbb
 óriási gzip bodyt. A Nuclei worker külön stdout/stderr drain, outputkvóta,
 timeout és TERM/KILL supervisor. A képernyő-/HAR/trace-capture nem alapértelmezett.
+
+A `benchmarks/mixed_soak.py` a meglévő queue/governor/proxy útvonalakat használja,
+nem második ütemezőt. A valódi Chromium/httpx/Nuclei oracle-ciklusoktól külön
+jelöli a tényleges processz/socket/SQLite limiteket terhelő szintetikus bemenetet.
+A hiányzó mérés, cleanup, engine vagy hibás forrásazonosság nem siker.
+[Mérési kontraktus és célzott eredmény](redjohn-mixed-soak-verification.md).
 
 ## Meglévő Nuclei a tartós HTTP(S) láncban
 

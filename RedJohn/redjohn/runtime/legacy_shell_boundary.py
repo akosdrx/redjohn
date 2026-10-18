@@ -8,12 +8,14 @@ Unsupported backends fail before executing the selected shell command.
 from __future__ import annotations
 
 import shutil
+import sys
 import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from redjohn.assessment.browser_proxy import BrowserEgressProxy
 from redjohn.assessment.egress import EgressUnavailable, LinuxEgressBoundary
+from redjohn.runtime.darwin_shell_boundary import DarwinShellEgressBoundary
 
 
 if TYPE_CHECKING:
@@ -45,7 +47,7 @@ class LegacyShellBoundary:
             tls_config=tls_config,
             on_response=on_response,
         )
-        self.boundary: LinuxEgressBoundary | None = None
+        self.boundary: LinuxEgressBoundary | DarwinShellEgressBoundary | None = None
         self._assets: tempfile.TemporaryDirectory[str] | None = None
         self.environment: dict[str, str] = {}
 
@@ -60,7 +62,7 @@ class LegacyShellBoundary:
         try:
             await self.proxy.start()
             self._assets = tempfile.TemporaryDirectory(prefix="redjohn-shell-trust-")
-            certificate = Path(self._assets.name) / "proxy-ca.pem"
+            certificate = Path(self._assets.name).resolve() / "proxy-ca.pem"
             if self.proxy.client_ca_certificate is not None:
                 certificate.write_bytes(self.proxy.client_ca_certificate)
                 certificate.chmod(0o600)
@@ -73,18 +75,55 @@ class LegacyShellBoundary:
                 (read_only if grant.read_only else writable).append(path)
             if certificate.exists():
                 read_only.append(certificate)
-            self.boundary = LinuxEgressBoundary(
-                self.proxy.url,
-                self.workspace,
-                read_only_paths=tuple(read_only),
-                writable_paths=tuple(writable),
-                timeout_seconds=60,
-            )
+            if sys.platform == "darwin":
+                profile_builder = getattr(self.inner, "assessment_shell_filesystem_profile", None)
+                if not callable(profile_builder):
+                    raise EgressUnavailable("darwin_shell_filesystem_profile_unavailable")  # noqa: TRY301
+                # Controller-selected runtimes only; never grant a host HOME,
+                # ambient PATH root, or the directory holding the proxy key.
+                runtime_paths = [
+                    Path(sys.prefix).resolve(),
+                    Path(sys.base_prefix).resolve(),
+                    Path("/opt/homebrew"),
+                    Path("/usr/local"),
+                ]
+                self.boundary = DarwinShellEgressBoundary(
+                    self.proxy.url,
+                    self.workspace,
+                    filesystem_profile=profile_builder(
+                        [*read_only, *(path for path in runtime_paths if path.exists())]
+                    ),
+                    governor=self.control.governor,
+                )
+            else:
+                self.boundary = LinuxEgressBoundary(
+                    self.proxy.url,
+                    self.workspace,
+                    read_only_paths=tuple(read_only),
+                    writable_paths=tuple(writable),
+                    timeout_seconds=60,
+                )
             await self.boundary.start()
             await self.boundary.attest()
+            execution_path = "/usr/local/bin:/usr/local/go/bin:/usr/bin:/bin"
+            if sys.platform == "darwin":
+                execution_path = ":".join(
+                    dict.fromkeys(
+                        (
+                            str(Path(sys.prefix).resolve() / "bin"),
+                            str(Path(sys.base_prefix).resolve() / "bin"),
+                            "/opt/homebrew/bin",
+                            "/usr/local/bin",
+                            "/usr/bin",
+                            "/bin",
+                            "/usr/sbin",
+                            "/sbin",
+                        )
+                    )
+                )
             self.environment = {
                 **self.boundary.environment,
-                "PATH": "/usr/local/bin:/usr/local/go/bin:/usr/bin:/bin",
+                "PATH": execution_path,
                 "http_proxy": self.proxy.url,
                 "https_proxy": self.proxy.url,
                 "HTTP_PROXY": self.proxy.url,
@@ -105,6 +144,11 @@ class LegacyShellBoundary:
             await self.close()
             raise
 
+    def assert_active(self) -> None:
+        if self.boundary is None:
+            raise EgressUnavailable("legacy_shell_boundary_not_started")
+        self.boundary.assert_active()
+
     def wrap(self, command: list[str], *, cwd: Path) -> list[str]:
         if self.boundary is None:
             raise EgressUnavailable("legacy_shell_boundary_not_started")
@@ -116,12 +160,13 @@ class LegacyShellBoundary:
             executable = shutil.which(executable, path=self.environment["PATH"]) or ""
         if not executable:
             raise EgressUnavailable("legacy_shell_executable_unavailable")
-        # Only controller-built variables cross the namespace. Provider tokens,
+        # Only controller-built variables cross the boundary. Provider tokens,
         # inherited cloud credential chains, HOME and ambient proxy settings do
         # not cross the clearenv boundary.
         return self.boundary.wrap_argv(
             [
                 "/usr/bin/env",
+                "-i",
                 *(f"{name}={value}" for name, value in self.environment.items()),
                 executable,
                 *command[1:],

@@ -58,6 +58,9 @@ class Surface:
     source: str = "observed"
     request_ref: str = ""
     body_sha256: str = ""
+    resource_kind: str = ""
+    asset_ref: str = ""
+    artifact_sha256: str = ""
 
     def __post_init__(self) -> None:
         if self.source not in {"observed", "imported", "inferred"}:
@@ -66,6 +69,22 @@ class Surface:
             raise ValueError("unsupported_http_method")
         if self.body_sha256 and not re.fullmatch(r"[0-9a-f]{64}", self.body_sha256):
             raise ValueError("invalid_request_body_digest")
+        if self.resource_kind not in {"", "source_artifact"}:
+            raise ValueError("unsupported_surface_resource_kind")
+        if self.resource_kind == "source_artifact":
+            if (
+                self.url
+                or self.method != "GET"
+                or self.actor_id != "anonymous"
+                or self.body_sha256
+                or self.content_type
+                or self.input_location != "source_artifact"
+                or re.fullmatch(r"[a-f0-9]{64}", self.asset_ref) is None
+                or re.fullmatch(r"[a-f0-9]{64}", self.artifact_sha256) is None
+            ):
+                raise ValueError("invalid_source_artifact_surface")
+        elif self.asset_ref or self.artifact_sha256:
+            raise ValueError("source_artifact_resource_kind_required")
         if any(
             not isinstance(value, str) or len(value.encode()) > 8192
             for value in asdict(self).values()
@@ -79,7 +98,9 @@ class Surface:
             {
                 k: v
                 for k, v in asdict(self).items()
-                if k not in {"request_ref", "source"} and not (k == "body_sha256" and not v)
+                if k not in {"request_ref", "source"}
+                and not (k == "body_sha256" and not v)
+                and not (k in {"resource_kind", "asset_ref", "artifact_sha256"} and not v)
             }
         )
 

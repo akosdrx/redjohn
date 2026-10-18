@@ -65,7 +65,7 @@ def test_v2_mime_ambiguity_or_unsupported_encoding_is_not_accepted(content_type:
         ApprovedRequestBody.from_mapping(fields(content_type, b"{}"))
 
 
-@pytest.mark.parametrize("version", [True, "2", 0, 3])
+@pytest.mark.parametrize("version", [True, "2", 0, 4])
 def test_unknown_body_contract_version_fails_closed(version: object):
     with pytest.raises(RequestBodyDenied, match="contract_version"):
         ApprovedRequestBody.from_mapping(fields("application/json", b"{}", version))

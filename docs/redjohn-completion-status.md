@@ -12,7 +12,41 @@ nem helyettesíti a teljes rendszer elfogadását. A részletes követelménykap
 [master-követés](redjohn-requirements.md); a kódból generált állapot:
 [képességkatalógus](redjohn-capabilities.md).
 
-## Legfrissebb, még le nem zárt bekötési szakasz
+## Aktuális fejlesztési és igazolási határ
+
+A legutóbbi teljesen lezárt Ubuntu-bizonyíték továbbra is a
+`57141b25ed32169e24d0065b4bc21a0422e83fab` commit. Az új
+`5cfd51d286c65558b92a6c070bcd7edd5a8b432b` snapshot
+[tényleges Actions-futásában](https://github.com/akosdrx/redjohn/actions/runs/39144694827)
+az x64 és ARM64 Python-/frontend-/Go-ellenőrzés és a valódi integrációs szakasz
+már átment; mindkét job a hosszú vegyes terhelést futtatja. A teljes új futás
+ezért még nem nevezhető sikeresnek.
+
+A következő, helyi forrásállapot már tartalmazza a Semgrep/Trivy offline
+source-adaptereket, az asset/service/workflow inventoryt és az autentikált,
+tartós workflow-végrehajtót. A 27 új inventory/workflow esetből 6 valódi HTTPS;
+két actor 8 CRUD-lépése, 1 scheduled refresh és SQLite restart után a maradó
+objektumok/lease-ek/foglalások száma 0. A natív source-engine-ek négy esete
+macOS-en hiányzó Linux-képesség miatt blokkolt, nem sikeres. Ezek a következő
+hosted futásban kötelezők.
+
+Az explicit v3 XML/vendor JSON/charset és jóváhagyott text-file tokenfrissítés
+implementált; 170 célzott parser, vault, régi TLS/Nuclei és hibakontraktus
+sikeres. A két új valódi Chromium–Nuclei v3 lánc a következő hosted futásig
+nem igazolt. A régi általános MCP támogatás megmaradt; az account-/repository-
+kötésű, verzió-/sémaellenőrzött provider műveletek valódi stdio/HTTP kontrolljai
+elkészültek. A távoli MCP céloldali hatása attesztáció nélkül blokkolt marad.
+A macOS bound Shell saját Seatbelt-határa 3 valódi helyi tesztben igazolt;
+az Ubuntu-mátrix ezeket platformon kívüliként, végrehajtás nélkül rögzíti.
+
+A teljes master-cél továbbra is aktív. Nyitott többek között a további hálózati,
+DNS-, WordPress-, cloud/Kubernetes adapter, a teljes login/MFA/GraphQL és
+egyszerhasználatos bemenet, a Docker bound Shell, az összesített OS-szintű
+memóriakeret, a teljes provider-agent E2E, OAST/DNS/IPv6, reproducer- és
+kiadási/platform-igazolás. Az alábbi régebbi állapottábla történeti baseline;
+a fenti új implementációkat és a külön mérési dokumentumokat kell mellé olvasni.
+
+## Korábbi közös-runtime baseline
 
 A közös konfigurációs factory, a korlátos host-controller és az SDK-context
 `assessment_service` / `assessment_governor` bindingje már bekerült a kódba.
@@ -103,9 +137,10 @@ erőforrás-kezelése ettől még nyitott; a binding önmagában nem zárja ezt 
 
 A további lifecycle-audit konkrét találatai: az automatikus
 `McpRegistry.start_warmup(max_concurrency=6)` runner-hívás már kikerült;
-a `tools/cve/tool.py:_CveCache._mem` továbbra is korlátlan dictet használ;
+a `tools/cve/tool.py:_CveCache._mem` korlátlan dictet használt;
 a `runtime/session_manager.py` session-cache és lock-registry erős referenciákat
-tart. Az aktív session/resource állapot nem dobható el egyszerű LRU-evictionnel:
+tartott. Ezek az új [bounded cache/lifecycle](redjohn-legacy-cache-lifecycle.md)
+implementációban javítva vannak. Az aktív session/resource állapot nem dobható el egyszerű LRU-evictionnel:
 a közös runtime-hoz kötött admission és igazolt cleanup szükséges. A meglévő
 általános MCP/CVE funkciók és a felhasználó konfigurációi megőrzendők.
 

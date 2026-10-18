@@ -12,6 +12,8 @@ import os
 import re
 import sqlite3
 import sys
+import time
+from types import SimpleNamespace
 
 import pytest
 from agents.sandbox.capabilities.tools.shell_tool import ExecCommandTool, WriteStdinTool
@@ -211,6 +213,74 @@ async def test_failed_cleanup_retains_reservation_until_successful_retry(tmp_pat
     assert attempts == [True, True]
     assert pool.snapshot()["active"] == {}
     pool.close()
+
+
+async def test_shell_spawn_before_handle_with_cleanup_failure_retains_reservation(tmp_path):
+    pool = governor(max_workers=1)
+    cleanup_attempts = []
+
+    async def terminate():
+        cleanup_attempts.append(True)
+        if len(cleanup_attempts) == 1:
+            raise RuntimeError("owned termination failure")
+
+    async def interrupted_before_handle():
+        raise asyncio.CancelledError
+
+    owner = LegacyExecution(
+        tmp_path / "agents.db",
+        pool,
+        sandbox_session=SimpleNamespace(pty_terminate_all=terminate),
+    )
+    with pytest.raises(RuntimeError, match="termination failure"):
+        await owner.shell("exec_command", {}, interrupted_before_handle)
+    assert pool.snapshot()["active"] == {"worker": 1}
+    with pytest.raises(ResourceAdmissionError):
+        pool.acquire("scanner")
+    assert owner.db.execute("SELECT status,error_code FROM rj_legacy_execution").fetchone() == (
+        "inconclusive",
+        "sdk_process_cleanup_failed",
+    )
+    await owner.close()
+    assert cleanup_attempts == [True, True]
+    assert pool.snapshot()["active"] == {}
+    pool.close()
+
+
+async def test_shell_deadline_includes_the_initial_sdk_yield(tmp_path):
+    pool = governor(max_workers=1)
+    terminated = asyncio.Event()
+    elapsed = []
+    began = time.monotonic()
+
+    async def terminate():
+        elapsed.append(time.monotonic() - began)
+        terminated.set()
+
+    async def delayed_handle():
+        # Initial SDK streaming time is part of the execution deadline, not an
+        # extra interval before a second full timeout starts.
+        await asyncio.sleep(0.2)
+        return "Process running with session ID 7\nOutput:\n"
+
+    owner = LegacyExecution(
+        tmp_path / "agents.db",
+        pool,
+        shell_timeout_seconds=0.3,
+        sandbox_session=SimpleNamespace(pty_terminate_all=terminate),
+    )
+    try:
+        await owner.shell("exec_command", {}, delayed_handle)
+        await asyncio.wait_for(terminated.wait(), 0.2)
+        assert 0.25 <= elapsed[0] < 0.45
+        assert pool.snapshot()["active"] == {}
+        assert owner.db.execute("SELECT status,error_code FROM rj_legacy_execution").fetchone() == (
+            "timed_out",
+            "sdk_process_deadline_exceeded",
+        )
+    finally:
+        await owner.close()
+        pool.close()
 
 
 async def wait_started(events):

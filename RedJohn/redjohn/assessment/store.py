@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from urllib.parse import unquote_plus, urlsplit, urlunsplit
 
+from redjohn.assessment.inventory import InventoryRepository
 from redjohn.assessment.models import (
     AdapterResult,
     JobSpec,
@@ -157,6 +158,7 @@ class AssessmentStore:
           id TEXT PRIMARY KEY, engagement TEXT NOT NULL, job_id TEXT NOT NULL,
           status TEXT NOT NULL, payload TEXT NOT NULL, UNIQUE(job_id,id));
         CREATE INDEX IF NOT EXISTS rj_finding_engagement ON rj_finding(engagement,id);
+        CREATE INDEX IF NOT EXISTS rj_evidence_identity ON rj_evidence(engagement,kind,digest);
         CREATE TABLE IF NOT EXISTS rj_audit(
           sequence INTEGER PRIMARY KEY AUTOINCREMENT, engagement TEXT NOT NULL,
           event_key TEXT UNIQUE, action TEXT NOT NULL, at REAL NOT NULL, payload TEXT NOT NULL);
@@ -215,6 +217,7 @@ class AssessmentStore:
         versions = [row[0] for row in self.db.execute("SELECT version FROM rj_schema")]
         if versions != [1]:
             raise ValueError("unsupported_assessment_schema")
+        self.inventory = InventoryRepository(self)
 
     def close(self) -> None:
         with self._lock:
@@ -421,6 +424,7 @@ class AssessmentStore:
                     time.time(),
                 ),
             )
+            self.inventory.attach_surface(db, policy.engagement_id, surface_id, observed_surface)
             db.execute(
                 "UPDATE rj_request_capture SET state='succeeded',completed_surface_id=?,ended_at=? "
                 "WHERE capture_key=?",
@@ -540,6 +544,14 @@ class AssessmentStore:
             captured = Surface(**json.loads(actual["payload"]))
             if captured != surface:
                 raise PolicyDenied("session_refresh_surface_mismatch")
+            if db.execute(
+                "SELECT 1 FROM rj_workflow_lease l JOIN rj_workflow_instance w "
+                "ON w.id=l.instance_id WHERE w.engagement=? AND w.actor=? AND "
+                "w.tenant=? AND w.policy_revision=? AND (l.phase='inflight' OR "
+                "l.expires_at>?) LIMIT 1",
+                (*identity, time.time()),
+            ).fetchone():
+                raise PolicyDenied("session_refresh_workflow_reconciliation_required")
             previous = db.execute(
                 "SELECT state FROM rj_session_refresh WHERE refresh_key=?", (key,)
             ).fetchone()
@@ -784,11 +796,13 @@ class AssessmentStore:
                         "UPDATE rj_surface SET payload=?,observed_at=? WHERE id=?",
                         (json_text(payload), time.time(), surface_id),
                     )
+                self.inventory.attach_surface(db, engagement, surface_id, surface)
                 return surface_id
             db.execute(
                 "INSERT OR IGNORE INTO rj_surface VALUES(?,?,?,?,?)",
                 (surface_id, engagement, surface.key, json_text(asdict(surface)), time.time()),
             )
+            self.inventory.attach_surface(db, engagement, surface_id, surface)
         return surface_id
 
     def is_stopped(self, policy: EngagementPolicy) -> bool:
@@ -803,14 +817,65 @@ class AssessmentStore:
         return bool(row[0])
 
     def surfaces(
-        self, engagement: str, *, limit: int = 50, after: str = ""
+        self,
+        engagement: str,
+        *,
+        limit: int = 50,
+        after: str = "",
+        actor_id: str = "",
+        tenant_id: str = "",
+        session_revision: str = "",
+        method: str = "",
+        source: str = "",
+        workflow_state: str = "",
+        asset_id: str = "",
     ) -> list[dict[str, Any]]:
-        if not 1 <= limit <= 100:
+        if type(limit) is not int or not 1 <= limit <= 100:
             raise ValueError("page_limit_must_be_1_to_100")
+        filters = {
+            "actor_id": actor_id,
+            "tenant_id": tenant_id,
+            "session_revision": session_revision,
+            "method": method,
+            "source": source,
+            "workflow_state": workflow_state,
+        }
+        if any(
+            not isinstance(value, str) or len(value) > 128
+            for value in (after, asset_id, *filters.values())
+        ):
+            raise ValueError("invalid_surface_filter")
         with self._lock:
             rows = self.db.execute(
-                "SELECT id,payload FROM rj_surface WHERE engagement=? AND id>? ORDER BY id LIMIT ?",
-                (engagement, after, limit),
+                "SELECT s.id,s.payload FROM rj_surface s WHERE s.engagement=? AND s.id>? "
+                "AND (?='' OR json_extract(s.payload,'$.actor_id')=?) "
+                "AND (?='' OR json_extract(s.payload,'$.tenant_id')=?) "
+                "AND (?='' OR json_extract(s.payload,'$.session_revision')=?) "
+                "AND (?='' OR json_extract(s.payload,'$.method')=?) "
+                "AND (?='' OR json_extract(s.payload,'$.source')=?) "
+                "AND (?='' OR json_extract(s.payload,'$.workflow_state')=?) "
+                "AND (?='' OR EXISTS(SELECT 1 FROM rj_inventory_surface i WHERE "
+                "i.engagement=s.engagement AND i.surface_id=s.id AND i.asset_id=?)) "
+                "ORDER BY s.id LIMIT ?",
+                (
+                    engagement,
+                    after,
+                    actor_id,
+                    actor_id,
+                    tenant_id,
+                    tenant_id,
+                    session_revision,
+                    session_revision,
+                    method,
+                    method,
+                    source,
+                    source,
+                    workflow_state,
+                    workflow_state,
+                    asset_id,
+                    asset_id,
+                    limit,
+                ),
             ).fetchall()
         return [{"id": row["id"], **json.loads(row["payload"])} for row in rows]
 
@@ -888,7 +953,13 @@ class AssessmentStore:
             ):
                 raise PolicyDenied("observed_or_operator_approved_input_required")
             policy.check_actor(surface.actor_id)
-            policy.check_scope_url(surface.url)
+            policy.check_surface(surface)
+            if surface.resource_kind == "source_artifact":
+                self.inventory.require_source_asset(
+                    policy, surface.asset_ref, surface.artifact_sha256
+                )
+            self.inventory.attach_surface(db, policy.engagement_id, spec.surface_id, surface)
+            self.inventory.require_surface_active(db, policy, spec.surface_id)
             job_id = stable_key([policy.engagement_id, spec.key])
             if not db.execute("SELECT 1 FROM rj_job WHERE id=?", (job_id,)).fetchone():
                 count = db.execute(
@@ -1780,6 +1851,7 @@ class AssessmentStore:
         *,
         job_id: str | None = None,
         kind: str = "observation",
+        deduplicate: bool = False,
     ) -> str:
         payload = json_text(redact(value)).encode()
         if len(payload) > self.artifact_max_bytes:
@@ -1787,6 +1859,14 @@ class AssessmentStore:
         ref = uuid.uuid4().hex
         try:
             with self.transaction() as db:
+                if deduplicate:
+                    existing = db.execute(
+                        "SELECT id FROM rj_evidence WHERE engagement=? AND kind=? "
+                        "AND digest=? LIMIT 1",
+                        (engagement, kind, stable_key(redact(value))),
+                    ).fetchone()
+                    if existing is not None:
+                        return str(existing[0])
                 size = db.execute(
                     "SELECT COALESCE(sum(bytes),0) FROM rj_evidence WHERE engagement=?",
                     (engagement,),

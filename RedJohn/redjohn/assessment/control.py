@@ -7,12 +7,14 @@ from dataclasses import asdict
 from typing import TYPE_CHECKING, Any, overload
 
 from redjohn.assessment.cache import SmartCache
-from redjohn.assessment.models import JobSpec, error_record
+from redjohn.assessment.inventory import INVENTORY_OPERATIONS, InventoryConflictError
+from redjohn.assessment.models import JobSpec, error_record, stable_key
 from redjohn.assessment.policy import EngagementPolicy, PolicyDenied
 from redjohn.assessment.registry import CapabilityRegistry
 from redjohn.assessment.resources import ResourceAdmissionError, ResourceGovernor
 from redjohn.assessment.scheduler import IntelligentDecisionEngine, Scheduler
 from redjohn.assessment.store import AssessmentStore, CapacityExceeded, redact
+from redjohn.assessment.workflow_execution import reviewed_step
 
 
 if TYPE_CHECKING:
@@ -101,13 +103,53 @@ class AssessmentControl:
                 raise PolicyDenied("stale_policy_revision")  # noqa: TRY301 - normalize at this API boundary
             args = {k: v for k, v in arguments.items() if k != "policy_revision"}
             if operation == "surface_search":
-                if set(args) - {"limit", "after"}:
+                if set(args) - {
+                    "limit",
+                    "after",
+                    "actor_id",
+                    "tenant_id",
+                    "session_revision",
+                    "method",
+                    "source",
+                    "workflow_state",
+                    "asset_id",
+                }:
                     raise ValueError("invalid_api_fields")  # noqa: TRY301 - normalize at this API boundary
                 result = {"items": self.store.surfaces(current.engagement_id, **args)}
             elif operation == "surface_get":
                 if set(args) != {"surface_id"}:
                     raise ValueError("invalid_api_fields")  # noqa: TRY301 - normalize at this API boundary
                 result = asdict(self.store.surface(current.engagement_id, args["surface_id"]))
+            elif operation == "workflow_submit_step":
+                if self.submission_admission is not None:
+                    self.submission_admission()
+                if set(args) != {"instance_id", "step_name", "surface_id", "expected_revision"}:
+                    raise ValueError("invalid_api_fields")  # noqa: TRY301 - bounded dispatch
+                reviewed_step(
+                    self.store,
+                    current,
+                    args["instance_id"],
+                    args["step_name"],
+                    args["surface_id"],
+                    args["expected_revision"],
+                )
+                spec = JobSpec(
+                    args["surface_id"],
+                    "workflow",
+                    "workflow_execute",
+                    policy_revision=current.revision,
+                    idempotent=False,
+                    options={
+                        name: args[name]
+                        for name in ("instance_id", "step_name", "expected_revision")
+                    },
+                    **self.registry.execution_versions("workflow_execute"),
+                )
+                result = {"job_ids": self.store.submit(current, [spec])}
+            elif operation in INVENTORY_OPERATIONS:
+                result = self.store.inventory.control_call(
+                    current, operation, args, owner=stable_key([self.caller, current.engagement_id])
+                )
             elif operation == "plan_next_batch":
                 if set(args) - {"limit"}:
                     raise ValueError("invalid_api_fields")  # noqa: TRY301 - normalize at this API boundary
@@ -186,6 +228,16 @@ class AssessmentControl:
                     "policy_denied", category="policy", coverage_effect="blocked"
                 ),
             }
+        except InventoryConflictError:
+            result = {
+                "ok": False,
+                "error": error_record(
+                    "inventory_state_conflict",
+                    category="state",
+                    coverage_effect="blocked",
+                    recovery_action="reconcile_or_reload_current_revision",
+                ),
+            }
         except ResourceAdmissionError:
             result = {
                 "ok": False,
@@ -212,7 +264,9 @@ class AssessmentControl:
                 {
                     "operation": operation
                     if operation
-                    in {
+                    in INVENTORY_OPERATIONS
+                    | {
+                        "workflow_submit_step",
                         "surface_search",
                         "surface_get",
                         "plan_next_batch",

@@ -30,9 +30,16 @@ from typing import TYPE_CHECKING, Any
 
 from agents import RunContextWrapper, function_tool
 
-from redjohn.assessment.models import error_record
+from redjohn.assessment.models import error_record, stable_key
+from redjohn.assessment.policy import PolicyDenied
 from redjohn.assessment.resources import ResourceAdmissionError
 from redjohn.runtime.legacy_execution import legacy_from_context
+from redjohn.tools.mcp.authorization import (
+    authorize_arguments,
+    authorize_descriptor,
+    contract_for,
+    server_identity,
+)
 from redjohn.tools.mcp.client import _errored_tool_output
 from redjohn.tools.mcp.naming import namespaced_tool_name
 from redjohn.tools.mcp.registry import MCP_REGISTRY_CONTEXT_KEY, McpRegistry
@@ -40,6 +47,7 @@ from redjohn.tools.mcp.session import McpConnectionUnavailableError
 
 
 if TYPE_CHECKING:
+    from agents.mcp import MCPServer
     from mcp.types import Tool as MCPTool
 
     from redjohn.tools.mcp.registry import McpConnectionEntry
@@ -257,11 +265,13 @@ async def get_mcp_tool_schema(
         "name": match.name,
         "description": (match.description or "").strip() or None,
         "input_schema": match.inputSchema or {"type": "object"},
+        "schema_sha256": stable_key(match.inputSchema or {"type": "object"}),
+        "server_identity": server_identity(entry),
     }
 
 
 @function_tool(timeout=120, strict_mode=False)
-async def call_mcp(
+async def call_mcp(  # noqa: PLR0912, PLR0915 - explicit validation and lifecycle boundaries
     ctx: RunContextWrapper,
     connection: str,
     tool: str,
@@ -297,6 +307,8 @@ async def call_mcp(
         # expressible as a strict tool schema), so some models serialize it as a
         # JSON string instead of a bare object. Accept a string that decodes to an
         # object so a correct call is not rejected over its encoding.
+        if len(arguments.encode()) > 65536:
+            return invalid_arguments
         stripped = arguments.strip()
         try:
             arguments = json.loads(stripped) if stripped else {}
@@ -304,6 +316,27 @@ async def call_mcp(
             return invalid_arguments
     if arguments is not None and not isinstance(arguments, dict):
         return invalid_arguments
+    try:
+        if len(json.dumps(arguments or {}, allow_nan=False).encode()) > 65536:
+            return invalid_arguments
+    except (TypeError, ValueError, RecursionError):
+        return invalid_arguments
+    context = ctx.context if isinstance(ctx.context, dict) else {}
+    owner = legacy_from_context(context)
+    rule = None
+    if owner is not None and owner.control is not None:
+        try:
+            owner.check_policy()
+            rule = contract_for(entry, tool)
+            authorize_arguments(rule, arguments or {}, owner.control.policy)
+        except (PolicyDenied, ResourceAdmissionError) as exc:
+            return _errored_tool_output(
+                error_record(
+                    str(exc),
+                    category="policy",
+                    coverage_effect="blocked",
+                )
+            )
     try:
         available = await _catalog_for(ctx, entry)
     except (McpConnectionUnavailableError, ResourceAdmissionError, TimeoutError) as exc:
@@ -314,7 +347,20 @@ async def call_mcp(
             f"Unknown tool {tool!r} on MCP connection {connection!r}. "
             "Call search_mcp_tools, then get_mcp_tool_schema."
         )
-    context = ctx.context if isinstance(ctx.context, dict) else {}
+
+    async def authorize_live_server(server: MCPServer) -> None:
+        if rule is None or owner is None or owner.control is None:
+            return
+        owner.check_policy()
+        authorize_arguments(rule, arguments or {}, owner.control.policy)
+        # The session may reconnect between discovery and execution. Validate
+        # the actual replacement server on its owning task immediately before
+        # sending a call, not merely the stale registry/catalog snapshot.
+        descriptors = await server.list_tools()
+        descriptor = next((item for item in descriptors if item.name == tool), None)
+        if descriptor is None:
+            raise PolicyDenied("mcp_authorized_tool_unavailable")
+        authorize_descriptor(entry, rule, descriptor, server=server)
 
     async def dispatch() -> Any:
         session = await entry.ensure_connected()
@@ -324,11 +370,11 @@ async def call_mcp(
             label=namespaced_tool_name(connection, tool),
             result_transform=entry.result_transform,
             supports_images=context.get("supports_images", True),
+            before_call=authorize_live_server if rule is not None else None,
         )
 
     timeout = min(110, entry.config.session_timeout_seconds if entry.config else 60)
     try:
-        owner = legacy_from_context(context)
         if owner is not None:
             return await owner.run(
                 f"mcp-call:{connection}:{tool}",

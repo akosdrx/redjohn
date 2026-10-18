@@ -14,8 +14,14 @@ from dataclasses import dataclass
 from typing import Any, NoReturn
 from urllib.parse import quote_plus, unquote_plus
 
-from redjohn.assessment.media_type import replay_media_type, same_replay_media_type
+from redjohn.assessment.media_type import (
+    parse_media_type,
+    replay_media_type,
+    same_replay_media_type,
+)
 from redjohn.assessment.request_body import ApprovedRequestBody, RequestBodyDenied
+from redjohn.assessment.wire_encoding import WireEncodingDenied, WireText
+from redjohn.assessment.xml_wire import XMLBodyDenied, XMLTokenSpan, xml_token_span
 
 
 _MAX_BINDINGS = 16
@@ -58,6 +64,7 @@ class _Span:
     start: int
     end: int
     kind: str = "string"
+    encoding: str = "utf-8"
 
 
 def _pointer(value: str) -> tuple[str, ...]:
@@ -68,8 +75,10 @@ def _pointer(value: str) -> tuple[str, ...]:
     return tuple(item.replace("~1", "/").replace("~0", "~") for item in value[1:].split("/"))
 
 
-def _json_spans(body: bytes, pointer: str) -> tuple[str, list[_Span]]:  # noqa: PLR0915
-    text = body.decode("utf-8")
+def _json_spans(  # noqa: PLR0915 - bounded lossless JSON parser
+    body: bytes, pointer: str, *, charset: str | None = None
+) -> tuple[str, list[_Span]]:
+    text = WireText.decode(body, charset).text
     selected = _pointer(pointer)
     spans: list[_Span] = []
     at, nodes = 0, 0
@@ -157,25 +166,29 @@ def _json_spans(body: bytes, pointer: str) -> tuple[str, list[_Span]]:  # noqa: 
     return text, spans
 
 
-def _form_spans(body: bytes, field: str) -> list[_Span]:
+def _form_spans(body: bytes, field: str, *, charset: str = "utf-8") -> list[_Span]:
     spans = []
     offset = 0
     for part in body.split(b"&"):
         name, equals, _value = part.partition(b"=")
-        if unquote_plus(name.decode("ascii"), encoding="utf-8", errors="strict") == field:
+        if unquote_plus(name.decode("ascii"), encoding=charset, errors="strict") == field:
             spans.append(
                 _Span(
                     offset + len(name) + len(equals),
                     offset + len(part),
                     "string" if equals else "missing_equals",
+                    charset,
                 )
             )
         offset += len(part) + 1
     return spans
 
 
-def _multipart_spans(body: bytes, content_type: str, field: str) -> list[_Span]:
-    boundary = replay_media_type(content_type).boundary.encode("ascii")
+def _multipart_spans(
+    body: bytes, content_type: str, field: str, *, contract_version: int = 2
+) -> list[_Span]:
+    parsed_type = replay_media_type(content_type, contract_version=contract_version)
+    boundary = parsed_type.boundary.encode("ascii")
     delimiter = b"--" + boundary
     middle = b"\r\n" + delimiter + b"\r\n"
     pieces = body[len(delimiter) + 2 : -len(delimiter) - 6].split(middle)
@@ -194,36 +207,89 @@ def _multipart_spans(body: bytes, content_type: str, field: str) -> list[_Span]:
         match = _PART.fullmatch(disposition)
         if match is not None and match.group(1).decode() == field:
             start = offset + len(raw_headers) + 4
-            spans.append(
-                _Span(
-                    start,
-                    start + len(payload),
-                    "file" if b"; filename=" in disposition else "string",
+            end = start + len(payload)
+            kind = "file" if b"; filename=" in disposition else "string"
+            encoding = "utf-8"
+            if contract_version == 3:
+                raw_type = next(
+                    (
+                        line.partition(b":")[2].strip().decode("ascii")
+                        for line in raw_headers.split(b"\r\n")
+                        if line.partition(b":")[0].lower() == b"content-type"
+                    ),
+                    None,
                 )
-            )
+                part_type = parse_media_type(raw_type or "text/plain")
+                if kind == "file" and not (
+                    raw_type is not None
+                    and (
+                        part_type.media_type.startswith("text/")
+                        or part_type.family in {"json", "xml"}
+                    )
+                ):
+                    kind = "binary_file"
+                if kind != "binary_file":
+                    wire = WireText.decode(
+                        payload, dict(part_type.parameters).get("charset", parsed_type.charset)
+                    )
+                    encoding = wire.encoding
+                    start += len(wire.preamble)
+            spans.append(_Span(start, end, kind, encoding))
         offset += len(part) + len(middle)
     return spans
 
 
+def _body_wire(body: ApprovedRequestBody, *, xml: bool = False) -> WireText:
+    return WireText.decode(
+        body.data, dict(parse_media_type(body.content_type).parameters).get("charset"), xml=xml
+    )
+
+
 def _span(body: ApprovedRequestBody, binding: BodyTokenBinding) -> _Span:
-    media = body.content_type.partition(";")[0].strip().lower()
-    if binding.location == "json" and media == "application/json":
-        text, spans = _json_spans(body.data, binding.selector)
+    try:
+        return _selected_span(body, binding)
+    except (WireEncodingDenied, XMLBodyDenied, UnicodeError):
+        _deny("invalid_selected_wire_value")
+
+
+def _selected_span(body: ApprovedRequestBody, binding: BodyTokenBinding) -> _Span:
+    parsed = replay_media_type(
+        body.content_type, contract_version=max(2, body.body_contract_version)
+    )
+    media = parsed.media_type
+    if binding.location == "xml" and body.body_contract_version == 3 and parsed.family == "xml":
+        selected = xml_token_span(_body_wire(body, xml=True), binding.selector, binding.occurrence)
+        return _Span(selected.start, selected.end, "xml_" + selected.kind, selected.encoding)
+    if binding.location == "json" and parsed.family == "json":
+        wire = _body_wire(body)
+        _text, spans = _json_spans(body.data, binding.selector, charset=wire.encoding)
     elif binding.location == "form" and media == "application/x-www-form-urlencoded":
-        spans = _form_spans(body.data, binding.selector)
-    elif binding.location == "multipart" and media == "multipart/form-data":
-        spans = _multipart_spans(body.data, body.content_type, binding.selector)
+        spans = _form_spans(body.data, binding.selector, charset=parsed.charset)
+    elif binding.location in {"multipart", "multipart_file"} and media == "multipart/form-data":
+        spans = _multipart_spans(
+            body.data,
+            body.content_type,
+            binding.selector,
+            contract_version=max(2, body.body_contract_version),
+        )
     else:
         _deny("location_content_type_mismatch")
     if binding.occurrence >= len(spans):
         _deny("selector_not_found")
     result = spans[binding.occurrence]
-    if result.kind != "string":
+    expected_kind = (
+        "file"
+        if binding.location == "multipart_file" and body.body_contract_version == 3
+        else "string"
+    )
+    if result.kind != expected_kind:
         _deny("string_field_required")
     if binding.location == "json":
         # Convert only the selected occurrence; repeated JSON keys cannot cause
         # quadratic repeated-prefix encoding or change unrelated UTF-8 bytes.
-        return _Span(len(text[: result.start].encode()), len(text[: result.end].encode()))
+        return _Span(
+            wire.byte_offset(result.start), wire.byte_offset(result.end), encoding=wire.encoding
+        )
     return result
 
 
@@ -239,7 +305,7 @@ def validate_body_token_bindings(
             not isinstance(item, dict)
             or set(item) != {"location", "selector", "occurrence", "source"}
             or not isinstance(item["location"], str)
-            or item["location"] not in {"json", "form", "multipart"}
+            or item["location"] not in {"json", "form", "multipart", "xml", "multipart_file"}
             or not isinstance(item["selector"], str)
             or _utf8_size(item["selector"]) > 512
             or type(item["occurrence"]) is not int
@@ -252,8 +318,10 @@ def validate_body_token_bindings(
             or not _NAME.fullmatch(item["source"]["name"])
         ):
             _deny("invalid_binding")
-        if item["location"] != "json" and not _NAME.fullmatch(item["selector"]):
+        if item["location"] not in {"json", "xml"} and not _NAME.fullmatch(item["selector"]):
             _deny("invalid_field_name")
+        if item["location"] in {"xml", "multipart_file"} and body.body_contract_version != 3:
+            _deny("explicit_v3_binding_required")
         binding = BodyTokenBinding(
             item["location"],
             item["selector"],
@@ -358,15 +426,7 @@ def rotate_body_tokens(request: dict[str, Any], response: dict[str, Any]) -> dic
         if total > _MAX_TOKEN_TOTAL:
             _deny("bound_token_budget")
         target = _span(body, binding)
-        if binding.location == "json":
-            replacement = json.dumps(token, ensure_ascii=True).encode()
-        elif binding.location == "form":
-            replacement = quote_plus(token, safe="", encoding="utf-8", errors="strict").encode()
-        else:
-            delimiter = b"--" + replay_media_type(body.content_type).boundary.encode("ascii")
-            replacement = token.encode()
-            if delimiter in replacement:
-                _deny("multipart_delimiter_in_value")
+        replacement = _replacement(body, binding, target, token)
         replacements.append((target.start, target.end, replacement))
     data = body.data
     for start, end, replacement in sorted(replacements, reverse=True):
@@ -384,7 +444,31 @@ def rotate_body_tokens(request: dict[str, Any], response: dict[str, Any]) -> dic
     return updated
 
 
-def matches_refreshed_capture(
+def _replacement(
+    body: ApprovedRequestBody, binding: BodyTokenBinding, target: _Span, token: str
+) -> bytes:
+    try:
+        if binding.location == "xml":
+            return XMLTokenSpan(
+                target.start, target.end, target.kind.removeprefix("xml_"), target.encoding
+            ).replacement(token)
+        if binding.location == "json":
+            return json.dumps(token, ensure_ascii=True).encode(target.encoding)
+        if binding.location == "form":
+            return quote_plus(token, safe="", encoding=target.encoding, errors="strict").encode(
+                "ascii"
+            )
+        delimiter = b"--" + parse_media_type(body.content_type).boundary.encode("ascii")
+        replacement = token.encode(target.encoding)
+        if delimiter in replacement:
+            _deny("multipart_delimiter_in_value")
+    except (UnicodeError, XMLBodyDenied):
+        _deny("token_not_representable_in_selected_wire_value")
+    else:
+        return replacement
+
+
+def matches_refreshed_capture(  # noqa: PLR0911 - explicit fresh-capture rejection gates
     expected_content_type: str,
     expected_body: bytes,
     actual_content_type: str,
@@ -411,19 +495,32 @@ def matches_refreshed_capture(
                     "body_contract_version": version,
                 }
             )
+        # Extended approval must be explicit on both sides of a fresh capture.
+        if (expected_body_contract_version == 3) != (actual_body_contract_version == 3):
+            return False
+        version = max(2, expected_body_contract_version, actual_body_contract_version)
         if not same_replay_media_type(
-            expected_content_type, actual_content_type, ignore_boundary=True
+            expected_content_type,
+            actual_content_type,
+            ignore_boundary=True,
+            contract_version=version,
         ):
             return False
-        if replay_media_type(expected_content_type).media_type != "multipart/form-data":
+        if (
+            replay_media_type(expected_content_type, contract_version=version).media_type
+            != "multipart/form-data"
+        ):
             return expected_body == actual_body and (
                 expected_content_type == actual_content_type
                 or expected_body_contract_version == 2
                 or actual_body_contract_version == 2
+                or expected_body_contract_version == actual_body_contract_version == 3
             )
 
         def parts(content_type: str, data: bytes) -> tuple[bytes, ...]:
-            delimiter = b"--" + replay_media_type(content_type).boundary.encode("ascii")
+            delimiter = b"--" + replay_media_type(
+                content_type, contract_version=version
+            ).boundary.encode("ascii")
             return tuple(
                 data[len(delimiter) + 2 : -len(delimiter) - 6].split(b"\r\n" + delimiter + b"\r\n")
             )

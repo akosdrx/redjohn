@@ -1,5 +1,16 @@
 # Követelménykövetés — master prompt 2.0
 
+**2026-10-18, aktuális ellenőrzési határ:** a korábbi, ténylegesen lezárt Ubuntu
+x64/ARM64 Actions-kör SHA-ja `57141b25ed32169e24d0065b4bc21a0422e83fab`
+(1225 pass/platform, 320 valódi integráció/platform, 0 fail/skip).
+Az új cache/session, közös SDK/MCP/Shell-életciklus, felületi tesztek és vegyes
+terhelés külön, `5cfd51d286c65558b92a6c070bcd7edd5a8b432b` forráson futnak:
+[aktuális Actions](https://github.com/akosdrx/redjohn/actions/runs/39144694827).
+Az elindított futás még nem sikeres eredmény. A táblák régebbi mérési soraiban
+szereplő hozzáférési/tesztállapotok történeti baseline-ok; a követett teljes
+feladat a completion ledgerben marad nyitott. A felhasználó az élő cloud/Kubernetes
+hozzáférést igénylő igazolást későbbre halasztotta; ez nem live siker.
+
 A teljes hátralévő feladat és annak elfogadási kapui egy helyen:
 [RedJohn completion ledger](redjohn-completion-status.md). A kódkatalógus
 generált, és nem téveszti össze a hiányzó konfigurációt a hiányzó adapterrel.

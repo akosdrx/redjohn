@@ -1,0 +1,77 @@
+{
+  "semgrep": {
+    "version": "1.181.0",
+    "commit": "72d3525fe7e02f486428386078f192f8c4756804",
+    "source": "https://github.com/semgrep/semgrep/tree/v1.181.0",
+    "license": "LGPL-2.1_engine_only_rules_separate",
+    "license_url": "https://raw.githubusercontent.com/semgrep/semgrep/72d3525fe7e02f486428386078f192f8c4756804/LICENSE",
+    "license_sha256": "20c17d8b8c48a600800dfd14f95d5cb9ff47066a9641ddeab48dc54aec96e331",
+    "executable": "osemgrep",
+    "assets": {
+      "Linux-arm64": {
+        "url": "https://files.pythonhosted.org/packages/88/c5/f5346177cafd8c3a68d6e133f9d579c39c47ec9aad2c4b93135bc609908f/semgrep-1.181.0-cp310.cp311.cp312.cp313.cp314.py310.py311.py312.py313.py314-none-manylinux_2_34_aarch64.whl",
+        "sha256": "6dedd7d72dd7f7bd314439f469e143d57d84508c57c29246793378cccc2b90dc",
+        "archive_kind": "wheel",
+        "member": "semgrep-1.181.0.data/purelib/semgrep/bin/semgrep-core"
+      },
+      "Linux-amd64": {
+        "url": "https://files.pythonhosted.org/packages/b0/1d/aed54e9cea5491f0dd54286126216f97ef817a356734d3c9d5e40c124c34/semgrep-1.181.0-cp310.cp311.cp312.cp313.cp314.py310.py311.py312.py313.py314-none-manylinux_2_34_x86_64.whl",
+        "sha256": "c142ec04a2ed144970cb0a92f6877651dd3c088505eec737bb7f4db7ae5f0ffa",
+        "archive_kind": "wheel",
+        "member": "semgrep-1.181.0.data/purelib/semgrep/bin/semgrep-core"
+      }
+    },
+    "entrypoint_source": "https://github.com/semgrep/semgrep/blob/v1.181.0/src/main/Main.ml",
+    "native_libraries": [
+      "libbz2.so.1",
+      "libcom_err.so.2",
+      "libcrypto.so.3",
+      "libcurl.so.4",
+      "libdw.so.1",
+      "libelf.so.1",
+      "libev.so.4",
+      "libgcc_s.so.1",
+      "libgmp.so.10",
+      "libgssapi_krb5.so.2",
+      "libk5crypto.so.3",
+      "libkeyutils.so.1",
+      "libkrb5.so.3",
+      "libkrb5support.so.0",
+      "liblzma.so.5",
+      "libm.so.6",
+      "libnghttp2.so.14",
+      "libpcre2-8.so.0",
+      "libresolv.so.2",
+      "libselinux.so.1",
+      "libssl.so.3",
+      "libstdc++.so.6",
+      "libtree-sitter.so.0.26",
+      "libunwind.so.8",
+      "libz.so.1",
+      "libzstd.so.1"
+    ]
+  },
+  "trivy": {
+    "version": "0.76.0",
+    "commit": "531360e5d2a88e732373f1614ba99a38738538b8",
+    "source": "https://github.com/aquasecurity/trivy/tree/v0.76.0",
+    "license": "Apache-2.0_engine_embedded_checks_separate_advisory_datasets",
+    "license_url": "https://raw.githubusercontent.com/aquasecurity/trivy/531360e5d2a88e732373f1614ba99a38738538b8/LICENSE",
+    "license_sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+    "executable": "trivy",
+    "assets": {
+      "Linux-amd64": {
+        "url": "https://github.com/aquasecurity/trivy/releases/download/v0.76.0/trivy_0.76.0_Linux-64bit.tar.gz",
+        "sha256": "e24b1c51293c1b15e4ba8d45bbc7891ba053f90278ec2698f3562c993e145fe7",
+        "archive_kind": "tar.gz",
+        "member": "trivy"
+      },
+      "Linux-arm64": {
+        "url": "https://github.com/aquasecurity/trivy/releases/download/v0.76.0/trivy_0.76.0_Linux-ARM64.tar.gz",
+        "sha256": "aab21e677a7b7071fc79f1711480840754c18a1b9d9cefa7ccd06af63a0e8f4c",
+        "archive_kind": "tar.gz",
+        "member": "trivy"
+      }
+    }
+  }
+}

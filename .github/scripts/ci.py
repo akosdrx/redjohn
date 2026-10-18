@@ -162,14 +162,19 @@ def junit_summary(path):
     return {"counts": counts, "evidence_kinds": kinds, "skips": skips}
 
 
-REQUIRED = ("python-install", "linux-dependencies", "scanner-install", "linux-setup",
+REQUIRED = ("python-install", "linux-dependencies", "scanner-install", "source-scanner-install", "linux-setup",
             "frontend-install", "pip-check", "python-lint", "python-types", "ci-contracts", "frontend-types",
-            "frontend-build", "frontend-tests", "go-vet", "go-tests", "go-build", "python-wheel",
+            "frontend-build", "frontend-tests", "go-vet", "go-tests", "go-build", "python-wheel", "python-wheel-license",
             "python-regression", "python-integration", "mixed-soak", "sandbox-setup", "sandbox-cleanup")
 
 
 def summarize():
     result = {**identity(), "commands": {}, "junit": {}, "blockers": []}
+    result["platform_not_applicable"] = {}
+    for suite_name in ("regression", "integration"):
+        applicability = OUT / ("non-applicable-" + suite_name + ".json")
+        if applicability.is_file():
+            result["platform_not_applicable"][suite_name] = json.loads(applicability.read_text())["cases"]
     for name in REQUIRED:
         path = OUT / (name + ".json")
         if not path.is_file():

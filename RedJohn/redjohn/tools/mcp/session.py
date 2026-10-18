@@ -373,6 +373,7 @@ class SupervisedMcpSession:
         label: str,
         result_transform: ResultTransform | None = None,
         supports_images: bool = True,
+        before_call: Callable[[MCPServer], Awaitable[None]] | None = None,
     ) -> Any:
         """Run one tool call with bounded retries for transient session failures.
 
@@ -384,6 +385,22 @@ class SupervisedMcpSession:
         from redjohn.tools.mcp.client import dispatch_mcp_call
 
         async def job(server: MCPServer) -> Any:
+            if before_call is not None:
+                from redjohn.assessment.models import error_record
+                from redjohn.assessment.policy import PolicyDenied
+                from redjohn.assessment.resources import ResourceAdmissionError
+                from redjohn.tools.mcp.client import _errored_tool_output
+
+                try:
+                    await before_call(server)
+                except (PolicyDenied, ResourceAdmissionError) as exc:
+                    return _errored_tool_output(
+                        error_record(
+                            str(exc),
+                            category="policy",
+                            coverage_effect="blocked",
+                        )
+                    )
             return await dispatch_mcp_call(
                 server,
                 tool_name,

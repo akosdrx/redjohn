@@ -54,6 +54,10 @@ def validate_configuration(value: object) -> dict[str, Any]:
         "tinja",
         "schemathesis",
         "interactsh",
+        "semgrep",
+        "trivy",
+        "source_jobs",
+        "workflow_execution",
         "jobs",
     }:
         raise ValueError("invalid_configuration_fields")
@@ -138,6 +142,7 @@ def enqueue_configured_jobs(
                     **runtime.registry.execution_versions(capability),
                 )
             )
+    specs.extend(_configured_source_jobs(runtime, store, policy, config))
     selected_jobs = config.get("jobs", [])
     if not isinstance(selected_jobs, list) or len(selected_jobs) > 64:
         raise ValueError("invalid_selected_specialist_jobs")
@@ -154,6 +159,8 @@ def enqueue_configured_jobs(
                 "tinja_validate",
                 "schemathesis_validate",
                 "oast_correlate",
+                "semgrep_source",
+                "trivy_source",
             }
         ):
             raise ValueError("invalid_selected_specialist_job")
@@ -165,6 +172,8 @@ def enqueue_configured_jobs(
             "tinja_validate": "ssti",
             "schemathesis_validate": "api_schema",
             "oast_correlate": "oast",
+            "semgrep_source": "source_code",
+            "trivy_source": "source_configuration",
         }[capability]
         specs.append(
             JobSpec(
@@ -181,6 +190,74 @@ def enqueue_configured_jobs(
             )
         )
     store.submit(policy, specs)
+
+
+def _configured_source_jobs(
+    runtime: AssessmentRuntime,
+    store: AssessmentStore,
+    policy: EngagementPolicy,
+    config: dict[str, Any],
+) -> list[JobSpec]:
+    selected = config.get("source_jobs", [])
+    if not isinstance(selected, list) or len(selected) > 64:
+        raise ValueError("invalid_source_job_list")
+    if not selected:
+        return []
+    from redjohn.assessment.source_tools import SourceToolConfig  # noqa: PLC0415 - explicitly selected local source package
+
+    specs = []
+    for item in selected:
+        if (
+            not isinstance(item, dict)
+            or set(item) - {"capability", "timeout_seconds", "retest_revision"}
+            or item.get("capability") not in {"semgrep_source", "trivy_source"}
+        ):
+            raise ValueError("invalid_source_job")
+        capability = item["capability"]
+        tool = capability.removesuffix("_source")
+        document = config.get(tool)
+        if not isinstance(document, dict):
+            raise TypeError("source_tool_configuration_required")
+        source_config = SourceToolConfig.from_mapping(tool, document)
+        digest = source_config.artifact_sha256
+        if digest not in policy.allowed_source_artifacts:
+            raise ValueError("source_artifact_not_approved")
+        ref = store.evidence_put(
+            policy.engagement_id,
+            {
+                "format": "redjohn-source-manifest-v1",
+                "artifact_sha256": digest,
+                "files": [{"path": path, "sha256": sha} for path, sha in source_config.files],
+            },
+            kind="approved_source_manifest",
+            deduplicate=True,
+        )
+        asset_ref = store.inventory.record_asset(
+            policy, kind="source_artifact", locator=digest, source="imported", evidence_refs=(ref,)
+        )
+        surface = Surface(
+            "",
+            resource_kind="source_artifact",
+            asset_ref=asset_ref,
+            artifact_sha256=digest,
+            input_location="source_artifact",
+            input_name=source_config.revision,
+            source="imported",
+            workflow_state="approved_seed",
+        )
+        surface_id = store.upsert_surface(policy.engagement_id, surface)
+        specs.append(
+            JobSpec(
+                surface_id,
+                "source_code" if tool == "semgrep" else "source_configuration",
+                capability,
+                policy_revision=policy.revision,
+                timeout_seconds=item.get("timeout_seconds", 60),
+                retest_revision=item.get("retest_revision", ""),
+                **runtime.registry.execution_versions(capability),
+            )
+        )
+    return specs
 
 
 class ConfiguredAssessment:
@@ -284,6 +361,9 @@ class ConfiguredAssessment:
                 tinja_config=config.get("tinja"),
                 schemathesis_config=config.get("schemathesis"),
                 interactsh_config=config.get("interactsh"),
+                semgrep_config=config.get("semgrep"),
+                trivy_config=config.get("trivy"),
+                workflow_execution_config=config.get("workflow_execution"),
             )
             self.policy = self._runtime.policy
             enqueue_configured_jobs(self.runtime, store, policy, config)

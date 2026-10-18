@@ -65,8 +65,22 @@ class AssessmentRuntime:
         tinja_config: dict[str, Any] | None = None,
         schemathesis_config: dict[str, Any] | None = None,
         interactsh_config: dict[str, Any] | None = None,
+        semgrep_config: dict[str, Any] | None = None,
+        trivy_config: dict[str, Any] | None = None,
+        workflow_execution_config: dict[str, Any] | None = None,
     ) -> None:
         policy.authorize(caller)
+        workflow_config = None
+        if workflow_execution_config is not None:
+            from pathlib import Path  # noqa: PLC0415 - explicitly selected workflow
+
+            from redjohn.assessment.auth_replay import AuthReplayVault  # noqa: PLC0415
+            from redjohn.assessment.workflow_execution import WorkflowExecutionConfig  # noqa: PLC0415
+
+            if auth_vault_file is None:
+                raise ValueError("workflow_execution_private_vault_required")
+            workflow_config = WorkflowExecutionConfig.from_mapping(workflow_execution_config)
+            AuthReplayVault.from_file(Path(auth_vault_file), policy)
         if continuous_replay is not None and not isinstance(continuous_replay, dict):
             raise ValueError("continuous_replay_invalid_configuration")
         if continuous_replay is not None and (
@@ -102,6 +116,9 @@ class AssessmentRuntime:
             tinja_config=tinja_config,
             schemathesis_config=schemathesis_config,
             interactsh_config=interactsh_config,
+            semgrep_config=semgrep_config,
+            trivy_config=trivy_config,
+            workflow_execution_configured=bool(workflow_execution_config and auth_vault_file),
         )
         self.technology = TechnologyDetector(store.path)
 
@@ -170,6 +187,31 @@ class AssessmentRuntime:
                 session_recovery_enabled=session_recovery_enabled,
             )
         refresh_adapter: SessionRefreshService | None = None
+        if workflow_execution_config is not None:
+            from pathlib import Path  # noqa: PLC0415 - selected workflow package
+
+            from redjohn.assessment.workflow_execution import (  # noqa: PLC0415
+                WorkflowExecutionAdapter,
+            )
+
+            assert auth_vault_file is not None and workflow_config is not None
+            adapters["workflow_execute"] = WorkflowExecutionAdapter(
+                workflow_config,
+                policy,
+                store,
+                self.rate_limits,
+                tls_config=browser_tls,
+                auth_vault_file=Path(auth_vault_file),
+            )
+        if semgrep_config is not None or trivy_config is not None:
+            from redjohn.assessment.source_tools import CAPABILITIES as SOURCE_TOOLS  # noqa: PLC0415
+            from redjohn.assessment.source_tools import SourceToolAdapter, SourceToolConfig  # noqa: PLC0415
+
+            for name, document in (("semgrep", semgrep_config), ("trivy", trivy_config)):
+                if document is not None:
+                    adapters[SOURCE_TOOLS[name]] = SourceToolAdapter(
+                        SourceToolConfig.from_mapping(name, document), policy, store
+                    )
         if any(value is not None for value in (arjun_config, sqlmap_config, dalfox_config)):
             from redjohn.assessment.specialists import CAPABILITIES as SPECIALISTS  # noqa: PLC0415
             from redjohn.assessment.specialists import SpecialistAdapter, SpecialistConfig  # noqa: PLC0415 - selected adapters only

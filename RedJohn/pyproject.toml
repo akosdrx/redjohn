@@ -4,6 +4,7 @@ version = "1.7.0"
 description = "Open-source AI Hackers for your apps"
 readme = "README.md"
 license = "Apache-2.0"
+license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md"]
 requires-python = ">=3.12"
 authors = [
   { name = "RedJohn", email = "hi@redjohn.ai" },

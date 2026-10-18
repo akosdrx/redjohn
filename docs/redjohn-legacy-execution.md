@@ -1,4 +1,4 @@
-# Legacy SDK execution: owned admission, outcomes and Linux Shell isolation
+# Legacy SDK execution: owned admission, outcomes and local Shell isolation
 
 The root SDK runner and its child agents share the assessment ResourceGovernor.
 Runs without a host assessment also participate in the existing host-wide
@@ -73,16 +73,54 @@ Initialization is lazy at the first selected bound Shell command. A backend
 without the namespace attachment hook, a missing bubblewrap/user namespace, or a
 failed attestation produces `sdk_egress_enforcement_unavailable`, with a stable
 cause reference. It does not execute the selected command through a fallback.
-The Docker and macOS SDK backends do not yet expose this namespace attachment;
-they are explicitly blocked for this bound Shell path. Unbound legacy SDK runs
+The Docker SDK backend does not expose an attested attachment and remains
+explicitly blocked for this bound Shell path. macOS uses the separate verified
+Seatbelt backend below. Unbound legacy SDK runs
 keep their existing backend sandbox contract and gain shared resource ownership;
 they are not reported as having the new assessed network boundary.
 
 Generic remote MCP tools are still operator-configured integrations. A transport
 connection allowance does not prove the remote provider's tool semantics obey an
-assessment target policy. Typed remote-provider argument/action authorization
-and corresponding live provider checks remain separate work; this patch does
-not claim their completion.
+assessment target policy. The host-reviewed provider contracts below authorize
+account/repository metadata and explicit provider workflows; generic MCP target
+worker isolation remains a separate, explicitly blocked capability.
+
+## Local macOS Shell boundary
+
+The existing `RedJohnLocalSandboxSession` now attaches
+`DarwinShellEgressBoundary` for an assessment-bound Shell. It retains the actual
+installed SDK's workspace/filesystem profile and explicit operator path grants.
+Controller-selected Python/tool runtime directories are read-only. The extra
+Seatbelt rules deny networking and allow only outbound **IPv4 TCP to the exact
+controller-owned loopback proxy port**. IPv6, UDP, other loopback addresses and
+ports, Unix sockets, Mach/XPC, Apple events and foreign process inspection/signals
+are denied. Descendant commands inherit the restrictions.
+
+The environment is cleared **before** `sandbox-exec` launches, as well as inside
+the command. Host provider tokens, Python/loader hooks, host HOME and ambient
+proxy overrides are not passed to the process. Only the public proxy certificate
+file is granted; its signing key stays outside the worker. HTTPS clients validate
+that per-run certificate and the proxy still verifies the actual upstream CA and
+hostname. No certificate-checking bypass or system trust-store modification is
+used.
+
+Before binding any selected command, a real subprocess under the exact composed
+profile verifies the controller proxy is reachable, while another owned TCP
+listener, another loopback address, IPv6 on the proxy port, UDP, an owned Unix
+socket and a private controller canary are denied. A child process must also fail
+direct TCP. This probe has a shared 64 MiB worker reservation, a ten-second
+deadline and owned process-group cleanup; failed cleanup retains its reservation
+and owner for retry. A failed/unavailable Seatbelt profile produces blocked
+coverage before executing the requested command. Startup never falls back to
+an unbound SDK command. The per-run command temporary directory, proxy assets
+and probe artifacts are removed after owned-process cleanup.
+
+This is macOS Seatbelt verification, **not** Linux namespace/cgroup verification.
+`sandbox-exec` is the same deprecated Apple API the installed SDK already uses;
+the runtime therefore checks the actual profile on each new boundary instead
+of assuming another macOS release supports it. A missing executable or changed
+kernel behavior blocks this capability. Docker/VM attachment, generic remote MCP
+target isolation and cross-platform hard memory enforcement are separate gates.
 
 ## Reproduced verification
 
@@ -121,3 +159,128 @@ This short guest probe is debugging evidence, not the required protected
 GitHub-hosted x64/ARM64 matrix. The hosted workflow must run
 `tests/test_legacy_shell_boundary_live.py` with its normal strict capability gate
 and retain its JUnit/metrics before this path can be called hosted-verified.
+
+## Host-approved provider semantics
+
+Bound assessment runs now require a per-tool `tool_authorizations` contract in
+the operator's MCP configuration. Unbound generic MCP usage remains compatible.
+This is separate from configuring the service URL or bearer authentication:
+permission to connect to an MCP endpoint does not authorize arbitrary repository,
+account, workflow or assessment-target actions.
+
+The contract pins the reported MCP server name/version and input-schema SHA256,
+allowlists argument names, and fixes the account/repository/object context.
+`get_mcp_tool_schema` returns the version and schema digest for host review. The
+operator must review those values and semantics before adding a contract; the
+model cannot create one through tool arguments. Calls validate the actual live
+server immediately before dispatch, including after a transport reconnect.
+Unexpected argument keys, changed context, changed schema or changed version do
+not reach the underlying tool.
+
+Supported contracts are `provider-read` and explicit `provider-mutate`. Mutation
+requires a fixed context and workflow reference, an active-staging/isolated-lab
+profile, and no automatic replay. A schema annotation cannot grant these rights.
+`context_free=true` is an explicit host approval for public intelligence tools
+that have no account context; it does not invent an assessment web target.
+
+Example operator configuration fragment (replace metadata placeholders with the
+reviewed result from the actual server):
+
+```json
+{
+  "tool_authorizations": [{
+    "tool": "read_repository",
+    "effect": "provider-read",
+    "server_name": "<reviewed server name>",
+    "server_version": "<reviewed server version>",
+    "schema_sha256": "<reviewed input schema digest>",
+    "allowed_arguments": ["repository"],
+    "fixed_arguments": {"repository": "operator-owned/project"}
+  }]
+}
+```
+
+No operator MCP file is rewritten or populated automatically. The active
+regression reads an actual temporary operator JSON file and verifies its exact
+bytes remain unchanged after all provider calls and failures.
+
+Generic `target-read`/`target-mutate` contracts cannot silently inherit network
+authority from their URL arguments. Remote HTTP MCP target execution is blocked
+as `mcp_remote_target_boundary_unavailable`; unconfined stdio target execution is
+blocked as `mcp_target_worker_boundary_not_attested`. URL validation alone cannot
+enforce that remote provider's DNS, redirects or sockets. Canonical target work
+continues through the already reviewed assessment scheduler adapters. A future
+generic target transport must attest its real worker boundary before this block
+can be removed; it must not replace it with a prompt or configuration boolean.
+
+Phase-two verification:
+
+```sh
+cd RedJohn
+../.venv/bin/python -m pytest -q tests/test_mcp_authorization_live.py \
+  tests/test_legacy_execution.py tests/test_mcp_configuration.py \
+  tests/test_runner_assessment_contract.py
+```
+
+**47 passed in 13.56 seconds** on macOS, including actual stateful stdio provider
+calls and an independent local HTTP MCP endpoint. The HTTP case proves approved
+provider metadata works while assessment target egress is unavailable, a real
+provider tool failure stays inconclusive, the controller remains alive, and the
+next approved call recovers. Cross-repository calls do not reach the provider.
+The run emitted two upstream SDK deprecation warnings for its streamable-HTTP
+client alias; they did not represent a retry, assertion failure or skipped test.
+
+The phase-two Shell fault contracts additionally prove that the absolute process
+deadline includes the initial SDK yield and that a spawn interrupted before a
+handle is returned retains its admission if terminate-all fails. Capacity becomes
+available only after a successful cleanup retry. These are contract tests; the
+separate real PTY and Linux namespace cases remain independently classified.
+
+## macOS verification and fault contracts
+
+The dedicated real macOS file is `tests/test_legacy_shell_darwin_live.py`:
+
+- `test_real_macos_bound_shell_proxy_filesystem_and_descendants[http]`
+- `test_real_macos_bound_shell_proxy_filesystem_and_descendants[https]`
+- `test_real_macos_bound_shell_close_kills_worker_and_removes_proxy`
+
+These **three actual SDK/Seatbelt cases passed in 4.18 seconds** on this macOS
+ARM64 host with Python 3.13.16. The HTTP/HTTPS cases compile a workspace Python
+file, validate the owned fixture response through the policy proxy, and verify
+that direct sockets, proxy bypass, child direct sockets, off-scope requests,
+controller file reads and inherited provider-secret environment access fail.
+The cleanup case inspects the actual OS child PID, confirms it is gone, checks
+the proxy port has closed, and verifies zero retained worker reservations or
+proxy tasks. They are platform-not-applicable on Ubuntu, not Linux passes.
+
+`tests/test_darwin_shell_boundary.py` is separately classified as fault/contract
+coverage, not real Seatbelt evidence. It checks malformed proxy endpoint
+rejection, missing backend fail-closed behavior, and interrupted probe cleanup
+ownership: an unconfirmed child keeps its reservation and blocks new Shell
+dispatch until cleanup succeeds. The next call cannot silently use an unbound
+session. The final selected command also rechecks current policy after lazy
+attestation, because that probe may yield while an operator stops the engagement.
+
+Focused combined verification, retaining JUnit outside the source tree:
+
+```sh
+cd RedJohn
+../.venv/bin/python -m pytest -q tests/test_darwin_shell_boundary.py \
+  tests/test_legacy_shell_darwin_live.py tests/test_mcp_authorization_live.py \
+  tests/test_legacy_execution.py tests/test_mcp_configuration.py \
+  tests/test_runner_assessment_contract.py \
+  --junitxml=/tmp/redjohn-legacy-phase3.junit.xml
+```
+
+This focused command is not the full Python/frontend/Go or hosted x64/ARM64
+regression. No Docker/VM backend attestation, external provider credentials, or
+macOS hard cgroup-like memory enforcement is inferred from these results.
+
+Final combined result on **macOS 27.0 ARM64, Python 3.13.16,
+openai-agents 0.19.4**: **57 passed, 0 failed, 0 skipped in 16.29 seconds**.
+The two warnings are the same upstream streamable-HTTP alias deprecations noted
+above. The final JUnit records the three real macOS cases at 0.761, 0.719 and
+0.503 seconds respectively; setup/interpreter collection overhead is separate.
+Scoped Ruff/format checks passed, and strict mypy passed across the 14 changed
+legacy-runtime/MCP modules. These are completed local focused checks, not a
+replacement for the separately required hosted full matrix.

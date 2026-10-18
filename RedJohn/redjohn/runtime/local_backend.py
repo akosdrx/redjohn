@@ -229,6 +229,14 @@ class RedJohnLocalSandboxSession(UnixLocalSandboxSession):
     def bind_assessment_shell_boundary(self, boundary: LegacyShellBoundary | None) -> None:
         self.redjohn_shell_boundary = boundary
 
+    def assessment_shell_filesystem_profile(self, extra_read_paths: Sequence[Path]) -> str:
+        """Keep the SDK workspace and operator grants when adding Seatbelt egress."""
+        return self._darwin_exec_profile(
+            Path(self.state.manifest.root).resolve(),
+            extra_read_paths=extra_read_paths,
+            extra_path_grants=self._darwin_extra_path_grant_roots(),
+        )
+
     def _confined_exec_command(
         self, *, command_parts: list[str], workspace_root: Path, env: Mapping[str, str]
     ) -> list[str]:
@@ -289,6 +297,11 @@ class RedJohnLocalSandboxSession(UnixLocalSandboxSession):
         return cwd, command_parts
 
     async def _resolved_exec_context(self) -> tuple[dict[str, str], str]:
+        if self.redjohn_shell_boundary is not None:
+            # Sanitize before spawning sandbox-exec itself. An `env -i` inside
+            # the child is too late for ambient loader hooks/provider secrets.
+            self.redjohn_shell_boundary.assert_active()
+            return dict(self.redjohn_shell_boundary.environment), str(self.state.manifest.root)
         env, workspace = await super()._resolved_exec_context()
         # Keep the operator's real home out of agent shells. Home-relative
         # reads would otherwise reach ~/.ssh, cloud credentials and browser profiles.

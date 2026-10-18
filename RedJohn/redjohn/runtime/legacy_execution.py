@@ -191,7 +191,7 @@ class LegacyExecution:
             (self.max_history,),
         )
 
-    async def shell(
+    async def shell(  # noqa: PLR0912, PLR0915 - process handle and cleanup ownership stay atomic
         self, name: str, arguments: dict[str, Any], operation: Callable[[], Awaitable[Any]]
     ) -> Any:
         """Retain the worker lease after a yielded SDK process until it terminates.
@@ -204,6 +204,9 @@ class LegacyExecution:
         self.check_policy()
         if self.control is not None:
             await self._ensure_shell_boundary()
+            # Lazy boundary attestation can yield while an operator stops or
+            # revises the engagement; recheck before the selected command starts.
+            self.check_policy()
         terminate = getattr(self._sandbox_session, "pty_terminate_all", None)
         if not callable(terminate):
             raise ResourceAdmissionError("sdk_process_cleanup_unavailable")
@@ -230,6 +233,7 @@ class LegacyExecution:
         )
         operation_id = uuid.uuid4().hex
         retained = False
+        launched_at = time.monotonic()
         try:
             self.db.execute(
                 "INSERT INTO rj_legacy_execution VALUES(?,?,?,?,?,NULL,'running','')",
@@ -250,23 +254,36 @@ class LegacyExecution:
             if running:
                 process_id = int(running.group(1))
                 watchdog = asyncio.create_task(
-                    self._shell_deadline(), name="redjohn-shell-deadline"
+                    self._shell_deadline(launched_at), name="redjohn-shell-deadline"
                 )
                 self._shell[process_id] = operation_id, lease, watchdog
                 retained = True
             else:
                 self._finish(operation_id, "succeeded" if "code 0" in header else "inconclusive")
         except BaseException:
-            await self._stop_shell("cancelled", "sdk_exec_interrupted")
-            self._finish(operation_id, "inconclusive", "sdk_exec_interrupted")
+            try:
+                await self._stop_shell("cancelled", "sdk_exec_interrupted")
+            except BaseException:
+                # The SDK may have spawned a child before yielding its handle.
+                # Keep this admission too until terminate-all succeeds; absence
+                # of a returned handle does not prove absence of a process.
+                retained = True
+                self._failed_cleanup[lease.lease_id] = (
+                    lease,
+                    self._sandbox_session.pty_terminate_all,
+                )
+                self._finish(operation_id, "inconclusive", "sdk_process_cleanup_failed")
+                raise
+            else:
+                self._finish(operation_id, "inconclusive", "sdk_exec_interrupted")
             raise
         finally:
             if not retained:
                 lease.release()
         return result
 
-    async def _shell_deadline(self) -> None:
-        maximum = self._shell_timeout
+    async def _shell_deadline(self, launched_at: float) -> None:
+        maximum = max(0.0, self._shell_timeout - (time.monotonic() - launched_at))
         if self.control is not None and self.control.policy.deadline:
             maximum = min(maximum, max(0, self.control.policy.deadline - time.time()))
         await asyncio.sleep(maximum)
@@ -278,6 +295,7 @@ class LegacyExecution:
 
         async with self._shell_boundary_lock:
             if self._shell_boundary is not None:
+                self._shell_boundary.assert_active()
                 return
             transport = self._shell_transport
             if transport is None or transport.request_admission is None or self.control is None:
@@ -289,8 +307,20 @@ class LegacyExecution:
                 tls_config=transport.tls_config,
                 on_response=transport.on_response,
             )
-            await boundary.start()
             self._shell_boundary = boundary
+            try:
+                await boundary.start()
+            except BaseException as start_error:
+                try:
+                    await boundary.close()
+                except BaseException as cleanup_error:
+                    # Retain the cleanup owner and its reservation if an
+                    # interrupted attestation may still have a child process.
+                    # The next call must assert_active(), never run unconfined.
+                    raise start_error from cleanup_error
+                else:
+                    self._shell_boundary = None
+                raise
 
     def _release_shell(self, process_id: int, state: str, code: str = "") -> None:
         if (owned := self._shell.pop(process_id, None)) is None:

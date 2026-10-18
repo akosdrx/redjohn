@@ -3,7 +3,7 @@
 Jobs persist opaque actor/revision/request references. Credentials remain in an
 operator-supplied private file and in this host process; they never become
 scanner arguments, template files, scheduler payloads or ordinary evidence.
-POST additionally requires a v2 private body contract, an exact captured body
+POST additionally requires a versioned private body contract, an exact captured body
 hash, explicit operator approval, and the engagement's POST URL allowlist.
 """
 
@@ -201,13 +201,15 @@ class AuthReplayBinding:
             _deny("auth_replay_worker_body_mismatch")
 
     def _template_content_type(self, content_type: str | None) -> bool:
-        if self._body is not None and self._body.body_contract_version == 2 and content_type:
+        if self._body is not None and self._body.body_contract_version >= 2 and content_type:
+            version = self._body.body_contract_version
             if (
-                replay_media_type(self.content_type).media_type == "multipart/form-data"
+                replay_media_type(self.content_type, contract_version=version).media_type
+                == "multipart/form-data"
                 and content_type == HOST_REPLAY_MULTIPART_CONTENT_TYPE
             ):
                 return True
-            return same_replay_media_type(content_type, self.content_type)
+            return same_replay_media_type(content_type, self.content_type, contract_version=version)
         return content_type == self.content_type or (
             self._body is not None
             and self.content_type.startswith("multipart/form-data; boundary=")

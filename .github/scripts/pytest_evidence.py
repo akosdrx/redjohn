@@ -6,6 +6,7 @@ remaining cases are reported as unit/contract/mixed, never as scanner E2E.
 
 import json
 import os
+import platform
 from pathlib import Path
 
 import pytest
@@ -43,10 +44,16 @@ REAL_FILES = {
     "test_viewer_assessment.py",
     "test_legacy_cache_live.py",
     "test_legacy_shell_boundary_live.py",
+    "test_legacy_shell_darwin_live.py",
     "test_nuclei_cli_live.py",
     "test_tui_terminal_live.py",
     "test_viewer_steering_live.py",
     "test_soak_limits_live.py",
+    "test_mcp_authorization_live.py",
+    "test_source_tools_live.py",
+    "test_inventory_workflows_live.py",
+    "test_workflow_execution_failures_live.py",
+    "test_extended_wire_replay_live.py",
 }
 
 REAL_CASES = {
@@ -74,7 +81,11 @@ LOCAL_NUCLEI_FILES = {
 LOCAL_PROCESS_FILES = {
     "test_host_lifecycle_live.py", "test_legacy_cache_live.py",
     "test_tui_terminal_live.py", "test_soak_limits_live.py",
+    "test_mcp_authorization_live.py", "test_inventory_workflows_live.py",
+    "test_workflow_execution_failures_live.py",
 }
+NAMESPACE_ONLY_FILES = {"test_source_tools_live.py", "test_legacy_shell_boundary_live.py"}
+PLATFORM_FILES = {"test_legacy_shell_darwin_live.py": "Darwin"}
 LOCAL_PROCESS_CASES = {
     "test_real_stdio_unknown_mutation_is_never_replayed",
     "test_real_stdio_cancellation_terminates_worker_and_releases_lease",
@@ -94,6 +105,7 @@ def pytest_addoption(parser):
 
 def pytest_collection_modifyitems(config, items):
     selected, deselected = [], []
+    non_applicable = []
     suite = config.getoption("--ci-suite")
     capability_path = os.environ.get("REDJOHN_CI_CAPABILITIES")
     capabilities = json.loads(Path(capability_path).read_text()) if capability_path else None
@@ -101,13 +113,21 @@ def pytest_collection_modifyitems(config, items):
         filename = Path(str(item.path)).name
         name = item.originalname or item.name
         real = filename in REAL_FILES or name in REAL_CASES
+        if filename in PLATFORM_FILES and platform.system() != PLATFORM_FILES[filename]:
+            if suite == "all" or (suite == "integration") == real:
+                non_applicable.append({"nodeid": item.nodeid, "required_platform": PLATFORM_FILES[filename],
+                                   "actual_platform": platform.system(),
+                                   "reason": "platform_not_applicable_not_executed_not_passed"})
+            deselected.append(item)
+            continue
         doubles = filename in MOCK_CONTRACT_FILES or "unittest.mock" in Path(str(item.path)).read_text()
         item.user_properties.append(
             ("evidence_kind", "real_integration" if real else
              "mock_contract" if doubles else "unit_contract_or_mixed")
         )
         if real and capabilities is not None:
-            required = ({"browser_available"} if filename == "test_viewer_steering_live.py" else
+            required = ({"namespace_available"} if filename in NAMESPACE_ONLY_FILES else
+                        {"browser_available"} if filename == "test_viewer_steering_live.py" else
                         set() if filename in LOCAL_NUCLEI_FILES or filename in LOCAL_PROCESS_FILES or name in LOCAL_PROCESS_CASES
                         else {"cgroup_available"} if name in KERNEL_ONLY_CASES
                         else {"browser_available", "namespace_available"})
@@ -121,6 +141,10 @@ def pytest_collection_modifyitems(config, items):
             deselected.append(item)
     items[:] = selected
     config.hook.pytest_deselected(items=deselected)
+    if os.environ.get("GITHUB_ACTIONS") == "true":
+        output = Path(os.environ["GITHUB_WORKSPACE"]) / "artifacts" / ("non-applicable-" + suite + ".json")
+        output.parent.mkdir(exist_ok=True)
+        output.write_text(json.dumps({"suite": suite, "cases": non_applicable}, indent=2) + "\n")
 
 
 @pytest.hookimpl(hookwrapper=True)

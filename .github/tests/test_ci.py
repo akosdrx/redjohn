@@ -18,7 +18,7 @@ SPEC.loader.exec_module(ci)
 class EvidenceContract(unittest.TestCase):
     def setUp(self):
         # Keep synthetic rejection cases out of the real runner's step summary.
-        summary = patch.dict(os.environ, {"GITHUB_STEP_SUMMARY": ""})
+        summary = patch.dict(os.environ, {"GITHUB_STEP_SUMMARY": "", "GITHUB_ACTIONS": "false"})
         summary.start()
         self.addCleanup(summary.stop)
 
@@ -152,6 +152,35 @@ class EvidenceContract(unittest.TestCase):
             result = ci.junit_summary(path)
             self.assertEqual(result["evidence_kinds"]["mock_contract"]["passed"], 1)
             self.assertNotIn("real_integration", result["evidence_kinds"])
+
+    def test_darwin_cases_are_explicitly_not_applicable_and_namespace_blocks_stay_visible(self):
+        spec = importlib.util.spec_from_file_location("evidence", Path(__file__).parents[1] / "scripts/pytest_evidence.py")
+        plugin = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(plugin)
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            capability = root / "capabilities.json"
+            capability.write_text('{"browser_available":false,"namespace_available":false}')
+            items, markers, deselected = [], {}, []
+            for filename in ("test_legacy_shell_darwin_live.py", "test_source_tools_live.py"):
+                path = root / filename
+                path.write_text("")
+                markers[filename] = []
+                items.append(SimpleNamespace(path=path, originalname="test_real", name="test_real",
+                    nodeid=filename + "::test_real", user_properties=[], add_marker=markers[filename].append))
+            config = SimpleNamespace(getoption=lambda _: "integration",
+                hook=SimpleNamespace(pytest_deselected=lambda **kw: deselected.extend(kw["items"])))
+            with patch.dict(os.environ, {"REDJOHN_CI_CAPABILITIES": str(capability),
+                                        "GITHUB_ACTIONS": "true", "GITHUB_WORKSPACE": str(root)}), \
+                    patch.object(plugin.platform, "system", return_value="Linux"):
+                plugin.pytest_collection_modifyitems(config, items)
+            self.assertEqual([item.nodeid for item in deselected], ["test_legacy_shell_darwin_live.py::test_real"])
+            self.assertEqual(len(items), 1)
+            self.assertEqual(len(markers["test_source_tools_live.py"]), 1)
+            evidence = json.loads((root / "artifacts/non-applicable-integration.json").read_text())
+            self.assertEqual(len(evidence["cases"]), 1)
+            self.assertEqual(evidence["cases"][0]["required_platform"], "Darwin")
+            self.assertIn("not_passed", evidence["cases"][0]["reason"])
 
 
 if __name__ == "__main__":

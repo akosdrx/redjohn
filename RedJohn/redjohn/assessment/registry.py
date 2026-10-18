@@ -149,6 +149,19 @@ CAPABILITIES = (
         auth_replay=True,
         owner_process_only=True,
     ),
+    Capability(
+        "workflow_execute",
+        "RedJohn reviewed stateful workflow",
+        profiles=("active-staging", "isolated-lab"),
+        adapter_implemented=True,
+        source="redjohn/assessment/workflow_execution.py",
+        license="project",
+        status="implemented_pending_live_proof",
+        reason="requires_explicit_workflow_configuration_and_private_vault",
+        cancellation=True,
+        auth_replay=True,
+        owner_process_only=True,
+    ),
     *tuple(
         Capability(
             id=name,
@@ -258,22 +271,39 @@ CAPABILITIES = (
         auth_replay=True,
     ),
     *tuple(
-        Capability(id=name, tool=tool, binary_names=bins, domains=domains, source=source)
-        for name, tool, bins, domains, source in (
+        Capability(
+            id=capability,
+            tool=tool,
+            binary_names=(binary,),
+            domains=("source",),
+            resource_class="scanner",
+            adapter_implemented=True,
+            source=source,
+            license=license_name,
+            status="implemented_pending_native_e2e",
+            reason="requires_explicit_immutable_local_manifest_and_offline_namespace",
+            cancellation=True,
+        )
+        for capability, tool, binary, source, license_name in (
             (
                 "semgrep_source",
-                "Semgrep",
-                ("semgrep",),
-                ("source",),
-                "https://github.com/semgrep/semgrep",
+                "Semgrep CE (native OCaml)",
+                "osemgrep",
+                "https://github.com/semgrep/semgrep/tree/v1.181.0",
+                "LGPL-2.1_engine_rules_separate",
             ),
             (
                 "trivy_source",
-                "Trivy",
-                ("trivy",),
-                ("source", "cloud"),
-                "https://github.com/aquasecurity/trivy",
+                "Trivy filesystem misconfiguration",
+                "trivy",
+                "https://github.com/aquasecurity/trivy/tree/v0.76.0",
+                "Apache-2.0_engine_embedded_checks_separate",
             ),
+        )
+    ),
+    *tuple(
+        Capability(id=name, tool=tool, binary_names=bins, domains=domains, source=source)
+        for name, tool, bins, domains, source in (
             (
                 "naabu_ports",
                 "Naabu",
@@ -341,8 +371,23 @@ CAPABILITIES = (
 )
 
 
+def _source_configurations(
+    semgrep: dict[str, Any] | None, trivy: dict[str, Any] | None
+) -> dict[str, Any]:
+    if semgrep is None and trivy is None:
+        return {}
+    from redjohn.assessment.source_tools import CAPABILITIES as SOURCE_CAPABILITIES  # noqa: PLC0415
+    from redjohn.assessment.source_tools import SourceToolConfig  # noqa: PLC0415 - selected source engines only
+
+    return {
+        SOURCE_CAPABILITIES[name]: SourceToolConfig.from_mapping(name, value)
+        for name, value in (("semgrep", semgrep), ("trivy", trivy))
+        if value is not None
+    }
+
+
 class CapabilityRegistry:
-    def __init__(  # noqa: PLR0912 - explicit optional configuration gates
+    def __init__(  # noqa: PLR0912, PLR0915 - explicit optional configuration gates
         self,
         *,
         repository_root: str | Path | None = None,
@@ -350,6 +395,7 @@ class CapabilityRegistry:
         nuclei_lock: dict[str, Any] | None = None,
         session_refresh_configured: bool = False,
         browser_post_capture_configured: bool = False,
+        workflow_execution_configured: bool = False,
         ffuf_config: dict[str, Any] | None = None,
         httpx_config: dict[str, Any] | None = None,
         katana_config: dict[str, Any] | None = None,
@@ -360,6 +406,8 @@ class CapabilityRegistry:
         tinja_config: dict[str, Any] | None = None,
         schemathesis_config: dict[str, Any] | None = None,
         interactsh_config: dict[str, Any] | None = None,
+        semgrep_config: dict[str, Any] | None = None,
+        trivy_config: dict[str, Any] | None = None,
     ) -> None:
         """Discover local installation presence without executing optional tools.
 
@@ -372,7 +420,9 @@ class CapabilityRegistry:
         self._capabilities = {entry.id: entry for entry in CAPABILITIES}
         self._session_refresh_configured = session_refresh_configured
         self._browser_post_capture_configured = browser_post_capture_configured
+        self._workflow_execution_configured = workflow_execution_configured
         self._ffuf_config = None
+        self._source_configs = _source_configurations(semgrep_config, trivy_config)
         self._specialist_configs = {}
         if any(value is not None for value in (arjun_config, sqlmap_config, dalfox_config)):
             from redjohn.assessment.specialists import CAPABILITIES as SPECIALISTS  # noqa: PLC0415
@@ -431,6 +481,8 @@ class CapabilityRegistry:
             "dalfox_validate": root / ".tools/dalfox/3.2.4/dalfox",
             "tinja_validate": root / ".tools/tinja/1.2.0/tinja",
             "schemathesis_validate": root / ".tools/schemathesis/4.31.1/schemathesis.tar",
+            "semgrep_source": root / ".tools/semgrep/1.181.0/osemgrep",
+            "trivy_source": root / ".tools/trivy/0.76.0/trivy",
         }
         if nuclei_lock is not None and not isinstance(nuclei_lock, dict):
             raise TypeError("invalid_nuclei_registry_lock_metadata")
@@ -454,6 +506,9 @@ class CapabilityRegistry:
 
     def execution_versions(self, capability: str) -> ExecutionVersions:  # noqa: PLR0911
         """Return configured cache/job identities, never runtime version proof."""
+        if capability in self._source_configs:
+            source = self._source_configs[capability]
+            return {"tool_version": source.version, "template_version": source.revision}
         if capability in {"oast_correlate", "oast_poll"} and self._oast_config is not None:
             return {
                 "tool_version": self._oast_config.version,
@@ -481,7 +536,9 @@ class CapabilityRegistry:
 
     def _binary_presence(self, entry: Capability) -> tuple[str | None, str | None]:  # noqa: PLR0911 - explicit pin prevents PATH fallback
         configured = (
-            self._specialist_configs[entry.id].binary
+            self._source_configs[entry.id].binary
+            if entry.id in self._source_configs
+            else self._specialist_configs[entry.id].binary
             if entry.id in self._specialist_configs
             else self._discovery_configs[entry.id].binary
             if entry.id in self._discovery_configs
@@ -512,7 +569,7 @@ class CapabilityRegistry:
     def get(self, name: str) -> Capability | None:
         return self._capabilities.get(name)
 
-    def health(self) -> list[dict[str, Any]]:
+    def health(self) -> list[dict[str, Any]]:  # noqa: PLR0912 - one explicit gate per optional capability
         rows = []
         for entry in self._capabilities.values():
             row = asdict(entry)
@@ -538,15 +595,27 @@ class CapabilityRegistry:
                     status="blocked_configuration",
                     reason="private_refresh_provider_and_vault_not_configured",
                 )
+            elif entry.id == "workflow_execute" and not self._workflow_execution_configured:
+                row.update(
+                    status="blocked_configuration",
+                    reason="explicit_workflow_configuration_and_private_vault_missing",
+                )
             elif entry.id == "ffuf_discover" and self._ffuf_config is None:
                 row.update(
                     status="blocked_configuration",
                     reason="pinned_ffuf_and_approved_paths_not_configured",
                 )
             elif (
-                entry.id in {"httpx_probe", "katana_discover"}
-                and entry.id not in self._discovery_configs
-            ) or (entry.id == "vulnx_intelligence" and self._vulnx_config is None):
+                (
+                    entry.id in {"httpx_probe", "katana_discover"}
+                    and entry.id not in self._discovery_configs
+                )
+                or (entry.id == "vulnx_intelligence" and self._vulnx_config is None)
+                or (
+                    entry.id in {"semgrep_source", "trivy_source"}
+                    and entry.id not in self._source_configs
+                )
+            ):
                 row.update(
                     status="blocked_configuration",
                     reason="pinned_binary_and_approved_tool_configuration_missing",

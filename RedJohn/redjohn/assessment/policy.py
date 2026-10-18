@@ -8,8 +8,12 @@ import re
 import socket
 import time
 from dataclasses import asdict, dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from urllib.parse import parse_qsl, unquote, urlsplit
+
+
+if TYPE_CHECKING:
+    from redjohn.assessment.models import Surface
 
 
 class PolicyDenied(ValueError):  # noqa: N818 - public compatibility name
@@ -55,6 +59,7 @@ class EngagementPolicy:
     request_budget: int = 128
     allowed_replay_urls: tuple[str, ...] = ()
     allowed_refresh_urls: tuple[str, ...] = ()
+    allowed_source_artifacts: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         if not all(
@@ -77,7 +82,19 @@ class EngagementPolicy:
             raise PolicyDenied("invalid_target_domain")
         if self.egress_mode not in {"unavailable", "local-fixture", "enforced"}:
             raise PolicyDenied("invalid_egress_mode")
-        if not self.allowed_origins or len(self.allowed_origins) > 128:
+        if (
+            not isinstance(self.allowed_source_artifacts, tuple)
+            or len(self.allowed_source_artifacts) > 128
+            or any(
+                not isinstance(value, str) or re.fullmatch(r"[a-f0-9]{64}", value) is None
+                for value in self.allowed_source_artifacts
+            )
+            or (self.allowed_source_artifacts and "source" not in self.target_domains)
+        ):
+            raise PolicyDenied("invalid_source_artifact_grants")
+        if (not self.allowed_origins and not self.allowed_source_artifacts) or len(
+            self.allowed_origins
+        ) > 128:
             raise PolicyDenied("invalid_origin_allowlist")
         for origin in self.allowed_origins:
             parsed = urlsplit(origin)
@@ -130,6 +147,7 @@ class EngagementPolicy:
             "target_domains",
             "allowed_replay_urls",
             "allowed_refresh_urls",
+            "allowed_source_artifacts",
         ):
             if field in value:
                 if not isinstance(value[field], (list, tuple)) or not all(
@@ -140,7 +158,31 @@ class EngagementPolicy:
         return cls(**value)
 
     def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
+        document = asdict(self)
+        # Old signed approvals and persisted policy JSON must remain byte-for-
+        # byte canonical when no new source capability was granted.
+        if not self.allowed_source_artifacts:
+            document.pop("allowed_source_artifacts")
+        return document
+
+    def check_surface(self, surface: Surface) -> None:
+        """Source permission comes from an explicit digest grant, never discovery."""
+        if surface.resource_kind != "source_artifact":
+            self.check_scope_url(surface.url)
+            return
+        if self.deadline and time.time() >= self.deadline:
+            raise PolicyDenied("campaign_deadline_exceeded")
+        if (
+            "source" not in self.target_domains
+            or surface.artifact_sha256 not in self.allowed_source_artifacts
+        ):
+            raise PolicyDenied("source_artifact_not_approved")
+
+    @staticmethod
+    def resource_identity(surface: Surface) -> str:
+        if surface.resource_kind == "source_artifact":
+            return "source_artifact:" + surface.artifact_sha256
+        return origin_for(surface.url)
 
     def authorize(self, caller: str, revision: str | None = None) -> None:
         if caller != self.owner_id:

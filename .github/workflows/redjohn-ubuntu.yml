@@ -55,6 +55,8 @@ jobs:
       REDJOHN_REQUIRE_SPECIALIST_E2E: '1'
       REDJOHN_REQUIRE_SCHEMA_OAST_E2E: '1'
       REDJOHN_REQUIRE_OS_MEMORY: '1'
+      REDJOHN_REQUIRE_SOURCE_SCANNER_E2E: '1'
+      REDJOHN_EXTENDED_WIRE_MEASUREMENTS: ${{ github.workspace }}/artifacts/extended-wire
       REDJOHN_TEST_CGROUP_ROOT: /sys/fs/cgroup/redjohn-ci-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.runner_arch }}
       REDJOHN_RESOURCE_POOL_PATH: ${{ github.workspace }}/.ci-state/redjohn-resources.sqlite3
       REDJOHN_OS_MEMORY_MEASUREMENTS: ${{ github.workspace }}/artifacts/os-memory
@@ -147,7 +149,9 @@ jobs:
           python .github/scripts/ci.py run --name go-build --cwd RedJohn/redjohn/interface/tui -- timeout 10m go build -trimpath -o "$GITHUB_WORKSPACE/artifacts/build/redjohn-tui" ./cmd/redjohn-tui
       - name: Build the Python distribution using the existing packaging hook
         if: ${{ !cancelled() && steps.go.outcome == 'success' && steps.dependencies.outcome == 'success' }}
-        run: python .github/scripts/ci.py run --name python-wheel -- timeout 10m python -m pip wheel --no-deps --no-build-isolation ./RedJohn --wheel-dir artifacts/build
+        run: |
+          python .github/scripts/ci.py run --name python-wheel -- timeout 10m python -m pip wheel --no-deps --no-build-isolation ./RedJohn --wheel-dir artifacts/build
+          python .github/scripts/ci.py run --name python-wheel-license -- python .github/scripts/verify-wheel.py
       - name: Cache version-pinned Chromium downloads
         if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
         uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
@@ -160,6 +164,7 @@ jobs:
         run: |
           python .github/scripts/ci.py run --name linux-dependencies -- timeout 10m bash -c 'sudo apt-get update && sudo apt-get install -y bubblewrap iproute2 apparmor-utils && python -m playwright install --with-deps chromium'
           python .github/scripts/ci.py run --name scanner-install -- timeout 20m bash .github/scripts/install-scanners.sh
+          python .github/scripts/ci.py run --name source-scanner-install -- timeout 15m bash .github/scripts/install-source-scanners.sh
       - name: Delegate the owned cgroup and restore verified provenance fixtures
         if: ${{ !cancelled() && steps.engines.outcome == 'success' }}
         id: delegation

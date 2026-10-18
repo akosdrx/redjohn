@@ -22,7 +22,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, NoReturn
 
 from redjohn.assessment.auth_replay import AuthReplayDenied, AuthReplayVault
-from redjohn.assessment.media_type import MediaTypeDenied, replay_media_type
+from redjohn.assessment.media_type import MediaTypeDenied, parse_media_type, replay_media_type
 from redjohn.assessment.models import Surface
 from redjohn.assessment.policy import PolicyDenied, origin_for
 from redjohn.assessment.request_body import ApprovedRequestBody, RequestBodyDenied
@@ -53,6 +53,8 @@ def _approved_wire_body(request: dict[str, Any]) -> ApprovedRequestBody:
     try:
         return ApprovedRequestBody.from_mapping(request)
     except RequestBodyDenied as exc:
+        if "body_contract_version" in request:
+            raise
         if str(exc) not in {
             "auth_replay_body_unsupported_content_type",
             "auth_replay_body_invalid_multipart_boundary",
@@ -61,6 +63,42 @@ def _approved_wire_body(request: dict[str, Any]) -> ApprovedRequestBody:
             raise
         request["body_contract_version"] = 2
         return ApprovedRequestBody.from_mapping(request)
+
+
+def _valid_rule_media(rule: dict[str, Any]) -> bool:
+    version = rule.get("body_contract_version", 2)
+    if type(version) is not int or version not in {2, 3}:
+        return False
+    if rule["content_type"] in {
+        "application/json",
+        "application/x-www-form-urlencoded",
+        "multipart/form-data",
+    }:
+        return True
+    if version != 3:
+        return False
+    try:
+        parsed = parse_media_type(rule["content_type"])
+    except MediaTypeDenied:
+        return False
+    # Rules select a base MIME, not a target-provided widening of approval.
+    return (
+        parsed.family in {"json", "xml"}
+        and parsed.media_type == rule["content_type"]
+        and not parsed.parameters
+    )
+
+
+def _rule_matches_media(rule: dict[str, Any], content_type: str) -> bool:
+    try:
+        return bool(
+            replay_media_type(
+                content_type, contract_version=rule.get("body_contract_version", 2)
+            ).media_type
+            == rule["content_type"]
+        )
+    except MediaTypeDenied:
+        return False
 
 
 def _has_expired_capture_binding(
@@ -135,19 +173,16 @@ class BrowserPostCaptureService:
             for rule in data["rules"]:
                 if (
                     not isinstance(rule, dict)
-                    or not required <= set(rule) <= required | {"start_url", "body_tokens"}
+                    or not required
+                    <= set(rule)
+                    <= required | {"start_url", "body_tokens", "body_contract_version"}
                     or any(
                         not isinstance(rule[key], str) or len(rule[key]) > 4096
                         for key in required - {"expires_at", "automatic_approval"}
                     )
                     or rule["automatic_approval"] is not True
                     or rule["actor_id"] == "anonymous"
-                    or rule["content_type"]
-                    not in {
-                        "application/json",
-                        "application/x-www-form-urlencoded",
-                        "multipart/form-data",
-                    }
+                    or not _valid_rule_media(rule)
                     or isinstance(rule["expires_at"], bool)
                     or not isinstance(rule["expires_at"], (int, float))
                     or not math.isfinite(rule["expires_at"])
@@ -410,15 +445,11 @@ class BrowserPostCaptureService:
         if len(types) != 1 or len(body) > 65536:
             _deny("browser_capture_invalid_request_body")
         content_type = types[0]
-        try:
-            media = replay_media_type(content_type).media_type
-        except MediaTypeDenied:
-            _deny("browser_capture_content_type_unsupported")
         rules = [
             rule
             for rule in context.rules
             if self.policy._request_url(rule["url"]) == self.policy._request_url(url)
-            and rule["content_type"] == media
+            and _rule_matches_media(rule, content_type)
             and rule["expires_at"] > time.time()
         ]
         if len(rules) != 1:
@@ -433,6 +464,8 @@ class BrowserPostCaptureService:
             "body_sha256": hashlib.sha256(body).hexdigest(),
             "replay_safety": "operator-approved",
         }
+        if "body_contract_version" in rule:
+            request["body_contract_version"] = rule["body_contract_version"]
         if "body_tokens" in rule:
             request["body_tokens"] = copy.deepcopy(rule["body_tokens"])
         approved = _approved_wire_body(request)

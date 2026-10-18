@@ -19,7 +19,7 @@ from urllib.parse import urlsplit
 from redjohn.assessment.egress import EgressUnavailable
 from redjohn.assessment.intelligence import PerformanceMonitor
 from redjohn.assessment.models import AdapterResult, JobSpec, error_record, stable_key
-from redjohn.assessment.policy import EngagementPolicy, PolicyDenied, origin_for
+from redjohn.assessment.policy import EngagementPolicy, PolicyDenied
 from redjohn.assessment.recovery import CircuitBreaker, FailureRecoverySystem, error_from_code
 from redjohn.assessment.resources import ResourceAdmissionError, ResourceGovernor
 from redjohn.assessment.store import AssessmentStore, CapacityExceeded, EvidenceWriteError
@@ -29,7 +29,8 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from redjohn.assessment.adapters import WorkerAdapter
-    from redjohn.assessment.registry import CapabilityRegistry
+    from redjohn.assessment.models import Surface
+    from redjohn.assessment.registry import Capability, CapabilityRegistry
 
 
 _TRANSIENT_HOST_CAPACITY = frozenset(
@@ -347,9 +348,9 @@ class Scheduler:
                     "stale_policy_revision", category="policy", coverage_effect="blocked"
                 ),
             )
-        self.policy.check_capability(domains=entry.domains, profiles=entry.profiles)
-        self.policy.check_actor(surface.actor_id)
-        self.policy.check_scope_url(surface.url)
+        self._authorize_surface(entry, surface)
+        with self.store._lock:
+            self.store.inventory.require_surface_active(self.store.db, self.policy, spec.surface_id)
         if (
             surface.method not in {"GET", "HEAD", "OPTIONS"}
             or spec.capability in {"browser_post_capture", "session_refresh"}
@@ -364,7 +365,7 @@ class Scheduler:
                     coverage_effect="blocked",
                 ),
             )
-        circuit_key = stable_key([spec.capability, origin_for(surface.url)])
+        circuit_key = stable_key([spec.capability, self.policy.resource_identity(surface)])
         if not self.circuits.allow(circuit_key):
             return AdapterResult(
                 "failed",
@@ -489,6 +490,19 @@ class Scheduler:
             finally:
                 os.close(descriptor)
 
+    def _authorize_surface(self, entry: Capability, surface: Surface) -> None:
+        self.policy.check_capability(domains=entry.domains, profiles=entry.profiles)
+        self.policy.check_actor(surface.actor_id)
+        self.policy.check_surface(surface)
+        if surface.resource_kind == "source_artifact":
+            if "source" not in entry.domains:
+                raise PolicyDenied("source_artifact_capability_mismatch")
+            self.store.inventory.require_source_asset(
+                self.policy, surface.asset_ref, surface.artifact_sha256
+            )
+        elif entry.domains == ("source",):
+            raise PolicyDenied("source_artifact_resource_required")
+
     def _resource_denial(
         self,
         error: ResourceAdmissionError | CapacityExceeded,
@@ -606,7 +620,7 @@ class Scheduler:
                 and result.error.get("category") != "resource"
             ):
                 self.circuits.record(
-                    stable_key([job["capability"], origin_for(surface.url)]),
+                    stable_key([job["capability"], self.policy.resource_identity(surface)]),
                     success=result.execution_status == "succeeded"
                     or (result.error or {}).get("category")
                     in {"policy", "capability", "input", "permission", "auth", "rate_limit"},
