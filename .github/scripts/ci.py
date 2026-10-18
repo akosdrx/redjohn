@@ -154,7 +154,7 @@ def junit_summary(path):
 REQUIRED = ("python-install", "linux-dependencies", "scanner-install", "linux-setup",
             "frontend-install", "pip-check", "python-lint", "python-types", "ci-contracts", "frontend-types",
             "frontend-build", "go-vet", "go-tests", "go-build", "python-wheel",
-            "python-regression", "python-integration")
+            "python-regression", "python-integration", "sandbox-setup", "sandbox-cleanup")
 
 
 def summarize():
@@ -180,6 +180,9 @@ def summarize():
     cap = OUT / "capabilities.json"
     if not cap.is_file() or not json.loads(cap.read_text()).get("available"):
         result["blockers"].append("blocked_runner_capability")
+    policy_cleanup = OUT / "apparmor-cleanup.json"
+    if not policy_cleanup.is_file() or not json.loads(policy_cleanup.read_text()).get("success"):
+        result["blockers"].append("failed_owned_apparmor_cleanup")
     cleanup = OUT / "cgroup-cleanup.json"
     if not cleanup.is_file():
         result["blockers"].append("missing_cleanup_evidence")

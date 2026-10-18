@@ -1,0 +1,34 @@
+# CI-only policy. No executable attachment and no unconfined/complain mode.
+# Root enters this named profile before setpriv drops to the runner UID.
+# Every exec inherits confinement, including bwrap's no-new-privs children
+# and Chromium's nested namespace/seccomp sandbox. Host capabilities remain 0.
+abi <abi/4.0>,
+include <tunables/global>
+profile @REDJOHN_CI_PROFILE@ flags=(attach_disconnected,mediate_deleted) {
+  # bwrap's namespace setup plus setpriv's initial UID/GID drop only.
+  capability setuid,
+  capability setgid,
+  capability setpcap,
+  capability sys_chroot,
+  capability sys_ptrace,
+  capability sys_admin,
+  capability net_admin,
+
+  # Existing DAC, private mounts, kernel network namespaces and cgroups
+  # continue to restrict these operations. No px/ux or change_profile escape.
+  /{,**} mrwlkix,
+  network,
+  unix,
+  ptrace,
+  signal,
+  userns,
+  mount,
+  umount,
+  pivot_root,
+
+  audit deny /etc/apparmor.d/{,**} wkl,
+  audit deny /proc/sys/{,**} w,
+  audit deny /proc/sysrq-trigger w,
+  audit deny /sys/kernel/security/{,**} wkl,
+  audit deny /proc/{self,thread-self,[0-9]*}/attr/{current,exec} w,
+}

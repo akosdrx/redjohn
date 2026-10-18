@@ -67,6 +67,7 @@ jobs:
       REDJOHN_AUTOMATIC_SESSION_MEASUREMENTS: ${{ github.workspace }}/artifacts/automatic-session.json
       REDJOHN_MIME_RESTART_MEASUREMENTS: ${{ github.workspace }}/artifacts/mime-restart.json
       REDJOHN_CI_CAPABILITIES: ${{ github.workspace }}/artifacts/capabilities.json
+      REDJOHN_CI_APPARMOR_PROFILE: redjohn-ci-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.runner_arch }}
       GOMAXPROCS: '2'
       GOTOOLCHAIN: local
     steps:
@@ -142,7 +143,7 @@ jobs:
         if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
         id: engines
         run: |
-          python .github/scripts/ci.py run --name linux-dependencies -- timeout 10m bash -c 'sudo apt-get update && sudo apt-get install -y bubblewrap iproute2 && python -m playwright install --with-deps chromium'
+          python .github/scripts/ci.py run --name linux-dependencies -- timeout 10m bash -c 'sudo apt-get update && sudo apt-get install -y bubblewrap iproute2 apparmor-utils && python -m playwright install --with-deps chromium'
           python .github/scripts/ci.py run --name scanner-install -- timeout 20m bash .github/scripts/install-scanners.sh
       - name: Delegate the owned cgroup and restore verified provenance fixtures
         if: ${{ !cancelled() && steps.engines.outcome == 'success' }}
@@ -154,10 +155,17 @@ jobs:
           task_python="$(command -v python)"
           task_home="$HOME"
           sudo -E env HOME="$task_home" REDJOHN_CI_CAPABILITIES='' bash .github/scripts/linux-tests.sh "$task_python" regression
-      - name: Attest namespace and memory boundaries without disabling protection
+      - name: Install the job-scoped enforcing AppArmor policy and negative controls
         if: ${{ !cancelled() && steps.delegation.outcome == 'success' }}
+        id: sandbox
+        run: python .github/scripts/ci.py run --name sandbox-setup -- python .github/scripts/sandbox.py prepare
+      - name: Attest namespace and memory boundaries without disabling protection
+        if: ${{ !cancelled() && steps.sandbox.outcome == 'success' }}
         id: capability
-        run: python .github/scripts/capabilities.py
+        run: |
+          task_python="$(command -v python)"
+          task_home="$HOME"
+          sudo -E env HOME="$task_home" bash .github/scripts/linux-tests.sh "$task_python" capability
       - name: Run actual Chromium, Nuclei, scanners and Linux isolation E2E
         if: ${{ !cancelled() && steps.delegation.outcome == 'success' }}
         run: |
@@ -167,6 +175,9 @@ jobs:
       - name: Capture and clean only this job's delegated processes
         if: always()
         run: bash .github/scripts/cleanup-linux.sh
+      - name: Remove only the job-owned AppArmor profile and recheck host restrictions
+        if: ${{ always() && steps.sandbox.outcome != 'skipped' }}
+        run: python .github/scripts/ci.py run --name sandbox-cleanup -- python .github/scripts/sandbox.py cleanup
       - name: Require complete evidence and reject skipped capabilities
         if: always()
         run: python .github/scripts/ci.py summary

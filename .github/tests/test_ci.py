@@ -76,6 +76,7 @@ class EvidenceContract(unittest.TestCase):
                     "leaked_descendant_pids_before_cleanup": []}))
             (root / "capabilities.json").write_text('{"available":true}')
             (root / "cgroup-cleanup.json").write_text('{"removed":true,"leaked_processes":false}')
+            (root / "apparmor-cleanup.json").write_text('{"success":true}')
             (root / "go-tests.log").write_text('{"Package":"fixture","Test":"TestContract","Action":"pass"}\n')
             for name in ("regression", "integration"):
                 (root / (name + ".junit.xml")).write_text('<testsuite><testcase name="fixture"/></testsuite>')

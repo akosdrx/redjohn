@@ -48,9 +48,32 @@ to the historical path used by the existing provenance regression inside the
 disposable runner; the runtime skills remain English. No scanner executes as
 root. The launcher drops to the original runner UID before the sampler and
 tests start. The kernel namespace attestation, cgroup memory/swap/pids limits,
-actual kernel OOM and process cleanup checks are mandatory. Setup never
-disables AppArmor, changes user-namespace sysctls, bypasses TLS validation or
-removes egress enforcement. Missing capabilities fail the capability gate.
+actual kernel OOM and process cleanup checks are mandatory. Missing
+capabilities fail the capability gate.
+
+Ubuntu's user-namespace restriction remains enabled (`=1`). A unique,
+non-attached **enforcing** AppArmor profile scopes namespace permission to
+this job's capability probe and integration descendants. A privileged launcher
+enters it and immediately drops to the original runner UID/GID, with effective,
+permitted and ambient host capabilities all zero. It never attaches to Python,
+bwrap, Chromium or a writable executable path. The profile allows only seven
+capabilities needed for UID/GID drop and namespace construction; DAC, private
+mounts, network isolation, memory limits and Chromium's own sandbox still apply.
+Every exec inherits the policy; policy/sysctl writes and profile changes are
+denied. This policy deliberately covers the assessment subprocess tree, since
+Chromium needs nested namespaces beneath bwrap's no-new-privs boundary.
+It is not a general application deployment profile.
+
+`apparmor_restrict_unprivileged_unconfined` is hardened to `1` so an ordinary
+process cannot use `aa-exec` to gain the profile's namespace privileges.
+Unprofiled `unshare`, unprivileged profile entry, profile escape and raw sockets
+in a nested namespace are real negative controls. Chromium's `chrome://sandbox`
+must show PID/network namespaces and seccomp; unsafe disabling flags are
+rejected. No global restriction is disabled, no unconfined/complain policy or
+setuid helper is installed, and TLS/egress checks remain intact. Only the
+run/attempt/architecture-owned policy is removed after owned processes stop;
+surviving profile processes prevent removal. Setup, policy SHA-256, negative
+controls, browser status and cleanup are preserved as artifacts.
 
 Each architecture has a 90-minute job timeout, per-command deadlines, bounded
 Go build concurrency and a matrix concurrency of two. Existing runs are not
