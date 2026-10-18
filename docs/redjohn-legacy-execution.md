@@ -204,14 +204,15 @@ No operator MCP file is rewritten or populated automatically. The active
 regression reads an actual temporary operator JSON file and verifies its exact
 bytes remain unchanged after all provider calls and failures.
 
-Generic `target-read`/`target-mutate` contracts cannot silently inherit network
-authority from their URL arguments. Remote HTTP MCP target execution is blocked
-as `mcp_remote_target_boundary_unavailable`; unconfined stdio target execution is
-blocked as `mcp_target_worker_boundary_not_attested`. URL validation alone cannot
-enforce that remote provider's DNS, redirects or sockets. Canonical target work
-continues through the already reviewed assessment scheduler adapters. A future
-generic target transport must attest its real worker boundary before this block
-can be removed; it must not replace it with a prompt or configuration boolean.
+Generic target contracts cannot silently inherit network authority from URL
+arguments. Remote HTTP target execution remains blocked as
+`mcp_remote_target_boundary_unavailable`; an unbound stdio target remains blocked
+as `mcp_target_worker_boundary_not_attested`. The new host-bound Linux local path
+submits reference-only `mcp_target_read` jobs to the existing persistent scheduler
+and attests its actual PID/network namespace before dispatch. Its precise
+supported inputs, live results and remaining Docker/macOS limitations are in
+[Confined local MCP target reads](redjohn-confined-mcp-target.md). Target mutation
+and authenticated/body replay remain separate explicit capabilities.
 
 Phase-two verification:
 

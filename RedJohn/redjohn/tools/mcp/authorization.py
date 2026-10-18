@@ -38,10 +38,11 @@ def contract_for(entry: McpConnectionEntry, tool: str) -> McpToolAuthorization:
     if rule.effect.startswith("target-"):
         if config is not None and config.transport == "http":
             raise McpAuthorizationError("mcp_remote_target_boundary_unavailable")
-        # A URL argument check is not redirect/DNS/socket enforcement. Only a
-        # host-owned, actually attested worker launch can satisfy this boundary;
-        # no boolean or annotation supplied by the remote tool grants it.
-        raise McpAuthorizationError("mcp_target_worker_boundary_not_attested")
+        # A host adapter is permission to SUBMIT a reference-only durable job.
+        # It must attest the real worker at prepare/dispatch, before networking.
+        # A URL argument or tool annotation alone never grants a launch.
+        if entry._target_adapter is None:
+            raise McpAuthorizationError("mcp_target_worker_boundary_not_attested")
     return rule
 
 

@@ -44,6 +44,10 @@ def post_template(content_type: str = "application/json") -> dict:
         "application/x-www-form-urlencoded",
         "application/x-www-form-urlencoded; charset=utf-8",
         "multipart/form-data; boundary=redjohn_fixture-1",
+        "application/vnd.redjohn+json; charset=utf-16",
+        "application/xml; charset=iso-8859-1",
+        'application/soap+xml; charset="windows-1252"',
+        "application/x-www-form-urlencoded; charset=windows-1250",
     ],
 )
 def test_post_contract_accepts_only_explicit_public_placeholder(content_type):
@@ -64,6 +68,10 @@ def test_post_contract_accepts_only_explicit_public_placeholder(content_type):
         {"headers": {"content-type": "application/json"}},
         {"headers": {"Content-Type": "text/plain"}},
         {"headers": {"Content-Type": 'multipart/form-data; boundary="quoted"'}},
+        {"headers": {"Content-Type": "application/xml; charset=utf-7"}},
+        {"headers": {"Content-Type": "application/json; charset=utf-8; charset=utf-16"}},
+        {"headers": {"Content-Type": "application/xml; profile=arbitrary"}},
+        {"headers": {"Content-Type": "application/xml\r\nAuthorization: injected"}},
         {"raw": ["POST /approved-replay HTTP/1.1"]},
         {"redirects": True},
         {"method": "PUT"},

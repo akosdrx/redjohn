@@ -11,6 +11,14 @@ from dataclasses import asdict, dataclass
 from typing import TYPE_CHECKING, Any
 from urllib.parse import parse_qsl, unquote, urlsplit
 
+from redjohn.assessment.network_scope import (
+    dns_name,
+    endpoint,
+    numeric_ip,
+    port_number,
+    resolver_tuple,
+)
+
 
 if TYPE_CHECKING:
     from redjohn.assessment.models import Surface
@@ -60,6 +68,11 @@ class EngagementPolicy:
     allowed_replay_urls: tuple[str, ...] = ()
     allowed_refresh_urls: tuple[str, ...] = ()
     allowed_source_artifacts: tuple[str, ...] = ()
+    allowed_networks: tuple[str, ...] = ()
+    allowed_tcp_ports: tuple[str, ...] = ()
+    allowed_dns_zones: tuple[str, ...] = ()
+    allowed_dns_resolvers: tuple[str, ...] = ()
+    network_request_budget: int = 0
 
     def __post_init__(self) -> None:
         if not all(
@@ -92,9 +105,13 @@ class EngagementPolicy:
             or (self.allowed_source_artifacts and "source" not in self.target_domains)
         ):
             raise PolicyDenied("invalid_source_artifact_grants")
-        if (not self.allowed_origins and not self.allowed_source_artifacts) or len(
-            self.allowed_origins
-        ) > 128:
+        self._validate_network_grants()
+        if (
+            not self.allowed_origins
+            and not self.allowed_source_artifacts
+            and not self.allowed_networks
+            and not self.allowed_dns_zones
+        ) or len(self.allowed_origins) > 128:
             raise PolicyDenied("invalid_origin_allowlist")
         for origin in self.allowed_origins:
             parsed = urlsplit(origin)
@@ -114,6 +131,70 @@ class EngagementPolicy:
             or not 1 <= self.request_budget <= 100000
         ):
             raise PolicyDenied("invalid_execution_budget")
+
+    def _validate_network_grants(self) -> None:
+        grants = (
+            self.allowed_networks,
+            self.allowed_tcp_ports,
+            self.allowed_dns_zones,
+            self.allowed_dns_resolvers,
+        )
+        if any(
+            not isinstance(items, tuple)
+            or len(items) > 128
+            or any(not isinstance(item, str) or len(item) > 253 for item in items)
+            for items in grants
+        ):
+            raise PolicyDenied("invalid_network_grants")
+        if (
+            (any(grants) and "network" not in self.target_domains)
+            or bool(self.allowed_networks) != bool(self.allowed_tcp_ports)
+            or bool(self.allowed_dns_zones) != bool(self.allowed_dns_resolvers)
+            or type(self.network_request_budget) is not int
+            or not 0 <= self.network_request_budget <= 100000
+            or (
+                any(grants)
+                and (not self.network_request_budget or self.profile == "safe-production")
+            )
+        ):
+            raise PolicyDenied("explicit_network_scope_and_budget_required")
+        for network in self.allowed_networks:
+            parsed = ipaddress.ip_network(network, strict=True)
+            if network != str(parsed) or parsed.is_multicast or parsed.is_unspecified:
+                raise PolicyDenied("canonical_network_range_required")
+        for port in self.allowed_tcp_ports:
+            port_number(port)
+        for zone in self.allowed_dns_zones:
+            dns_name(zone)
+        for resolver in self.allowed_dns_resolvers:
+            resolver_tuple(resolver)
+
+    def check_network_endpoint(self, address: str, port: str) -> None:
+        if self.deadline and time.time() >= self.deadline:
+            raise PolicyDenied("campaign_deadline_exceeded")
+        numeric_ip(address)
+        port_number(port)
+        if (
+            "network" not in self.target_domains
+            or port not in self.allowed_tcp_ports
+            or not any(
+                ipaddress.ip_address(address) in ipaddress.ip_network(net)
+                for net in self.allowed_networks
+            )
+        ):
+            raise PolicyDenied("network_endpoint_out_of_scope")
+
+    def check_dns_query(self, name: str, query_type: str, address: str, port: str) -> None:
+        if self.deadline and time.time() >= self.deadline:
+            raise PolicyDenied("campaign_deadline_exceeded")
+        dns_name(name)
+        if (
+            "network" not in self.target_domains
+            or query_type not in {"A", "AAAA", "CNAME"}
+            or endpoint(address, port) not in self.allowed_dns_resolvers
+            or not any(name == zone or name.endswith("." + zone) for zone in self.allowed_dns_zones)
+        ):
+            raise PolicyDenied("dns_query_out_of_scope")
 
     def _validate_post_allowlists(self) -> None:
         for urls in (self.allowed_replay_urls, self.allowed_refresh_urls):
@@ -148,6 +229,10 @@ class EngagementPolicy:
             "allowed_replay_urls",
             "allowed_refresh_urls",
             "allowed_source_artifacts",
+            "allowed_networks",
+            "allowed_tcp_ports",
+            "allowed_dns_zones",
+            "allowed_dns_resolvers",
         ):
             if field in value:
                 if not isinstance(value[field], (list, tuple)) or not all(
@@ -161,12 +246,28 @@ class EngagementPolicy:
         document = asdict(self)
         # Old signed approvals and persisted policy JSON must remain byte-for-
         # byte canonical when no new source capability was granted.
-        if not self.allowed_source_artifacts:
-            document.pop("allowed_source_artifacts")
+        for key in (
+            "allowed_source_artifacts",
+            "allowed_networks",
+            "allowed_tcp_ports",
+            "allowed_dns_zones",
+            "allowed_dns_resolvers",
+            "network_request_budget",
+        ):
+            if not document[key]:
+                document.pop(key)
         return document
 
     def check_surface(self, surface: Surface) -> None:
         """Source permission comes from an explicit digest grant, never discovery."""
+        if surface.resource_kind == "network_endpoint":
+            self.check_network_endpoint(surface.network_address, surface.network_port)
+            return
+        if surface.resource_kind == "dns_name":
+            self.check_dns_query(
+                surface.dns_name, surface.dns_type, surface.network_address, surface.network_port
+            )
+            return
         if surface.resource_kind != "source_artifact":
             self.check_scope_url(surface.url)
             return
@@ -182,6 +283,12 @@ class EngagementPolicy:
     def resource_identity(surface: Surface) -> str:
         if surface.resource_kind == "source_artifact":
             return "source_artifact:" + surface.artifact_sha256
+        if surface.resource_kind in {"network_endpoint", "dns_name"}:
+            return (
+                surface.resource_kind
+                + ":"
+                + endpoint(surface.network_address, surface.network_port)
+            )
         return origin_for(surface.url)
 
     def authorize(self, caller: str, revision: str | None = None) -> None:

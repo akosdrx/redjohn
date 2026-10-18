@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import shutil
 from dataclasses import asdict, dataclass
 from importlib.util import find_spec
@@ -135,6 +136,44 @@ CAPABILITIES = (
                 "https://github.com/projectdiscovery/vulnx/tree/v2.0.2",
             ),
         )
+    ),
+    *tuple(
+        Capability(
+            id=capability,
+            tool=tool,
+            domains=("network",),
+            profiles=("active-staging", "isolated-lab"),
+            resource_class="scanner",
+            adapter_implemented=True,
+            binary_names=(binary,),
+            source=source,
+            license="MIT",
+            status="implemented_pending_native_e2e",
+            reason="requires_explicit_network_or_dns_grants_and_scoped_socks_broker",
+            cancellation=True,
+        )
+        for capability, tool, binary, source in (
+            (
+                "naabu_ports",
+                "Naabu TCP CONNECT",
+                "naabu",
+                "https://github.com/projectdiscovery/naabu/tree/v2.6.1",
+            ),
+            (
+                "dnsx_resolve",
+                "dnsx controlled TCP DNS",
+                "dnsx",
+                "https://github.com/projectdiscovery/dnsx/tree/v1.3.1",
+            ),
+        )
+    ),
+    Capability(
+        "dns_discover",
+        "Amass / Subfinder alternatives",
+        domains=("network",),
+        status="deferred_not_required",
+        reason="controlled_dnsx_resolve_selected_no_duplicate_orchestrator",
+        source="https://github.com/owasp-amass/amass",
     ),
     Capability(
         "session_refresh",
@@ -270,6 +309,30 @@ CAPABILITIES = (
         cancellation=True,
         auth_replay=True,
     ),
+    Capability(
+        "browser_auth_flow",
+        "RedJohn reviewed Chromium authentication workflow",
+        profiles=("active-staging", "isolated-lab"),
+        resource_class="browser",
+        adapter_implemented=True,
+        source="redjohn/assessment/browser_workflow_actions.py",
+        license="project",
+        status="implemented_pending_live_proof",
+        reason="requires_private_authentication_flow_and_one_use_inputs",
+        cancellation=True,
+        auth_replay=True,
+    ),
+    Capability(
+        "mcp_target_read",
+        "RedJohn confined host-bound stdio target read",
+        adapter_implemented=True,
+        source="redjohn/runtime/mcp_target.py",
+        license="project",
+        status="implemented_pending_live_proof",
+        reason="requires_attested_stdio_and_fixed_reviewed_contract",
+        cancellation=True,
+        owner_process_only=True,
+    ),
     *tuple(
         Capability(
             id=capability,
@@ -304,21 +367,7 @@ CAPABILITIES = (
     *tuple(
         Capability(id=name, tool=tool, binary_names=bins, domains=domains, source=source)
         for name, tool, bins, domains, source in (
-            (
-                "naabu_ports",
-                "Naabu",
-                ("naabu",),
-                ("network",),
-                "https://github.com/projectdiscovery/naabu",
-            ),
             ("nmap_services", "Nmap", ("nmap",), ("network",), "https://nmap.org/"),
-            (
-                "dns_discover",
-                "Amass / Subfinder / dnsx",
-                ("amass", "subfinder", "dnsx"),
-                ("network",),
-                "https://github.com/owasp-amass/amass",
-            ),
             (
                 "wordpress_assess",
                 "WPScan",
@@ -386,6 +435,21 @@ def _source_configurations(
     }
 
 
+def _network_configurations(
+    naabu: dict[str, Any] | None, dnsx: dict[str, Any] | None
+) -> dict[str, Any]:
+    if naabu is None and dnsx is None:
+        return {}
+    from redjohn.assessment.network_tools import CAPABILITIES as NETWORK_CAPABILITIES  # noqa: PLC0415
+    from redjohn.assessment.network_tools import NetworkToolConfig  # noqa: PLC0415 - selected native engines only
+
+    return {
+        NETWORK_CAPABILITIES[name]: NetworkToolConfig.from_mapping(name, value)
+        for name, value in (("naabu", naabu), ("dnsx", dnsx))
+        if value is not None
+    }
+
+
 class CapabilityRegistry:
     def __init__(  # noqa: PLR0912, PLR0915 - explicit optional configuration gates
         self,
@@ -395,6 +459,7 @@ class CapabilityRegistry:
         nuclei_lock: dict[str, Any] | None = None,
         session_refresh_configured: bool = False,
         browser_post_capture_configured: bool = False,
+        browser_auth_flow_configured: bool = False,
         workflow_execution_configured: bool = False,
         ffuf_config: dict[str, Any] | None = None,
         httpx_config: dict[str, Any] | None = None,
@@ -408,6 +473,8 @@ class CapabilityRegistry:
         interactsh_config: dict[str, Any] | None = None,
         semgrep_config: dict[str, Any] | None = None,
         trivy_config: dict[str, Any] | None = None,
+        naabu_config: dict[str, Any] | None = None,
+        dnsx_config: dict[str, Any] | None = None,
     ) -> None:
         """Discover local installation presence without executing optional tools.
 
@@ -420,9 +487,12 @@ class CapabilityRegistry:
         self._capabilities = {entry.id: entry for entry in CAPABILITIES}
         self._session_refresh_configured = session_refresh_configured
         self._browser_post_capture_configured = browser_post_capture_configured
+        self._browser_auth_flow_configured = browser_auth_flow_configured
+        self._mcp_target_versions: ExecutionVersions | None = None
         self._workflow_execution_configured = workflow_execution_configured
         self._ffuf_config = None
         self._source_configs = _source_configurations(semgrep_config, trivy_config)
+        self._network_configs = _network_configurations(naabu_config, dnsx_config)
         self._specialist_configs = {}
         if any(value is not None for value in (arjun_config, sqlmap_config, dalfox_config)):
             from redjohn.assessment.specialists import CAPABILITIES as SPECIALISTS  # noqa: PLC0415
@@ -483,6 +553,8 @@ class CapabilityRegistry:
             "schemathesis_validate": root / ".tools/schemathesis/4.31.1/schemathesis.tar",
             "semgrep_source": root / ".tools/semgrep/1.181.0/osemgrep",
             "trivy_source": root / ".tools/trivy/0.76.0/trivy",
+            "naabu_ports": root / ".tools/naabu/2.6.1/naabu",
+            "dnsx_resolve": root / ".tools/dnsx/1.3.1/dnsx",
         }
         if nuclei_lock is not None and not isinstance(nuclei_lock, dict):
             raise TypeError("invalid_nuclei_registry_lock_metadata")
@@ -506,6 +578,11 @@ class CapabilityRegistry:
 
     def execution_versions(self, capability: str) -> ExecutionVersions:  # noqa: PLR0911
         """Return configured cache/job identities, never runtime version proof."""
+        if capability == "mcp_target_read" and self._mcp_target_versions is not None:
+            return self._mcp_target_versions.copy()
+        if capability in self._network_configs:
+            network = self._network_configs[capability]
+            return {"tool_version": network.version, "template_version": network.revision}
         if capability in self._source_configs:
             source = self._source_configs[capability]
             return {"tool_version": source.version, "template_version": source.revision}
@@ -534,10 +611,29 @@ class CapabilityRegistry:
             }
         return {"tool_version": "1", "template_version": ""}
 
+    def bind_mcp_target(self, *, contract_sha256: str, server_version: str) -> None:
+        """Trusted host metadata binding; grants no target or dispatch authority."""
+        if (
+            not isinstance(contract_sha256, str)
+            or re.fullmatch(r"[a-f0-9]{64}", contract_sha256) is None
+            or not isinstance(server_version, str)
+            or re.fullmatch(r"[A-Za-z0-9_.+-]{1,128}", server_version) is None
+        ):
+            raise ValueError("invalid_host_stdio_registry_metadata")
+        versions: ExecutionVersions = {
+            "tool_version": server_version,
+            "template_version": contract_sha256,
+        }
+        if self._mcp_target_versions is not None and self._mcp_target_versions != versions:
+            raise ValueError("host_stdio_registry_binding_already_set")
+        self._mcp_target_versions = versions
+
     def _binary_presence(self, entry: Capability) -> tuple[str | None, str | None]:  # noqa: PLR0911 - explicit pin prevents PATH fallback
         configured = (
             self._source_configs[entry.id].binary
             if entry.id in self._source_configs
+            else self._network_configs[entry.id].binary
+            if entry.id in self._network_configs
             else self._specialist_configs[entry.id].binary
             if entry.id in self._specialist_configs
             else self._discovery_configs[entry.id].binary
@@ -600,6 +696,16 @@ class CapabilityRegistry:
                     status="blocked_configuration",
                     reason="explicit_workflow_configuration_and_private_vault_missing",
                 )
+            elif entry.id == "browser_auth_flow" and not self._browser_auth_flow_configured:
+                row.update(
+                    status="blocked_configuration",
+                    reason="private_authentication_flow_and_one_use_inputs_missing",
+                )
+            elif entry.id == "mcp_target_read" and self._mcp_target_versions is None:
+                row.update(
+                    status="blocked_host_stdio_binding_required",
+                    reason="attested_host_stdio_contract_not_bound",
+                )
             elif entry.id == "ffuf_discover" and self._ffuf_config is None:
                 row.update(
                     status="blocked_configuration",
@@ -614,6 +720,10 @@ class CapabilityRegistry:
                 or (
                     entry.id in {"semgrep_source", "trivy_source"}
                     and entry.id not in self._source_configs
+                )
+                or (
+                    entry.id in {"naabu_ports", "dnsx_resolve"}
+                    and entry.id not in self._network_configs
                 )
             ):
                 row.update(

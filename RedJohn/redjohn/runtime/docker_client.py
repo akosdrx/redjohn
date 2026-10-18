@@ -1,5 +1,4 @@
-"""RedJohnDockerSandboxClient — preserves the image's ENTRYPOINT and adds
-NET_ADMIN/NET_RAW capabilities + host-gateway.
+"""RedJohnDockerSandboxClient preserves ENTRYPOINT and drops network privileges.
 
 The SDK's ``DockerSandboxClient._create_container`` does not expose a hook for
 extending ``create_kwargs`` before ``containers.create`` is called. We subclass
@@ -11,13 +10,13 @@ deltas:
    ``docker-entrypoint.sh`` actually run — without it, ``caido-cli`` never
    starts inside the container and ``bootstrap_caido`` retries against a
    dead port.
-2. Append NET_ADMIN/NET_RAW to ``cap_add`` (required by ``nmap -sS`` and
-   other raw-socket tools).
+2. Explicitly drop NET_ADMIN/NET_RAW, including Docker's default NET_RAW.
 3. Add ``host.docker.internal`` → host-gateway to ``extra_hosts`` so the
    agent can reach host-served apps.
 
-Pinned to ``openai-agents==0.14.6``. Bumping the SDK requires
-re-merging the parent body. Track upstream for an injection hook.
+Reviewed against the installed ``openai-agents==0.19.4`` source. Preserve its
+path-grant validation when changing this small container-creation override.
+This is not an attested assessment egress backend; bound Shell remains blocked.
 """
 
 from __future__ import annotations
@@ -37,6 +36,7 @@ from agents.sandbox.sandboxes.docker import (
     _docker_port_key,
     _manifest_requires_fuse,
     _manifest_requires_sys_admin,
+    _validate_docker_path_grants,
 )
 from agents.sandbox.session.sandbox_session import SandboxSession
 from agents.sandbox.types import ExposedPortEndpoint
@@ -64,6 +64,19 @@ def _apply_sandbox_network(create_kwargs: dict[str, Any]) -> None:
     if network:
         create_kwargs["network"] = network
         create_kwargs.pop("ports", None)
+
+
+def _drop_network_privileges(create_kwargs: dict[str, Any]) -> None:
+    denied = {"NET_ADMIN", "NET_RAW"}
+    capabilities = create_kwargs.get("cap_add", [])
+    create_kwargs["cap_add"] = [
+        value for value in capabilities if str(value).upper().removeprefix("CAP_") not in denied
+    ]
+    dropped = list(create_kwargs.get("cap_drop", []))
+    for name in sorted(denied):
+        if name not in dropped:
+            dropped.append(name)
+    create_kwargs["cap_drop"] = dropped
 
 
 def _apply_resource_limits(create_kwargs: dict[str, Any]) -> None:
@@ -175,7 +188,9 @@ class RedJohnDockerSandboxClient(DockerSandboxClient):
         session_id: uuid.UUID | None = None,
     ) -> Container:
         # ----- BEGIN VERBATIM COPY of DockerSandboxClient._create_container -----
-        # SDK ref: src/agents/sandbox/sandboxes/docker.py:1434-1477 (v0.14.6).
+        # SDK source reviewed: agents/sandbox/sandboxes/docker.py (v0.19.4).
+        if manifest is not None:
+            _validate_docker_path_grants(manifest)
         if not self.image_exists(image):
             repo, tag = parse_repository_tag(image)
             self.docker_client.images.pull(repo, tag=tag or None, all_tags=False)
@@ -220,14 +235,9 @@ class RedJohnDockerSandboxClient(DockerSandboxClient):
             }
         # ----- END VERBATIM COPY -----
 
-        # RedJohn injections — append, don't overwrite, so FUSE/SYS_ADMIN survives.
-        cap_add = create_kwargs.setdefault("cap_add", [])
-        if not isinstance(cap_add, list):
-            cap_add = list(cap_add)
-            create_kwargs["cap_add"] = cap_add
-        for cap in ("NET_ADMIN", "NET_RAW"):
-            if cap not in cap_add:
-                cap_add.append(cap)
+        # Raw/network-administration authority is not a default Shell grant.
+        # Reviewed typed network adapters select their own unprivileged mode.
+        _drop_network_privileges(create_kwargs)
 
         extra_hosts = create_kwargs.setdefault("extra_hosts", {})
         extra_hosts["host.docker.internal"] = "host-gateway"
@@ -255,7 +265,7 @@ class RedJohnDockerSandboxClient(DockerSandboxClient):
         logger.debug(
             "Creating sandbox container: image=%s caps=%s exposed_ports=%s",
             image,
-            cap_add,
+            create_kwargs.get("cap_add", []),
             list(exposed_ports),
         )
         container = self.docker_client.containers.create(**create_kwargs)

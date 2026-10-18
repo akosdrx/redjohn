@@ -26,8 +26,8 @@ async def _docker_backend(
 ) -> tuple[Any, Any]:
     """Bring up a session backed by the local Docker daemon.
 
-    Uses :class:`RedJohnDockerSandboxClient` to inject NET_ADMIN /
-    NET_RAW caps + ``host.docker.internal`` host-gateway, on the same
+    Uses :class:`RedJohnDockerSandboxClient` to drop NET_ADMIN/NET_RAW while
+    preserving ``host.docker.internal`` host-gateway, on the same
     endpoint the startup check resolved (``DOCKER_HOST``, docker context,
     default socket). Imports ``docker`` lazily so deployments that target
     a non-Docker backend don't need the docker-py library installed.

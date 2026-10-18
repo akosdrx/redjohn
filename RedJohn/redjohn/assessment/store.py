@@ -163,6 +163,8 @@ class AssessmentStore:
           sequence INTEGER PRIMARY KEY AUTOINCREMENT, engagement TEXT NOT NULL,
           event_key TEXT UNIQUE, action TEXT NOT NULL, at REAL NOT NULL, payload TEXT NOT NULL);
         CREATE INDEX IF NOT EXISTS rj_audit_engagement ON rj_audit(engagement,sequence);
+        CREATE TABLE IF NOT EXISTS rj_network_usage(
+          engagement TEXT PRIMARY KEY REFERENCES rj_engagement(id),used INTEGER NOT NULL);
         CREATE TABLE IF NOT EXISTS rj_session_state(
           engagement TEXT NOT NULL REFERENCES rj_engagement(id), actor TEXT NOT NULL,
           tenant TEXT NOT NULL, policy_revision TEXT NOT NULL, revision TEXT NOT NULL,
@@ -218,6 +220,9 @@ class AssessmentStore:
         if versions != [1]:
             raise ValueError("unsupported_assessment_schema")
         self.inventory = InventoryRepository(self)
+        from redjohn.assessment.auth_flow_state import AuthFlowRepository  # noqa: PLC0415 - additive store extension
+
+        self.auth_flows = AuthFlowRepository(self)
 
     def close(self) -> None:
         with self._lock:
@@ -1537,6 +1542,34 @@ class AssessmentStore:
                 )
                 count += 1
         return count
+
+    def network_request_usage(self, policy: EngagementPolicy) -> int:
+        with self._lock:
+            if not self._capture_policy_fenced(self.db, policy):
+                raise PolicyDenied("network_budget_policy_denied")
+            row = self.db.execute(
+                "SELECT used FROM rj_network_usage WHERE engagement=?", (policy.engagement_id,)
+            ).fetchone()
+            return int(row[0]) if row else 0
+
+    def consume_network_requests(self, policy: EngagementPolicy, count: int = 1) -> None:
+        if type(count) is not int or count < 1:
+            raise ValueError("invalid_network_request_count")
+        with self.transaction() as db:
+            if not self._capture_policy_fenced(db, policy):
+                raise PolicyDenied("network_budget_policy_denied")
+            budget = getattr(policy, "network_request_budget", 0)
+            row = db.execute(
+                "SELECT used FROM rj_network_usage WHERE engagement=?", (policy.engagement_id,)
+            ).fetchone()
+            used = int(row[0]) if row else 0
+            if budget <= 0 or count > budget - used:
+                raise PolicyDenied("network_request_budget_exhausted")
+            db.execute(
+                "INSERT INTO rj_network_usage VALUES(?,?) ON CONFLICT(engagement) DO "
+                "UPDATE SET used=excluded.used",
+                (policy.engagement_id, used + count),
+            )
 
     def request_usage(self, policy: EngagementPolicy) -> int:
         with self._lock:

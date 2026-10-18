@@ -7,7 +7,7 @@ import contextlib
 import hashlib
 import json
 import threading
-from dataclasses import asdict, replace
+from dataclasses import replace
 from http.server import BaseHTTPRequestHandler
 from typing import TYPE_CHECKING
 from urllib.parse import urlsplit
@@ -80,12 +80,21 @@ def test_safe_production_denies_post_even_with_explicit_endpoint_allowlist():
 
 def test_surface_body_digest_changes_post_identity_but_preserves_legacy_get_identity():
     get = Surface("https://example.test/path?a=1&a=2", actor_id="alice", request_ref="capture-1")
+    # Literal pre-extension payload: asdict(current Surface) would include
+    # newly introduced fields and silently redefine the historical oracle.
     legacy = {
-        key: value
-        for key, value in asdict(get).items()
-        if key not in {"source", "request_ref", "body_sha256"}
+        "url": "https://example.test/path?a=1&a=2",
+        "method": "GET",
+        "content_type": "",
+        "input_location": "",
+        "input_name": "",
+        "actor_id": "alice",
+        "tenant_id": "",
+        "session_revision": "1",
+        "workflow_state": "initial",
     }
-    assert get.key == stable_key(legacy)
+    assert stable_key(legacy) == "6f30e083826efb51bfe303c03d644ed5a7edb03c39ad3bfacd5d540b8667d2d7"
+    assert get.key == "6f30e083826efb51bfe303c03d644ed5a7edb03c39ad3bfacd5d540b8667d2d7"
     post = replace(get, method="POST", content_type="application/json", body_sha256="a" * 64)
     assert post.key != replace(post, body_sha256="b" * 64).key
     assert post.key == replace(post, request_ref="fresh-capture", source="imported").key

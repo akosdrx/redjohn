@@ -164,7 +164,7 @@ def junit_summary(path):
     return {"counts": counts, "evidence_kinds": kinds, "skips": skips}
 
 
-REQUIRED = ("python-install", "linux-dependencies", "scanner-install", "source-scanner-install", "linux-setup",
+REQUIRED = ("python-install", "linux-dependencies", "scanner-install", "source-scanner-install", "network-scanner-install", "linux-setup",
             "frontend-install", "pip-check", "python-lint", "python-types", "ci-contracts", "frontend-types",
             "frontend-build", "frontend-tests", "go-vet", "go-tests", "go-build", "python-wheel", "python-wheel-license",
             "python-regression", "python-integration", "mixed-soak", "sandbox-setup", "sandbox-cleanup")

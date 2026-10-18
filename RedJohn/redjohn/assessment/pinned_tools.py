@@ -155,7 +155,17 @@ class PinnedToolRunner:
             "max_output_bytes": OUTPUT_LIMIT,
             "tool_environment": environment,
         }
-        if self.tool in {"arjun", "sqlmap", "dalfox", "tinja", "schemathesis", "semgrep", "trivy"}:
+        if self.tool in {
+            "arjun",
+            "sqlmap",
+            "dalfox",
+            "tinja",
+            "schemathesis",
+            "semgrep",
+            "trivy",
+            "naabu",
+            "dnsx",
+        }:
             config["max_file_bytes"] = 1024 * 1024
         source = Path(__file__).parents[1].joinpath("tools/hunt/bounded_worker.py").read_text()
         command = [sys.executable, "-I", "-S", "-c", source, json.dumps(config)]

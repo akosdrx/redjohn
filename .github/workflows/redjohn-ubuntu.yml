@@ -56,6 +56,7 @@ jobs:
       REDJOHN_REQUIRE_SCHEMA_OAST_E2E: '1'
       REDJOHN_REQUIRE_OS_MEMORY: '1'
       REDJOHN_REQUIRE_SOURCE_SCANNER_E2E: '1'
+      REDJOHN_REQUIRE_NETWORK_SCANNER_E2E: '1'
       REDJOHN_EXTENDED_WIRE_MEASUREMENTS: ${{ github.workspace }}/artifacts/extended-wire
       REDJOHN_TEST_CGROUP_ROOT: /sys/fs/cgroup/redjohn-ci-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.runner_arch }}
       REDJOHN_RESOURCE_POOL_PATH: ${{ github.workspace }}/.ci-state/redjohn-resources.sqlite3
@@ -162,9 +163,10 @@ jobs:
         if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
         id: engines
         run: |
-          python .github/scripts/ci.py run --name linux-dependencies -- timeout 10m bash -c 'sudo apt-get update && sudo apt-get install -y bubblewrap iproute2 apparmor-utils && python -m playwright install --with-deps chromium'
+          python .github/scripts/ci.py run --name linux-dependencies -- timeout 10m bash -c 'sudo apt-get update && sudo apt-get install -y bubblewrap iproute2 apparmor-utils libpcap0.8t64 && python -m playwright install --with-deps chromium'
           python .github/scripts/ci.py run --name scanner-install -- timeout 20m bash .github/scripts/install-scanners.sh
           python .github/scripts/ci.py run --name source-scanner-install -- timeout 15m bash .github/scripts/install-source-scanners.sh
+          python .github/scripts/ci.py run --name network-scanner-install -- timeout 10m bash .github/scripts/install-network-scanners.sh
       - name: Delegate the owned cgroup and restore verified provenance fixtures
         if: ${{ !cancelled() && steps.engines.outcome == 'success' }}
         id: delegation

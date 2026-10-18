@@ -66,6 +66,7 @@ if TYPE_CHECKING:
 
     from redjohn.tools.mcp.client import ResultTransform
     from redjohn.tools.mcp.config import McpConnectionConfig
+    from redjohn.tools.mcp.stdio_boundary import BoundedMcpStdio, McpStdioLaunch
 
     # One operation to run against the live session, e.g. ``list_tools`` or a tool
     # call. Runs on the supervising task (supervised sessions) or inline (adopted
@@ -160,7 +161,12 @@ class SupervisedMcpSession:
     :attr:`name`, :attr:`server`, :attr:`config`, :attr:`is_dead`.
     """
 
-    def __init__(self, config: McpConnectionConfig) -> None:
+    def __init__(
+        self,
+        config: McpConnectionConfig,
+        *,
+        stdio_launch: Callable[[McpConnectionConfig], Awaitable[McpStdioLaunch]] | None = None,
+    ) -> None:
         self._name = config.name
         self._config: McpConnectionConfig | None = config
         self._server: MCPServer | None = None
@@ -178,6 +184,9 @@ class SupervisedMcpSession:
         self._last_failure = FailureInfo("unknown", reason="connection unavailable")
         self._reconnect_lock = asyncio.Lock()
         self._call_semaphore: asyncio.Semaphore | None = None
+        self._stdio_launch = stdio_launch
+        self._bound_transports: list[BoundedMcpStdio] = []
+        self._launch_error: Exception | None = None
 
     @classmethod
     def adopt(
@@ -211,6 +220,9 @@ class SupervisedMcpSession:
         self._last_failure = FailureInfo("unknown", reason="connection unavailable")
         self._reconnect_lock = asyncio.Lock()
         self._call_semaphore = None
+        self._stdio_launch = None
+        self._bound_transports = []
+        self._launch_error = None
         return self
 
     # -- read-only accessors --------------------------------------------------
@@ -298,7 +310,10 @@ class SupervisedMcpSession:
         self._queue = asyncio.Queue(maxsize=self._config.queue_max_items if self._config else 32)
         self._ready = loop.create_future()
         self._task = asyncio.create_task(self._supervise(), name=f"mcp-session-{self._name}")
-        return await self._ready
+        started = await self._ready
+        if not started and self._launch_error is not None:
+            raise self._launch_error
+        return started
 
     async def aclose(self) -> None:
         """Shut the connection down and clean up its session on its owning task.
@@ -345,6 +360,7 @@ class SupervisedMcpSession:
         else:
             await self._safe_cleanup()
         self._fail_pending()
+        await self._cleanup_bound_transports()
 
     # -- caller-facing operations --------------------------------------------
 
@@ -374,6 +390,7 @@ class SupervisedMcpSession:
         result_transform: ResultTransform | None = None,
         supports_images: bool = True,
         before_call: Callable[[MCPServer], Awaitable[None]] | None = None,
+        allow_replay: bool = True,
     ) -> Any:
         """Run one tool call with bounded retries for transient session failures.
 
@@ -413,7 +430,9 @@ class SupervisedMcpSession:
         outcome = await self._run_job(
             job,
             phase="call",
-            idempotent=bool(self._config and tool_name in self._config.idempotent_tools),
+            idempotent=bool(
+                allow_replay and self._config and tool_name in self._config.idempotent_tools
+            ),
         )
         if outcome.capacity_exhausted:
             from redjohn.tools.mcp.client import _errored_tool_output
@@ -781,7 +800,21 @@ class SupervisedMcpSession:
 
         if self._config is None:
             raise RuntimeError(f"MCP connection {self._name!r} has no config to connect")
-        built = _build_server(self._config)
+        try:
+            launch = await self._stdio_launch(self._config) if self._stdio_launch else None
+        except Exception as exc:
+            # Preserve a trusted host launch/attestation rejection. It is a
+            # blocked capability, not a provider-negative tool observation.
+            if self._launch_error is None:
+                self._launch_error = exc
+            raise
+        built = (
+            _build_server(self._config)
+            if launch is None
+            else _build_server(self._config, launch=launch)
+        )
+        if built.transport is not None:
+            self._bound_transports.append(built.transport)
         server = built.server
         self._recorder = built.recorder
         try:
@@ -848,6 +881,13 @@ class SupervisedMcpSession:
         """
         server = self._server
         self._server = None
+        if self._bound_transports:
+            try:
+                if server is not None:
+                    await server.cleanup()  # type: ignore[no-untyped-call]
+            finally:
+                await self._cleanup_bound_transports()
+            return
         if server is None:
             return
         for _ in range(_MAX_ATTEMPTS):
@@ -866,6 +906,12 @@ class SupervisedMcpSession:
                 continue
             else:
                 return
+
+    async def _cleanup_bound_transports(self) -> None:
+        for transport in list(self._bound_transports):
+            await transport.close()
+            transport.assert_stopped()
+            self._bound_transports.remove(transport)
 
     def _report_ready(self, value: bool) -> None:
         if self._ready is not None and not self._ready.done():

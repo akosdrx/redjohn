@@ -57,6 +57,10 @@ def validate_configuration(value: object) -> dict[str, Any]:
         "semgrep",
         "trivy",
         "source_jobs",
+        "naabu",
+        "dnsx",
+        "network_jobs",
+        "browser_auth_flow",
         "workflow_execution",
         "jobs",
     }:
@@ -73,6 +77,7 @@ def enqueue_configured_jobs(
     config: dict[str, Any],
 ) -> None:
     specs = []
+    specs.extend(_configured_network_jobs(store, policy, config))
     for seed in config.get("seeds", []):
         if not isinstance(seed, dict) or set(seed) - {
             "url",
@@ -161,6 +166,8 @@ def enqueue_configured_jobs(
                 "oast_correlate",
                 "semgrep_source",
                 "trivy_source",
+                "naabu_ports",
+                "dnsx_resolve",
             }
         ):
             raise ValueError("invalid_selected_specialist_job")
@@ -174,6 +181,8 @@ def enqueue_configured_jobs(
             "oast_correlate": "oast",
             "semgrep_source": "source_code",
             "trivy_source": "source_configuration",
+            "naabu_ports": "network_port",
+            "dnsx_resolve": "dns_resolution",
         }[capability]
         specs.append(
             JobSpec(
@@ -190,6 +199,82 @@ def enqueue_configured_jobs(
             )
         )
     store.submit(policy, specs)
+
+
+def _configured_network_jobs(
+    store: AssessmentStore,
+    policy: EngagementPolicy,
+    config: dict[str, Any],
+) -> list[JobSpec]:
+    jobs = config.get("network_jobs", [])
+    if not isinstance(jobs, list) or len(jobs) > 64:
+        raise ValueError("invalid_network_job_list")
+    if not jobs:
+        return []
+    from redjohn.assessment.network_tools import CAPABILITIES, NetworkToolConfig  # noqa: PLC0415
+
+    specs = []
+    for item in jobs:
+        if (
+            not isinstance(item, dict)
+            or set(item)
+            - {
+                "capability",
+                "address",
+                "port",
+                "name",
+                "query_type",
+                "timeout_seconds",
+                "retest_revision",
+            }
+            or item.get("capability") not in CAPABILITIES.values()
+        ):
+            raise ValueError("invalid_network_job")
+        tool = next(
+            name for name, capability in CAPABILITIES.items() if capability == item["capability"]
+        )
+        document = config.get(tool)
+        if not isinstance(document, dict):
+            raise TypeError("explicit_network_tool_configuration_required")
+        selected = NetworkToolConfig.from_mapping(tool, document)
+        kind = "network_endpoint" if tool == "naabu" else "dns_name"
+        locator = item.get("address") if tool == "naabu" else item.get("name")
+        if not isinstance(locator, str):
+            raise TypeError("explicit_network_identity_required")
+        asset = store.inventory.record_asset(
+            policy,
+            kind="ip_address" if tool == "naabu" else "dns_name",
+            locator=locator,
+            source="imported",
+        )
+        surface = Surface(
+            "",
+            resource_kind=kind,
+            asset_ref=asset,
+            network_address=item.get("address", ""),
+            network_port=item.get("port", ""),
+            dns_name=item.get("name", ""),
+            dns_type=item.get("query_type", ""),
+            input_location=kind,
+            input_name=selected.revision,
+            source="imported",
+            workflow_state="approved_seed",
+        )
+        policy.check_surface(surface)
+        sid = store.upsert_surface(policy.engagement_id, surface)
+        specs.append(
+            JobSpec(
+                sid,
+                "network_port" if tool == "naabu" else "dns_resolution",
+                item["capability"],
+                tool_version=selected.version,
+                template_version=selected.revision,
+                policy_revision=policy.revision,
+                timeout_seconds=item.get("timeout_seconds", 30),
+                retest_revision=item.get("retest_revision", ""),
+            )
+        )
+    return specs
 
 
 def _configured_source_jobs(
@@ -364,6 +449,9 @@ class ConfiguredAssessment:
                 semgrep_config=config.get("semgrep"),
                 trivy_config=config.get("trivy"),
                 workflow_execution_config=config.get("workflow_execution"),
+                browser_auth_flow_config=config.get("browser_auth_flow"),
+                naabu_config=config.get("naabu"),
+                dnsx_config=config.get("dnsx"),
             )
             self.policy = self._runtime.policy
             enqueue_configured_jobs(self.runtime, store, policy, config)

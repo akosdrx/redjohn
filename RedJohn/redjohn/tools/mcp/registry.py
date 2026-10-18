@@ -37,6 +37,7 @@ if TYPE_CHECKING:
     from agents.mcp import MCPServer
 
     from redjohn.assessment.resources import ResourceGovernor, ResourceLease
+    from redjohn.runtime.mcp_target import McpTargetAdapter
     from redjohn.tools.mcp.client import ResultTransform
     from redjohn.tools.mcp.config import McpConnectionConfig
 
@@ -112,6 +113,7 @@ class McpConnectionEntry:
     _governor: ResourceGovernor | None = dataclasses.field(default=None, repr=False)
     _resource_lease: ResourceLease | None = dataclasses.field(default=None, repr=False)
     _retired_session: SupervisedMcpSession | None = dataclasses.field(default=None, repr=False)
+    _target_adapter: McpTargetAdapter | None = dataclasses.field(default=None, repr=False)
 
     @property
     def server(self) -> MCPServer | None:
@@ -156,6 +158,8 @@ class McpConnectionEntry:
 
     async def ensure_connected(self) -> SupervisedMcpSession:
         """Return this entry's live session, connecting it once when needed."""
+        if self._target_adapter is not None and not self._target_adapter.dispatching(self):
+            raise McpConnectionUnavailableError("mcp_target_dispatch_requires_scheduled_job")
         if self.session is not None:
             return self.session
         if self.connection_config is None:
@@ -190,7 +194,12 @@ class McpConnectionEntry:
             self._resource_lease = self._governor.acquire(
                 "context", estimated_bytes=self._governor.envelope.worker_memory_budget
             )
-        session = SupervisedMcpSession(config)
+        session = SupervisedMcpSession(
+            config,
+            stdio_launch=(
+                self._target_adapter.launch if self._target_adapter is not None else None
+            ),
+        )
         try:
             started = await session.start()
         except BaseException:
@@ -215,6 +224,8 @@ class McpConnectionEntry:
 
     async def ensure_catalog(self) -> list[Any]:
         """Return the filtered catalog, listing it once on first use."""
+        if self._target_adapter is not None and not self._target_adapter.dispatching(self):
+            raise McpConnectionUnavailableError("mcp_target_catalog_requires_scheduled_job")
         if (
             self._catalog is not None
             and self.session is not None

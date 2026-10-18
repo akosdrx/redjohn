@@ -244,6 +244,7 @@ async def test_actual_chromium_post_capture_body_token_refresh_and_nuclei_restar
         "binary_sha256": base_lock.binary_sha256,
         "stages": [],
         "model_calls": 0,
+        "pipeline_complete": False,
     }
     started = time.monotonic()
     with BrowserTokenHTTPSFixture(host, tmp_path / "upstream-tls") as fixture:
@@ -507,6 +508,16 @@ async def test_actual_chromium_post_capture_body_token_refresh_and_nuclei_restar
                     "governor_snapshot": report["metrics"]["resources"],
                 }
             )
+            if progress_output := os.environ.get("REDJOHN_BROWSER_TOKEN_MEASUREMENTS"):
+                progress = json.dumps(metrics, indent=2)
+                for secret in (
+                    *fixture.tokens.values(),
+                    *fixture.sessions.values(),
+                    fixture.refresh_secret,
+                    fixture.private_value,
+                ):
+                    assert secret not in progress
+                Path(progress_output).write_text(progress + "\n")
             return row
 
         def captured(revision: str) -> tuple[dict[str, Surface], dict[str, NucleiLock]]:
@@ -743,5 +754,6 @@ async def test_actual_chromium_post_capture_body_token_refresh_and_nuclei_restar
             assert secret not in json.dumps(metrics)
         for path in (vault_path, provider_path, capture_path):
             path.unlink()
+    metrics["pipeline_complete"] = True
     if output := os.environ.get("REDJOHN_BROWSER_TOKEN_MEASUREMENTS"):
         Path(output).write_text(json.dumps(metrics, indent=2) + "\n")

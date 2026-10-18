@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, overload
 
 from redjohn.assessment.cache import SmartCache
 from redjohn.assessment.inventory import INVENTORY_OPERATIONS, InventoryConflictError
-from redjohn.assessment.models import JobSpec, error_record, stable_key
+from redjohn.assessment.models import JobSpec, Surface, error_record, stable_key
 from redjohn.assessment.policy import EngagementPolicy, PolicyDenied
 from redjohn.assessment.registry import CapabilityRegistry
 from redjohn.assessment.resources import ResourceAdmissionError, ResourceGovernor
@@ -55,6 +55,7 @@ class AssessmentControl:
         self.runtime_status: Callable[[], dict[str, Any]] | None = None
         self.submission_admission: Callable[[], None] | None = None
         self.policy_admission: Callable[[EngagementPolicy], None] | None = None
+        self.auth_plan_ids: tuple[str, ...] = ()
         self._closed = False
 
     def close(self) -> None:
@@ -76,6 +77,77 @@ class AssessmentControl:
             if value.get(key, "") in {"", "1"}:
                 value[key] = version
         return JobSpec(**value)
+
+    def _auth_call(
+        self, policy: EngagementPolicy, operation: str, args: dict[str, Any]
+    ) -> dict[str, Any]:
+        required = {
+            "auth_plan_search": set(),
+            "auth_flow_start": {"plan_id", "run_key"},
+            "auth_flow_get": {"flow_id"},
+            "auth_flow_submit": {"flow_id", "expected_revision"},
+        }[operation]
+        if set(args) != required or any(
+            (type(value) is not int or value < 1)
+            if key == "expected_revision"
+            else (not isinstance(value, str) or not 1 <= len(value) <= 128)
+            for key, value in args.items()
+        ):
+            raise ValueError("invalid_auth_control_fields")
+        if operation == "auth_plan_search":
+            with self.store._lock:
+                rows = self.store.db.execute(
+                    "SELECT id,payload FROM rj_auth_plan WHERE engagement=? AND "
+                    "policy_revision=? ORDER BY id LIMIT 64",
+                    (policy.engagement_id, policy.revision),
+                ).fetchall()
+            return {
+                "items": [
+                    {"plan_id": row["id"], **json.loads(row["payload"])}
+                    for row in rows
+                    if row["id"] in self.auth_plan_ids
+                ]
+            }
+        if operation == "auth_flow_start":
+            if args["plan_id"] not in self.auth_plan_ids:
+                raise PolicyDenied("auth_plan_not_currently_configured")
+            return {
+                "flow_id": self.store.auth_flows.start(policy, args["plan_id"], args["run_key"])
+            }
+        flow = self.store.auth_flows.get(policy, args["flow_id"])
+        if operation == "auth_flow_get":
+            return flow
+        if flow["plan_id"] not in self.auth_plan_ids:
+            raise PolicyDenied("auth_plan_not_currently_configured")
+        if self.submission_admission is not None:
+            self.submission_admission()
+        if flow["revision"] != args["expected_revision"] or flow["status"] not in {
+            "prepared",
+            "awaiting_input",
+        }:
+            raise InventoryConflictError("auth_flow_requires_reconciliation")
+        plan = self.store.auth_flows.plan(policy, flow["plan_id"])
+        sid = self.store.upsert_surface(
+            policy.engagement_id,
+            Surface(
+                plan.actions[0].url,
+                actor_id=plan.actor_id,
+                tenant_id=plan.tenant_id,
+                session_revision=flow["from_revision"],
+                source="imported",
+                workflow_state="approved_seed",
+            ),
+        )
+        spec = JobSpec(
+            sid,
+            "auth",
+            "browser_auth_flow",
+            policy_revision=policy.revision,
+            idempotent=False,
+            options={"flow_id": args["flow_id"], "expected_revision": args["expected_revision"]},
+            **self.registry.execution_versions("browser_auth_flow"),
+        )
+        return {"job_ids": self.store.submit(policy, [spec])}
 
     async def call(  # noqa: PLR0912, PLR0915 - explicit bounded API dispatch
         self, operation: str, arguments: dict[str, Any] | None = None
@@ -120,6 +192,13 @@ class AssessmentControl:
                 if set(args) != {"surface_id"}:
                     raise ValueError("invalid_api_fields")  # noqa: TRY301 - normalize at this API boundary
                 result = asdict(self.store.surface(current.engagement_id, args["surface_id"]))
+            elif operation in {
+                "auth_plan_search",
+                "auth_flow_start",
+                "auth_flow_get",
+                "auth_flow_submit",
+            }:
+                result = self._auth_call(current, operation, args)
             elif operation == "workflow_submit_step":
                 if self.submission_admission is not None:
                     self.submission_admission()
@@ -266,6 +345,10 @@ class AssessmentControl:
                     if operation
                     in INVENTORY_OPERATIONS
                     | {
+                        "auth_plan_search",
+                        "auth_flow_start",
+                        "auth_flow_get",
+                        "auth_flow_submit",
                         "workflow_submit_step",
                         "surface_search",
                         "surface_get",

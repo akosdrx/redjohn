@@ -34,6 +34,10 @@ class LegacyShellBoundary:
         admission: Callable[[str], None],
         tls_config: BrowserTLSConfig | None = None,
         on_response: Callable[[str, int, dict[str, str]], None] | None = None,
+        additional_read_paths: tuple[Path, ...] = (),
+        attach_session: bool = True,
+        request_headers: Callable[[str, str, list[tuple[str, str]]], list[tuple[str, str]]]
+        | None = None,
     ) -> None:
         self.session, self.control = session, control
         self.inner = getattr(session, "_inner", session)
@@ -41,11 +45,14 @@ class LegacyShellBoundary:
             raise EgressUnavailable("legacy_shell_backend_namespace_attachment_unavailable")
         self.workspace = Path(self.inner.state.manifest.root).resolve()
         self._admission = admission
+        self._additional_read_paths = additional_read_paths
+        self._attach_session = attach_session
         self.proxy = BrowserEgressProxy(
             control.policy,
             request_admission=self._admit,
             tls_config=tls_config,
             on_response=on_response,
+            request_headers=request_headers,
         )
         self.boundary: LinuxEgressBoundary | DarwinShellEgressBoundary | None = None
         self._assets: tempfile.TemporaryDirectory[str] | None = None
@@ -66,7 +73,7 @@ class LegacyShellBoundary:
             if self.proxy.client_ca_certificate is not None:
                 certificate.write_bytes(self.proxy.client_ca_certificate)
                 certificate.chmod(0o600)
-            read_only: list[Path] = []
+            read_only: list[Path] = [path.resolve() for path in self._additional_read_paths]
             writable: list[Path] = []
             for grant in self.inner.state.manifest.extra_path_grants:
                 path = Path(grant.path).expanduser().resolve()
@@ -139,7 +146,8 @@ class LegacyShellBoundary:
                     "NODE_EXTRA_CA_CERTS",
                 ):
                     self.environment[name] = str(certificate)
-            self.inner.bind_assessment_shell_boundary(self)
+            if self._attach_session:
+                self.inner.bind_assessment_shell_boundary(self)
         except BaseException:
             await self.close()
             raise

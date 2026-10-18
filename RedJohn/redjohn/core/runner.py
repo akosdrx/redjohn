@@ -597,6 +597,7 @@ async def run_redjohn_scan(
             ),
         )
         mcp_registry.bind_governor(shared_governor)
+        legacy_execution.bind_mcp_registry(mcp_registry)
 
         context: dict[str, Any] = {
             "coordinator": coordinator,

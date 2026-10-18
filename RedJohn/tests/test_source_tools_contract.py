@@ -3,8 +3,10 @@
 import hashlib
 import json
 import os
+from datetime import timedelta
 
 import pytest
+from cryptography import x509
 
 from redjohn.assessment.models import AdapterResult, JobSpec, Surface, stable_key
 from redjohn.assessment.policy import EngagementPolicy, PolicyDenied
@@ -13,6 +15,7 @@ from redjohn.assessment.source_tools import (
     OfflineSourceRunner,
     SourceToolAdapter,
     SourceToolConfig,
+    offline_trust_anchor,
     read_source_file,
     relative_source_path,
 )
@@ -81,6 +84,17 @@ def source_policy(artifact_sha256="a" * 64):
         target_domains=("source",),
         allowed_source_artifacts=(artifact_sha256,),
     )
+
+
+def test_native_offline_trust_is_valid_ephemeral_public_only_and_not_host_trust():
+    first, second = offline_trust_anchor(), offline_trust_anchor()
+    assert first != second
+    assert b"PRIVATE KEY" not in first
+    assert len(first) < 4096
+    certificate = x509.load_pem_x509_certificate(first)
+    assert certificate.issuer == certificate.subject
+    assert certificate.extensions.get_extension_for_class(x509.BasicConstraints).value.ca
+    assert certificate.not_valid_after_utc - certificate.not_valid_before_utc < timedelta(hours=1)
 
 
 @pytest.mark.parametrize(
@@ -156,6 +170,7 @@ def test_source_argv_offline_single_worker_no_upload_build_or_remote_rules(tmp_p
         assert "--disable-version-check" in argv
         assert "--no-secrets-validation" in argv
         assert "--oss-only" in argv
+        assert "--experimental" in argv  # standalone native CLI must not fall back to Python
         assert argv[argv.index("--jobs") + 1] == "1"
         assert "--allow-local-builds" not in argv
         assert "--autofix" not in argv
@@ -166,6 +181,49 @@ def test_source_argv_offline_single_worker_no_upload_build_or_remote_rules(tmp_p
         assert "--skip-check-update" in argv
         assert argv[argv.index("--parallel") + 1] == "1"
         assert argv[argv.index("--scanners") + 1] == "misconfig"
+
+
+async def test_semgrep_native_health_uses_native_dispatch_and_keeps_failure_reason(
+    tmp_path, monkeypatch
+):
+    """Synthetic process reply checks health dispatch; this is not native E2E."""
+    config = SourceToolConfig.from_mapping("semgrep", config_document(tmp_path, "semgrep"))
+    policy = source_policy(config.artifact_sha256)
+    store = AssessmentStore(tmp_path / "health.sqlite3")
+    adapter = SourceToolAdapter(config, policy, store)
+    captured = []
+
+    async def no_namespace():
+        return None
+
+    async def execute(argv, timeout):
+        assert timeout == 10
+        captured.append(argv)
+        return {"exit_code": 2, "stderr": "private source must stay private"}
+
+    monkeypatch.setattr(adapter.runner, "prepare_offline", no_namespace)
+    monkeypatch.setattr(adapter.runner, "execute", execute)
+    surface = Surface(
+        "",
+        resource_kind="source_artifact",
+        asset_ref="b" * 64,
+        artifact_sha256=config.artifact_sha256,
+        input_location="source_artifact",
+        input_name=config.revision,
+    )
+    spec = JobSpec(
+        "source-id",
+        "source_configuration",
+        "semgrep_source",
+        tool_version=config.version,
+        template_version=config.revision,
+    )
+    result = await adapter.run({"id": "synthetic-health"}, surface, spec)
+    assert "--experimental" in captured[0]
+    assert result.coverage_status == "blocked"
+    assert result.error["cause_ref"] == "health:source_binary_version_or_digest_mismatch"
+    assert "private source" not in json.dumps(result.error)
+    store.close()
 
 
 def test_source_job_requires_explicit_domain_and_exact_artifact_revision(tmp_path):

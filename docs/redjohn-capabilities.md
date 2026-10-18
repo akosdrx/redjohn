@@ -4,7 +4,7 @@ A katalógus az aktuális `assessment/registry.py` kódjából készül. A megí
 
 A `redjohn assess health` mutatja az adott gép telepítési/konfigurációs állapotát motorindítás nélkül. A JSON itt platformfüggetlen kódkatalógus; a jegyzőkönyvek történeti futásokat igazolnak, jelenlegi futást nem állítanak.
 
-21 implementált képesség, 6 hiányzó opcionális adapter és 9 tudatosan halasztott alternatíva szerepel a jelenlegi registryben. A master szerinti teljes fennmaradó munka: [követett állapot](redjohn-completion-status.md).
+25 implementált képesség, 4 hiányzó opcionális adapter és 10 tudatosan halasztott alternatíva szerepel a jelenlegi registryben. A master szerinti teljes fennmaradó munka: [követett állapot](redjohn-completion-status.md).
 
 | Capability | Tool | Adapter | Kódstátusz | Forrás / licenc | Mérési jegyzőkönyv |
 |---|---|---|---|---|---|
@@ -16,6 +16,9 @@ A `redjohn assess health` mutatja az adott gép telepítési/konfigurációs ál
 | `httpx_probe` | ProjectDiscovery httpx | igen | `implemented_fixture_tested` | [forrás](https://github.com/projectdiscovery/httpx/tree/v1.12.0) / MIT_CLI_optional_datasets_and_provider_data_separate | [mérés](redjohn-projectdiscovery-verification.md) |
 | `katana_discover` | Katana (standard) | igen | `implemented_fixture_tested` | [forrás](https://github.com/projectdiscovery/katana/tree/v1.8.0) / MIT_CLI_optional_datasets_and_provider_data_separate | [mérés](redjohn-projectdiscovery-verification.md) |
 | `vulnx_intelligence` | VulnX | igen | `implemented_fixture_tested` | [forrás](https://github.com/projectdiscovery/vulnx/tree/v2.0.2) / MIT_CLI_optional_datasets_and_provider_data_separate | [mérés](redjohn-projectdiscovery-verification.md) |
+| `naabu_ports` | Naabu TCP CONNECT | igen | `implemented_pending_native_e2e` | [forrás](https://github.com/projectdiscovery/naabu/tree/v2.6.1) / MIT | nincs valódi integrációs igazolás |
+| `dnsx_resolve` | dnsx controlled TCP DNS | igen | `implemented_pending_native_e2e` | [forrás](https://github.com/projectdiscovery/dnsx/tree/v1.3.1) / MIT | nincs valódi integrációs igazolás |
+| `dns_discover` | Amass / Subfinder alternatives | nincs | `deferred_not_required` | [forrás](https://github.com/owasp-amass/amass) / not_verified_not_redistributed | nincs valódi integrációs igazolás |
 | `session_refresh` | RedJohn explicit session refresh | igen | `implemented_fixture_tested` | RedJohn-native / project | [mérés](redjohn-authenticated-schema-oast-verification.md) |
 | `workflow_execute` | RedJohn reviewed stateful workflow | igen | `implemented_pending_live_proof` | RedJohn-native / project | nincs valódi integrációs igazolás |
 | `arjun_parameters` | Arjun | igen | `implemented_fixture_tested` | [forrás](https://github.com/s0md3v/Arjun/tree/2.2.7) / AGPL-3.0_LICENSE_setup_metadata_conflicts | [mérés](redjohn-specialists-verification.md) |
@@ -27,11 +30,11 @@ A `redjohn assess health` mutatja az adott gép telepítési/konfigurációs ál
 | `oast_poll` | Interactsh protocol 1.4.1 | igen | `implemented_fixture_tested` | RedJohn-native / project_protocol_MIT_reference | [mérés](redjohn-mime-restart-verification.md) |
 | `browser_xss_confirmation` | RedJohn Chromium XSS confirmation | igen | `implemented_fixture_tested` | RedJohn-native / project | [mérés](redjohn-specialists-verification.md) |
 | `browser_post_capture` | RedJohn approved Chromium POST capture | igen | `implemented_fixture_tested` | RedJohn-native / project | [mérés](redjohn-mime-restart-verification.md) |
+| `browser_auth_flow` | RedJohn reviewed Chromium authentication workflow | igen | `implemented_pending_live_proof` | RedJohn-native / project | nincs valódi integrációs igazolás |
+| `mcp_target_read` | RedJohn confined host-bound stdio target read | igen | `implemented_pending_live_proof` | RedJohn-native / project | nincs valódi integrációs igazolás |
 | `semgrep_source` | Semgrep CE (native OCaml) | igen | `implemented_pending_native_e2e` | [forrás](https://github.com/semgrep/semgrep/tree/v1.181.0) / LGPL-2.1_engine_rules_separate | nincs valódi integrációs igazolás |
 | `trivy_source` | Trivy filesystem misconfiguration | igen | `implemented_pending_native_e2e` | [forrás](https://github.com/aquasecurity/trivy/tree/v0.76.0) / Apache-2.0_engine_embedded_checks_separate | nincs valódi integrációs igazolás |
-| `naabu_ports` | Naabu | nincs | `adapter_not_implemented` | [forrás](https://github.com/projectdiscovery/naabu) / not_verified_not_redistributed | nincs valódi integrációs igazolás |
 | `nmap_services` | Nmap | nincs | `adapter_not_implemented` | [forrás](https://nmap.org/) / not_verified_not_redistributed | nincs valódi integrációs igazolás |
-| `dns_discover` | Amass / Subfinder / dnsx | nincs | `adapter_not_implemented` | [forrás](https://github.com/owasp-amass/amass) / not_verified_not_redistributed | nincs valódi integrációs igazolás |
 | `wordpress_assess` | WPScan | nincs | `adapter_not_implemented` | [forrás](https://github.com/wpscanteam/wpscan) / not_verified_not_redistributed | nincs valódi integrációs igazolás |
 | `cloud_assess` | Prowler | nincs | `adapter_not_implemented` | [forrás](https://github.com/prowler-cloud/prowler) / not_verified_not_redistributed | nincs valódi integrációs igazolás |
 | `kubernetes_benchmark` | kube-bench | nincs | `adapter_not_implemented` | [forrás](https://github.com/aquasecurity/kube-bench) / not_verified_not_redistributed | nincs valódi integrációs igazolás |

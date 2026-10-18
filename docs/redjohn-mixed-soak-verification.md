@@ -68,12 +68,20 @@ Evidence, including unsuccessful/superseded short attempts, is retained under
 Private fixture databases, generated keys and native binaries are not published
 as measurement artifacts.
 
-## Remaining verification
+## Completed hosted long workload
 
-The new source snapshot still requires a complete protected hosted x64/ARM64
-Actions run. The last completed earlier CI SHA does not verify these changes.
-The long command in the benchmark README is separately required to establish
-its actual duration/results. Native/browser RSS cannot be explained solely by
+The protected x64/ARM64 run for `5cfd51d286c65558b92a6c070bcd7edd5a8b432b`
+has now completed successfully: **120 cycles per platform**, **1204.37 / 1205.72 s**,
+**720 / 720 actual/persisted requests**, with all benchmark gates true and
+descriptors **6→6**, processes **1→1**, listeners **0→0**. Each platform passed
+1281 Python cases including 333 real integrations, plus 14 frontend and 21 Go
+cases. [Exact evidence and remaining limits](redjohn-github-actions-master-phase1.md).
+
+## Remaining verification for later source changes
+
+Later source snapshots require their own complete protected hosted x64/ARM64
+Actions run. The completed earlier CI SHA does not verify newer code.
+Native/browser RSS cannot be explained solely by
 controller tracemalloc; allocation sites and retained measurement/cache size are
 reported without claiming absence of every leak or a fabricated baseline gain.
 The cooperative 2-GiB runtime/host admission budget is not presented as an OS

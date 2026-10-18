@@ -86,6 +86,13 @@ def _unknown_connection(connection: str, registry: McpRegistry) -> str:
     return f"Unknown MCP connection {connection!r}. Available connections: {available}."
 
 
+def _scheduled_targets(registry: McpRegistry, name: str) -> list[str]:
+    entry = registry.get(name)
+    if entry is None or entry.config is None or entry._target_adapter is None:
+        return []
+    return [rule.tool for rule in entry.config.tool_authorizations if rule.effect == "target-read"]
+
+
 def _format_tool(tool: MCPTool) -> str:
     schema = json.dumps(tool.inputSchema or {"type": "object"}, indent=2, ensure_ascii=False)
     description = (tool.description or "").strip() or "(no description)"
@@ -118,6 +125,7 @@ async def list_mcps(ctx: RunContextWrapper) -> dict[str, Any]:
                 "tool_count": summary.tool_count if summary.state == "catalog_ready" else None,
                 "dead": dead_by_name.get(summary.name, False),
                 "state": summary.state,
+                "scheduled_target_tools": _scheduled_targets(registry, summary.name),
             }
             for summary in registry.summaries()
         ]
@@ -276,6 +284,7 @@ async def call_mcp(  # noqa: PLR0912, PLR0915 - explicit validation and lifecycl
     connection: str,
     tool: str,
     arguments: Any = None,
+    surface_id: str | None = None,
 ) -> Any:
     """Call one tool on one MCP connection and return its result.
 
@@ -291,6 +300,9 @@ async def call_mcp(  # noqa: PLR0912, PLR0915 - explicit validation and lifecycl
             example ``{"path": "app.py"}``), or omitted/empty for a tool that
             takes none. Pass an object, not a stringified object. Match the shape
             that ``get_mcp_tool_schema`` returned.
+        surface_id: Existing observed surface reference for a host-bound target
+            read. Such calls enqueue a durable job and return its ID. They never
+            dispatch directly; retrieve completion/evidence with assessment tools.
     """
     registry = _registry_from_ctx(ctx)
     if registry is None or not registry:
@@ -324,11 +336,22 @@ async def call_mcp(  # noqa: PLR0912, PLR0915 - explicit validation and lifecycl
     context = ctx.context if isinstance(ctx.context, dict) else {}
     owner = legacy_from_context(context)
     rule = None
+    if surface_id is not None and (owner is None or owner.control is None):
+        return _errored_tool_output(
+            error_record(
+                "mcp_target_bound_assessment_required", category="policy", coverage_effect="blocked"
+            )
+        )
     if owner is not None and owner.control is not None:
         try:
             owner.check_policy()
             rule = contract_for(entry, tool)
             authorize_arguments(rule, arguments or {}, owner.control.policy)
+            if rule.effect.startswith("target-"):
+                assert entry._target_adapter is not None
+                return await entry._target_adapter.submit(entry, tool, arguments or {}, surface_id)
+            if surface_id is not None:
+                raise PolicyDenied("mcp_surface_reference_requires_target_contract")  # noqa: TRY301
         except (PolicyDenied, ResourceAdmissionError) as exc:
             return _errored_tool_output(
                 error_record(

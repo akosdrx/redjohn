@@ -54,6 +54,10 @@ REAL_FILES = {
     "test_inventory_workflows_live.py",
     "test_workflow_execution_failures_live.py",
     "test_extended_wire_replay_live.py",
+    "test_network_tools_live.py",
+    "test_mcp_target_live.py",
+    "test_browser_auth_flow_live.py",
+    "test_mcp_stdio_bounded_live.py",
 }
 
 REAL_CASES = {
@@ -83,8 +87,11 @@ LOCAL_PROCESS_FILES = {
     "test_tui_terminal_live.py", "test_soak_limits_live.py",
     "test_mcp_authorization_live.py", "test_inventory_workflows_live.py",
     "test_workflow_execution_failures_live.py",
+    "test_mcp_stdio_bounded_live.py",
 }
-NAMESPACE_ONLY_FILES = {"test_source_tools_live.py", "test_legacy_shell_boundary_live.py"}
+LOCAL_BROWSER_FILES = {"test_viewer_steering_live.py", "test_browser_auth_flow_live.py"}
+NAMESPACE_ONLY_FILES = {"test_source_tools_live.py", "test_legacy_shell_boundary_live.py",
+                        "test_network_tools_live.py", "test_mcp_target_live.py"}
 PLATFORM_FILES = {"test_legacy_shell_darwin_live.py": "Darwin"}
 LOCAL_PROCESS_CASES = {
     "test_real_stdio_unknown_mutation_is_never_replayed",
@@ -127,7 +134,7 @@ def pytest_collection_modifyitems(config, items):
         )
         if real and capabilities is not None:
             required = ({"namespace_available"} if filename in NAMESPACE_ONLY_FILES else
-                        {"browser_available"} if filename == "test_viewer_steering_live.py" else
+                        {"browser_available"} if filename in LOCAL_BROWSER_FILES else
                         set() if filename in LOCAL_NUCLEI_FILES or filename in LOCAL_PROCESS_FILES or name in LOCAL_PROCESS_CASES
                         else {"cgroup_available"} if name in KERNEL_ONLY_CASES
                         else {"browser_available", "namespace_available"})

@@ -9,6 +9,8 @@ import re
 from dataclasses import asdict, dataclass, field
 from typing import Any, Literal, get_args
 
+from redjohn.assessment.network_scope import dns_name, numeric_ip, port_number
+
 
 ExecutionStatus = Literal[
     "queued",
@@ -61,15 +63,19 @@ class Surface:
     resource_kind: str = ""
     asset_ref: str = ""
     artifact_sha256: str = ""
+    network_address: str = ""
+    network_port: str = ""
+    dns_name: str = ""
+    dns_type: str = ""
 
-    def __post_init__(self) -> None:
+    def __post_init__(self) -> None:  # noqa: PLR0912 - independent typed resource validation
         if self.source not in {"observed", "imported", "inferred"}:
             raise ValueError("invalid_surface_source")
         if self.method not in {"GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}:
             raise ValueError("unsupported_http_method")
         if self.body_sha256 and not re.fullmatch(r"[0-9a-f]{64}", self.body_sha256):
             raise ValueError("invalid_request_body_digest")
-        if self.resource_kind not in {"", "source_artifact"}:
+        if self.resource_kind not in {"", "source_artifact", "network_endpoint", "dns_name"}:
             raise ValueError("unsupported_surface_resource_kind")
         if self.resource_kind == "source_artifact":
             if (
@@ -83,8 +89,32 @@ class Surface:
                 or re.fullmatch(r"[a-f0-9]{64}", self.artifact_sha256) is None
             ):
                 raise ValueError("invalid_source_artifact_surface")
+        elif self.resource_kind in {"network_endpoint", "dns_name"}:
+            if (
+                self.url
+                or self.method != "GET"
+                or self.actor_id != "anonymous"
+                or self.body_sha256
+                or self.content_type
+                or self.artifact_sha256
+                or self.input_location != self.resource_kind
+                or re.fullmatch(r"[a-f0-9]{64}", self.asset_ref) is None
+            ):
+                raise ValueError("invalid_network_surface")
+            numeric_ip(self.network_address)
+            port_number(self.network_port)
+            if self.resource_kind == "dns_name":
+                dns_name(self.dns_name)
+                if self.dns_type not in {"A", "AAAA", "CNAME"}:
+                    raise ValueError("unsupported_dns_query_type")
+            elif self.dns_name or self.dns_type:
+                raise ValueError("dns_resource_kind_required")
         elif self.asset_ref or self.artifact_sha256:
             raise ValueError("source_artifact_resource_kind_required")
+        if self.resource_kind not in {"network_endpoint", "dns_name"} and any(
+            (self.network_address, self.network_port, self.dns_name, self.dns_type)
+        ):
+            raise ValueError("network_resource_kind_required")
         if any(
             not isinstance(value, str) or len(value.encode()) > 8192
             for value in asdict(self).values()
@@ -100,7 +130,19 @@ class Surface:
                 for k, v in asdict(self).items()
                 if k not in {"request_ref", "source"}
                 and not (k == "body_sha256" and not v)
-                and not (k in {"resource_kind", "asset_ref", "artifact_sha256"} and not v)
+                and not (
+                    k
+                    in {
+                        "resource_kind",
+                        "asset_ref",
+                        "artifact_sha256",
+                        "network_address",
+                        "network_port",
+                        "dns_name",
+                        "dns_type",
+                    }
+                    and not v
+                )
             }
         )
 

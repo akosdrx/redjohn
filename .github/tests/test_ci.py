@@ -193,6 +193,34 @@ class EvidenceContract(unittest.TestCase):
             self.assertEqual(evidence["cases"][0]["required_platform"], "Darwin")
             self.assertIn("not_passed", evidence["cases"][0]["reason"])
 
+    def test_network_and_target_mcp_require_namespace_without_a_browser_dependency(self):
+        spec = importlib.util.spec_from_file_location("evidence", Path(__file__).parents[1] / "scripts/pytest_evidence.py")
+        plugin = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(plugin)
+        self.assertIn("network-scanner-install", ci.REQUIRED)
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            capability = root / "capabilities.json"
+            for namespace in (False, True):
+                capability.write_text(json.dumps({"browser_available": False,
+                                                  "namespace_available": namespace}))
+                items, markers = [], {}
+                for filename in ("test_network_tools_live.py", "test_mcp_target_live.py"):
+                    path = root / filename
+                    path.write_text("")
+                    markers[filename] = []
+                    items.append(SimpleNamespace(path=path, originalname="test_real", name="test_real",
+                        user_properties=[], add_marker=markers[filename].append))
+                config = SimpleNamespace(getoption=lambda _: "integration",
+                    hook=SimpleNamespace(pytest_deselected=lambda **_: None))
+                with patch.dict(os.environ, {"REDJOHN_CI_CAPABILITIES": str(capability)}):
+                    plugin.pytest_collection_modifyitems(config, items)
+                self.assertEqual(len(items), 2)
+                for item in items:
+                    self.assertIn(("evidence_kind", "real_integration"), item.user_properties)
+                    self.assertIn(("required_runner_capabilities", "namespace_available"), item.user_properties)
+                    self.assertEqual(len(markers[item.path.name]), int(not namespace))
+
 
 if __name__ == "__main__":
     unittest.main()

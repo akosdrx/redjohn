@@ -287,7 +287,7 @@ class Scheduler:
             if close_idle is not None:
                 await asyncio.wait_for(close_idle(), timeout=15)
 
-    async def _heartbeat(self, job: dict[str, Any], task: asyncio.Task[AdapterResult]) -> None:
+    async def _heartbeat(self, job: dict[str, Any], task: asyncio.Task[Any]) -> None:
         while not task.done():
             await asyncio.sleep(max(0.02, self.lease_seconds / 3))
             if not self.store.heartbeat(job["id"], self.owner, job["attempt"], self.lease_seconds):
@@ -298,7 +298,8 @@ class Scheduler:
                 task.cancel()
                 return
 
-    async def _execute(self, job: dict[str, Any]) -> AdapterResult:  # noqa: PLR0911, PLR0912 - explicit state boundaries
+    async def _execute(self, job: dict[str, Any]) -> AdapterResult:  # noqa: PLR0911, PLR0912, PLR0915 - explicit state boundaries
+        execution_started = time.monotonic()
         spec = JobSpec(**json.loads(job["spec"]))
         surface = self.store.surface(self.policy.engagement_id, spec.surface_id)
         entry = self.registry.get(spec.capability)
@@ -375,6 +376,7 @@ class Scheduler:
                 ),
             )
         lease = None
+        has_prepare = False
         # BrowserService owns its process/page/context leases; no double charge.
         if entry.resource_class != "browser":
             try:
@@ -392,22 +394,76 @@ class Scheduler:
                         coverage_effect="blocked",
                     ),
                 )
+            prepare = getattr(adapter, "prepare", None)
+            if callable(prepare):
+                has_prepare = True
+                prepare_task = asyncio.create_task(prepare(job, surface, spec))
+                prepare_heartbeat = asyncio.create_task(self._heartbeat(job, prepare_task))
+                try:
+                    prepare_timeout = min(
+                        spec.timeout_seconds - (time.monotonic() - execution_started), 15.0
+                    )
+                    if self.policy.deadline:
+                        prepare_timeout = min(prepare_timeout, self.policy.deadline - time.time())
+                    await asyncio.wait_for(prepare_task, timeout=max(0.0, prepare_timeout))
+                except (PolicyDenied, EgressUnavailable, ResourceAdmissionError, CapacityExceeded):
+                    raise
+                except TimeoutError:
+                    return AdapterResult(
+                        "timed_out",
+                        "inconclusive",
+                        error=error_record(
+                            "adapter_prepare_timeout",
+                            category="timeout",
+                            coverage_effect="inconclusive",
+                        ),
+                    )
+                except Exception as exc:  # noqa: BLE001 - unknown admission failure blocks dispatch
+                    return AdapterResult(
+                        "failed",
+                        "blocked",
+                        error=error_record(
+                            "adapter_prepare_failed",
+                            category="capability",
+                            cause_ref=type(exc).__name__,
+                            coverage_effect="blocked",
+                        ),
+                    )
+                finally:
+                    prepare_heartbeat.cancel()
+                    await asyncio.gather(prepare_heartbeat, return_exceptions=True)
+            owner_only = (
+                entry.owner_process_only and getattr(adapter, "owner_process_only", False) is True
+            )
+            memory = self.governor.envelope.worker_memory_budget
+            dispatch_memory = getattr(adapter, "dispatch_memory_bytes", None)
+            if owner_only and type(dispatch_memory) is int and 0 <= dispatch_memory <= memory:
+                # Trusted adapter's child already holds its full context lease;
+                # this dispatch accounts only for host parser/frame overhead.
+                memory = dispatch_memory
             lease = self.governor.acquire(
                 kind=entry.resource_class,
-                estimated_bytes=self.governor.envelope.worker_memory_budget,
-                owner_process_only=(
-                    entry.owner_process_only
-                    and getattr(adapter, "owner_process_only", False) is True
-                ),
+                estimated_bytes=memory,
+                owner_process_only=owner_only,
             )
         try:
-            timeout = (
-                min(spec.timeout_seconds, self.policy.deadline - time.time())
-                if self.policy.deadline
-                else spec.timeout_seconds
-            )
+            # Preserve established dispatch timing for adapters without a
+            # preparation phase. The new prepare+dispatch path shares one clock.
+            if not has_prepare:
+                execution_started = time.monotonic()
+            timeout = spec.timeout_seconds - (time.monotonic() - execution_started)
+            if self.policy.deadline:
+                timeout = min(timeout, self.policy.deadline - time.time())
             if timeout <= 0:
-                raise TimeoutError("campaign_deadline_exceeded")
+                await adapter.cancel()
+                await adapter.cleanup()
+                return AdapterResult(
+                    "timed_out",
+                    "inconclusive",
+                    error=error_record(
+                        "adapter_prepare_timeout" if has_prepare else "timeout", category="timeout"
+                    ),
+                )
             task = asyncio.create_task(adapter.run(job, surface, spec))
             self._active[job["id"]] = (task, adapter)
             heartbeat = asyncio.create_task(self._heartbeat(job, task))
@@ -500,7 +556,18 @@ class Scheduler:
             self.store.inventory.require_source_asset(
                 self.policy, surface.asset_ref, surface.artifact_sha256
             )
-        elif entry.domains == ("source",):
+        elif surface.resource_kind in {"network_endpoint", "dns_name"}:
+            if "network" not in entry.domains:
+                raise PolicyDenied("network_capability_mismatch")
+            if surface.resource_kind == "network_endpoint":
+                self.store.inventory.require_network_asset(
+                    self.policy, surface.asset_ref, surface.network_address
+                )
+            else:
+                self.store.inventory.require_dns_asset(
+                    self.policy, surface.asset_ref, surface.dns_name
+                )
+        elif entry.domains in {("source",), ("network",)}:
             raise PolicyDenied("source_artifact_resource_required")
 
     def _resource_denial(

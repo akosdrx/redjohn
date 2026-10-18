@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from contextlib import AsyncExitStack
+from contextlib import AsyncExitStack, ExitStack
 from typing import TYPE_CHECKING, Any, Self
 
 from redjohn.assessment.adapters import (
@@ -68,8 +68,17 @@ class AssessmentRuntime:
         semgrep_config: dict[str, Any] | None = None,
         trivy_config: dict[str, Any] | None = None,
         workflow_execution_config: dict[str, Any] | None = None,
+        naabu_config: dict[str, Any] | None = None,
+        dnsx_config: dict[str, Any] | None = None,
+        browser_auth_flow_config: dict[str, Any] | None = None,
     ) -> None:
         policy.authorize(caller)
+        auth_flow_config = None
+        if browser_auth_flow_config is not None:
+            from redjohn.assessment.browser_auth_flow import BrowserAuthFlowConfig  # noqa: PLC0415
+
+            auth_flow_config = BrowserAuthFlowConfig.from_mapping(browser_auth_flow_config)
+            auth_flow_config.validate(policy)
         workflow_config = None
         if workflow_execution_config is not None:
             from pathlib import Path  # noqa: PLC0415 - explicitly selected workflow
@@ -119,6 +128,9 @@ class AssessmentRuntime:
             semgrep_config=semgrep_config,
             trivy_config=trivy_config,
             workflow_execution_configured=bool(workflow_execution_config and auth_vault_file),
+            browser_auth_flow_configured=auth_flow_config is not None,
+            naabu_config=naabu_config,
+            dnsx_config=dnsx_config,
         )
         self.technology = TechnologyDetector(store.path)
 
@@ -203,6 +215,20 @@ class AssessmentRuntime:
                 tls_config=browser_tls,
                 auth_vault_file=Path(auth_vault_file),
             )
+        if naabu_config is not None or dnsx_config is not None:
+            from redjohn.assessment.network_tools import (  # noqa: PLC0415 - selected engines only
+                CAPABILITIES as NETWORK_TOOLS,
+            )
+            from redjohn.assessment.network_tools import (  # noqa: PLC0415 - selected engines only
+                NetworkToolAdapter,
+                NetworkToolConfig,
+            )
+
+            for name, document in (("naabu", naabu_config), ("dnsx", dnsx_config)):
+                if document is not None:
+                    adapters[NETWORK_TOOLS[name]] = NetworkToolAdapter(
+                        NetworkToolConfig.from_mapping(name, document), policy, store
+                    )
         if semgrep_config is not None or trivy_config is not None:
             from redjohn.assessment.source_tools import CAPABILITIES as SOURCE_TOOLS  # noqa: PLC0415
             from redjohn.assessment.source_tools import SourceToolAdapter, SourceToolConfig  # noqa: PLC0415
@@ -329,6 +355,59 @@ class AssessmentRuntime:
         if refresh_adapter is not None:
             refresh_adapter.cache = self.control.cache
         self.capture_job_ids: tuple[str, ...] = ()
+        if auth_flow_config is not None:
+            from redjohn.assessment.browser_auth_flow import BrowserAuthFlowAdapter  # noqa: PLC0415
+
+            def update_browser_auth(actor: str, metadata: dict[str, Any] | None) -> None:
+                if metadata is not None and self.post_capture is not None:
+                    self.post_capture.bootstrap_authenticated_context(
+                        actor,
+                        metadata["tenant_id"],
+                        metadata["session_revision"],
+                        metadata["storage_state"],
+                        metadata["auth_evidence_ref"],
+                        private_state_file=auth_flow_config.private_state_file,
+                    )
+                    from redjohn.assessment.browser_workflow import _capture_specs  # noqa: PLC0415
+
+                    context = self.post_capture.context_metadata(
+                        actor, metadata["tenant_id"], "current"
+                    )
+                    ids = store.submit(policy, _capture_specs((context,), store, policy))
+                    self.capture_job_ids = tuple(
+                        dict.fromkeys(
+                            (
+                                *getattr(self, "capture_job_ids", ()),
+                                *ids,
+                            )
+                        )
+                    )[-self.governor.envelope.queue_max_items :]
+                for capability in ("browser_discover", "browser_post_capture"):
+                    selected = adapters.get(capability)
+                    if isinstance(selected, BrowserInventoryAdapter):
+                        if metadata is None:
+                            selected.actor_states.pop(actor, None)
+                        else:
+                            selected.actor_states[actor] = metadata
+                self.control.cache.invalidate(reason="session_changed")
+
+            # Bootstrap is host-only and starts no worker; failure must still
+            # release the newly constructed controller handles and pool owner.
+            with ExitStack() as failed_composition:
+                failed_composition.callback(self.governor.close)
+                failed_composition.callback(self.technology.close)
+                failed_composition.callback(self.control.close)
+                selected_auth_adapter = BrowserAuthFlowAdapter(
+                    auth_flow_config,
+                    policy,
+                    store,
+                    self.browser,
+                    on_session_state=update_browser_auth,
+                    rate_limits=self.rate_limits,
+                )
+                adapters["browser_auth_flow"] = selected_auth_adapter
+                self.control.auth_plan_ids = selected_auth_adapter.plan_ids
+                failed_composition.pop_all()
         self.continuous_workflow: ContinuousBrowserWorkflow | None = None
         if self.post_capture is not None:
             from redjohn.assessment.browser_workflow import (  # noqa: PLC0415
@@ -359,9 +438,15 @@ class AssessmentRuntime:
                         },
                     )
                     self.scheduler.reconcile = self.continuous_workflow.reconcile
-                self.capture_job_ids = enqueue_browser_capture_contexts(
-                    self.post_capture, store, policy
-                )
+                initial_ids = enqueue_browser_capture_contexts(self.post_capture, store, policy)
+                self.capture_job_ids = tuple(
+                    dict.fromkeys(
+                        (
+                            *self.capture_job_ids,
+                            *initial_ids,
+                        )
+                    )
+                )[-self.governor.envelope.queue_max_items :]
             except BaseException:
                 # No worker has started during reconciliation, but the two
                 # controller-owned database handles already need releasing.

@@ -36,6 +36,7 @@ from mcp.types import TextContent
 
 from redjohn.tools.mcp.failures import HttpStatusRecorder
 from redjohn.tools.mcp.session import McpConnectionUnavailableError, SupervisedMcpSession
+from redjohn.tools.mcp.stdio_boundary import BoundedMcpStdio, McpStdioLaunch
 
 
 if TYPE_CHECKING:
@@ -82,6 +83,7 @@ class BuiltMcpServer(NamedTuple):
 
     server: MCPServer
     recorder: HttpStatusRecorder | None
+    transport: BoundedMcpStdio | None = None
 
 
 def _auth_headers(config: McpConnectionConfig) -> dict[str, str]:
@@ -121,7 +123,21 @@ class _QuietMCPServerStdio(MCPServerStdio):
         return _quiet_stdio_streams(self.params)
 
 
-def _build_server(config: McpConnectionConfig) -> BuiltMcpServer:
+class _BoundedMCPServerStdio(_QuietMCPServerStdio):
+    def __init__(self, launch: McpStdioLaunch, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
+        self.transport = BoundedMcpStdio(launch)
+
+    @contextlib.asynccontextmanager
+    async def create_streams(self) -> Any:
+        with Path(os.devnull).open("w", encoding="utf-8") as errlog:
+            async with self.transport.streams(errlog) as streams:
+                yield streams
+
+
+def _build_server(
+    config: McpConnectionConfig, *, launch: McpStdioLaunch | None = None
+) -> BuiltMcpServer:
     """Construct (but do not connect) the SDK server for one connection.
 
     The returned tuple carries the server and, for HTTP connections, a recorder
@@ -144,16 +160,21 @@ def _build_server(config: McpConnectionConfig) -> BuiltMcpServer:
             "args": config.args,
             "env": config.env,
         }
+        server_class = _QuietMCPServerStdio if launch is None else _BoundedMCPServerStdio
+        server_kwargs: dict[str, Any] = {"launch": launch} if launch is not None else {}
+        server = server_class(
+            params=stdio_params,
+            name=config.name,
+            tool_filter=tool_filter,
+            cache_tools_list=True,
+            client_session_timeout_seconds=config.session_timeout_seconds,
+            max_retry_attempts=0,
+            **server_kwargs,
+        )
         return BuiltMcpServer(
-            _QuietMCPServerStdio(
-                params=stdio_params,
-                name=config.name,
-                tool_filter=tool_filter,
-                cache_tools_list=True,
-                client_session_timeout_seconds=config.session_timeout_seconds,
-                max_retry_attempts=0,
-            ),
+            server,
             None,
+            server.transport if isinstance(server, _BoundedMCPServerStdio) else None,
         )
 
     recorder = HttpStatusRecorder()

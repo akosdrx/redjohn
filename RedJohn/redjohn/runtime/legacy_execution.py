@@ -66,6 +66,7 @@ class LegacyExecution:
         self._shell_timeout = shell_timeout_seconds
         self._shell_transport = shell_transport
         self._shell_boundary: LegacyShellBoundary | None = None
+        self._mcp_target: Any = None
         self._shell_boundary_lock = asyncio.Lock()
         self._failed_cleanup: dict[str, tuple[ResourceLease, Callable[[], Awaitable[None]]]] = {}
         self._sandbox_session = sandbox_session
@@ -322,6 +323,15 @@ class LegacyExecution:
                     self._shell_boundary = None
                 raise
 
+    def bind_mcp_registry(self, registry: Any) -> None:
+        """Host-only composition; target calls enqueue into the existing scheduler."""
+        if self.control is None or self.control.scheduler is None:
+            return
+        from redjohn.runtime.mcp_target import McpTargetAdapter, _target_config  # noqa: PLC0415
+
+        if any(_target_config(registry.get(name).config) for name in registry.names()):
+            self._mcp_target = McpTargetAdapter(self, registry)
+
     def _release_shell(self, process_id: int, state: str, code: str = "") -> None:
         if (owned := self._shell.pop(process_id, None)) is None:
             return
@@ -367,6 +377,9 @@ class LegacyExecution:
             task.cancel()
         if tasks:
             await asyncio.gather(*tasks, return_exceptions=True)
+        if self._mcp_target is not None:
+            await self._mcp_target.close()
+            self._mcp_target = None
         if self._shell:
             await self._stop_shell("cancelled", "sdk_run_closed")
         if self._shell_boundary is not None:

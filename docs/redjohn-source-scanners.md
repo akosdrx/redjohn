@@ -16,6 +16,11 @@ The installer checks embedded SHA-256 pins for official PyPI/release archives
 and exact source-commit engine license files. It extracts Semgrep's native
 binary under its reviewed `osemgrep` entry-point name plus the exact 26 bundled
 ELF shared libraries from that official wheel. It installs no Python package.
+The fixed native health and scan commands include `--experimental`: in the
+pinned upstream [native dispatcher](https://github.com/semgrep/semgrep/blob/72d3525fe7e02f486428386078f192f8c4756804/src/osemgrep/cli_scan/Scan_subcommand.ml#L700),
+the default scan maturity asks for the Python frontend, while experimental
+maturity selects native execution. This dispatch setting changes none of the
+namespace, source, rule or resource restrictions below.
 Install receipts retain archive, binary, each library SHA/size, engine license,
 version and source-commit identities. Bundled-library provenance is the pinned
 upstream wheel; independent package version/license attestations are not
@@ -94,7 +99,13 @@ runner are shared by CLI and host-bound assessment control.
 Linux kernel isolation is mandatory for these source workers, including local
 fixtures. Each worker has attested user/mount/PID/network namespaces, loopback
 only, dropped capabilities and a controller-owned relay which rejects every
-network connection. There is no network-capable fallback. The source snapshot
+network connection. There is no network-capable fallback. The private workspace
+contains one valid short-lived public self-signed root for native TLS library
+initialization, whose signer key is discarded and never written. No host/public
+trust store is imported, no server certificate is issued, and deny-all kernel
+egress and the rejecting controller remain mandatory. An empty trust file makes
+the pinned native OCaml client fail before even its version command.
+The source snapshot
 is mounted read-only as a sibling of the writable temporary workspace. Before
 executing an engine, a trusted supervised probe checks the actual worker's
 `/proc/self/mountinfo` read-only flag and the separate writable workspace.

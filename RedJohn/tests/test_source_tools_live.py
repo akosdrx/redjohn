@@ -40,7 +40,7 @@ def installed_pin(tool):
 @pytest.mark.parametrize("tool", ["semgrep", "trivy"])
 @pytest.mark.parametrize("fixed", [False, True], ids=["positive", "fixed"])
 async def test_real_pinned_source_scanner_scheduler_positive_fixed_and_restart(  # noqa: PLR0915 - sequential real E2E lifecycle
-    tmp_path, tool, fixed
+    tmp_path, tool, fixed, monkeypatch
 ):
     binary = installed_pin(tool)
     document = config_document(tmp_path, tool)
@@ -79,6 +79,28 @@ async def test_real_pinned_source_scanner_scheduler_positive_fixed_and_restart( 
     }
     output = tmp_path / "run"
     async with ConfiguredAssessment(config, output, caller="operator") as assessment:
+        # These are exclusively the controlled source files created above.
+        # Preserve bounded native diagnostics on failure rather than relying
+        # on pytest's truncated representation of a large scheduler row.
+        adapter = assessment.runtime.scheduler.adapters[CAPABILITIES[tool]]
+        actual_execute = adapter.runner.execute
+        native_diagnostics = []
+
+        async def recorded_execute(argv, timeout):
+            result = await actual_execute(argv, timeout)
+            native_diagnostics.append(
+                {
+                    "exit_code": result.get("exit_code"),
+                    "timed_out": result.get("timed_out"),
+                    "truncated": result.get("truncated"),
+                    "error": result.get("error"),
+                    "stdout": result.get("stdout", "")[:2048],
+                    "stderr": result.get("stderr", "")[:8192],
+                }
+            )
+            return result
+
+        monkeypatch.setattr(adapter.runner, "execute", recorded_execute)
         enqueue_configured_jobs(assessment.runtime, assessment.store, assessment.policy, config)
         queued = assessment.store.jobs(assessment.policy.engagement_id)
         assert len(queued) == 1
@@ -89,7 +111,18 @@ async def test_real_pinned_source_scanner_scheduler_positive_fixed_and_restart( 
         assert surface.artifact_sha256 == source_config.artifact_sha256
         assert await assessment.runtime.scheduler.run_batch(max_jobs=1) == [job_id]
         row = assessment.store.jobs(assessment.policy.engagement_id)[0]
-        assert row["execution_status"] == "succeeded", row
+        if row["execution_status"] != "succeeded":
+            pytest.fail(
+                json.dumps(
+                    {
+                        "job_id": job_id,
+                        "result": row["result"],
+                        "error": row.get("error"),
+                        "native_diagnostics": native_diagnostics,
+                    },
+                    ensure_ascii=True,
+                )
+            )
         assert row["coverage_status"] == "completed", row
         result = row["result"] if isinstance(row["result"], dict) else json.loads(row["result"])
         candidates = result["findings"]

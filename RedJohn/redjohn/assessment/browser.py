@@ -37,11 +37,14 @@ if TYPE_CHECKING:
         StorageState,
     )
 
+    from redjohn.assessment.browser_action_models import BrowserAuthPlan
     from redjohn.assessment.browser_capture import BrowserPostCaptureService
+    from redjohn.assessment.browser_workflow_actions import ReviewedBrowserResult
     from redjohn.assessment.egress import LinuxEgressBoundary
     from redjohn.assessment.models import CoverageStatus, ExecutionStatus
     from redjohn.assessment.policy import EngagementPolicy
     from redjohn.assessment.resources import ResourceGovernor, ResourceLease
+    from redjohn.assessment.workflow_inputs import WorkflowInputVault
 
 
 @dataclass(frozen=True)
@@ -321,6 +324,37 @@ class BrowserDiscoveryService:
         except asyncio.CancelledError:
             await cleanup
             raise
+
+    async def run_reviewed_actions(
+        self,
+        plan: BrowserAuthPlan,
+        inputs: WorkflowInputVault,
+        checkpoint: dict[str, Any],
+        *,
+        on_read: Callable[[str], None],
+        on_admit: Callable[[tuple[str, ...]], None],
+        on_checkpoint: Callable[[int, dict[str, Any], str], None],
+    ) -> ReviewedBrowserResult:
+        """Run only typed reviewed actions through this service's existing boundary."""
+        from redjohn.assessment.browser_action_models import BrowserAuthPlan  # noqa: PLC0415
+        from redjohn.assessment.browser_workflow_actions import run_actions  # noqa: PLC0415
+        from redjohn.assessment.workflow_inputs import WorkflowInputVault  # noqa: PLC0415
+
+        if not isinstance(plan, BrowserAuthPlan) or not isinstance(inputs, WorkflowInputVault):
+            raise TypeError("typed_reviewed_browser_plan_required")
+        plan.authorize(self.policy)
+        async with self._lock:
+            await self.start()
+            async with asyncio.timeout(self.limits.total_timeout_seconds):
+                return await run_actions(
+                    self,
+                    plan,
+                    inputs,
+                    checkpoint,
+                    on_read=on_read,
+                    on_admit=on_admit,
+                    on_checkpoint=on_checkpoint,
+                )
 
     def healthcheck(self) -> dict[str, Any]:
         try:

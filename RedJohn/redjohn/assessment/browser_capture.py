@@ -151,6 +151,29 @@ class BrowserPostCaptureService:
         self._active: _Context | None = None
         self._tickets: set[_CaptureTicket] = set()
 
+    def bootstrap_authenticated_context(
+        self,
+        actor_id: str,
+        tenant_id: str,
+        revision: str,
+        storage_state: dict[str, Any],
+        evidence_ref: str,
+        *,
+        private_state_file: Path,
+    ) -> None:
+        """Host-only verified login bridge; does not infer POST replay authority."""
+        from redjohn.assessment.capture_bootstrap import bootstrap_authenticated_context  # noqa: PLC0415 - optional authentication flow only
+
+        bootstrap_authenticated_context(
+            self,
+            actor_id,
+            tenant_id,
+            revision,
+            storage_state,
+            evidence_ref,
+            private_state_file=private_state_file,
+        )
+
     def _rules(self) -> tuple[dict[str, Any], ...]:
         try:
             data = _private_json(self.rules_file)

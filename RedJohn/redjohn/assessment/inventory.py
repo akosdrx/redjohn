@@ -322,6 +322,28 @@ class InventoryRepository:
             ):
                 raise PolicyDenied("source_artifact_inventory_binding_denied")
 
+    def require_network_asset(self, policy: EngagementPolicy, asset_id: str, address: str) -> None:
+        with self.store._lock:
+            self._fence(self.store.db, policy)
+            row = self._get_asset(self.store.db, policy, asset_id)
+            if (
+                row["kind"] != "ip_address"
+                or row["state"] != "active"
+                or row["locator"] != canonical_asset_locator("ip_address", address)
+            ):
+                raise PolicyDenied("network_inventory_binding_denied")
+
+    def require_dns_asset(self, policy: EngagementPolicy, asset_id: str, name: str) -> None:
+        with self.store._lock:
+            self._fence(self.store.db, policy)
+            row = self._get_asset(self.store.db, policy, asset_id)
+            if (
+                row["kind"] != "dns_name"
+                or row["state"] != "active"
+                or row["locator"] != canonical_asset_locator("dns_name", name)
+            ):
+                raise PolicyDenied("dns_inventory_binding_denied")
+
     def set_asset_state(
         self, policy: EngagementPolicy, asset_id: str, state: str, expected_revision: int
     ) -> dict[str, Any]:
@@ -484,6 +506,15 @@ class InventoryRepository:
         policy = EngagementPolicy.from_mapping(json.loads(row[0]))
         if getattr(surface, "resource_kind", "") == "source_artifact":
             self.require_source_asset(policy, surface.asset_ref, surface.artifact_sha256)
+            asset_id, service_id = surface.asset_ref, None
+        elif surface.resource_kind == "network_endpoint":
+            self.require_network_asset(policy, surface.asset_ref, surface.network_address)
+            asset_id = surface.asset_ref
+            service_id = self._service(
+                db, policy, asset_id, "tcp", int(surface.network_port), "imported", ()
+            )
+        elif surface.resource_kind == "dns_name":
+            self.require_dns_asset(policy, surface.asset_ref, surface.dns_name)
             asset_id, service_id = surface.asset_ref, None
         else:
             references = (surface.request_ref,) if surface.request_ref else ()

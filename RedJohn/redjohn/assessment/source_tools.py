@@ -18,6 +18,7 @@ import sys
 import tempfile
 import time
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING, Any
 
@@ -41,6 +42,35 @@ _RULE_ID = re.compile(r"[A-Za-z0-9_.:-]{1,160}")
 _UNSAFE_NAMES = frozenset(
     {".git", ".semgrepignore", ".trivyignore", ".trivyignore.yaml", "trivy.yaml"}
 )
+
+
+def offline_trust_anchor() -> bytes:
+    """Let native TLS libraries initialize without importing host trust.
+
+    The signing key exists only while creating this unrelated ephemeral root;
+    no server certificate or key is exported. The worker still has deny-all
+    kernel egress and a controller which rejects every network connection.
+    """
+    from cryptography import x509  # noqa: PLC0415
+    from cryptography.hazmat.primitives import hashes, serialization  # noqa: PLC0415
+    from cryptography.hazmat.primitives.asymmetric import ec  # noqa: PLC0415
+    from cryptography.x509.oid import NameOID  # noqa: PLC0415
+
+    key = ec.generate_private_key(ec.SECP256R1())
+    name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "RedJohn offline source root")])
+    now = datetime.now(UTC)
+    certificate = (
+        x509.CertificateBuilder()
+        .subject_name(name)
+        .issuer_name(name)
+        .public_key(key.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(now - timedelta(minutes=1))
+        .not_valid_after(now + timedelta(minutes=30))
+        .add_extension(x509.BasicConstraints(ca=True, path_length=0), critical=True)
+        .sign(key, hashes.SHA256())
+    )
+    return certificate.public_bytes(serialization.Encoding.PEM)
 
 
 def relative_source_path(value: object) -> str:
@@ -357,7 +387,8 @@ print(json.dumps({'readonly':True,'writable_workspace':True}))
             (self.snapshot / "rules.json").write_bytes(rules)
         (self.snapshot / "empty-ignore").write_text("")
         self._ca_file = self.workspace / "proxy-ca.pem"
-        self._ca_file.write_text("")
+        self._ca_file.write_bytes(offline_trust_anchor())
+        self._ca_file.chmod(0o600)
         (self.workspace / "empty-ca-directory").mkdir(mode=0o700)
         self._deny_server = await asyncio.start_server(self._deny, "127.0.0.1", 0)
         port = self._deny_server.sockets[0].getsockname()[1]
@@ -385,7 +416,7 @@ print(json.dumps({'readonly':True,'writable_workspace':True}))
 
     async def healthcheck(self) -> dict[str, str]:
         args = (
-            ["scan", "--disable-version-check", "--metrics", "off", "--version"]
+            ["scan", "--experimental", "--disable-version-check", "--metrics", "off", "--version"]
             if self.tool == "semgrep"
             else ["--version"]
         )
@@ -407,6 +438,10 @@ print(json.dumps({'readonly':True,'writable_workspace':True}))
             return [
                 str(self.binary.path),
                 "scan",
+                # The pinned standalone native CLI otherwise asks for its
+                # uninstalled Python frontend. This selects native dispatch;
+                # namespace, rule and resource restrictions are unchanged.
+                "--experimental",
                 "--oss-only",
                 "--config",
                 str(self.snapshot / "rules.json"),
@@ -526,8 +561,11 @@ class SourceToolAdapter:
                 "blocked",
                 error=error_record(str(exc).split(":")[0], coverage_effect="blocked"),
             )
-        except (ValueError, TypeError, OSError, KeyError, AttributeError):
+        except (ValueError, TypeError, OSError, KeyError, AttributeError) as exc:
             coverage: CoverageStatus = "inconclusive" if stage == "scan" else "blocked"
+            cause = str(exc)
+            if re.fullmatch(r"[a-z][a-z0-9_]{0,95}", cause) is None:
+                cause = type(exc).__name__
             return AdapterResult(
                 "failed",
                 coverage,
@@ -536,6 +574,7 @@ class SourceToolAdapter:
                     if stage == "scan"
                     else "source_snapshot_or_pinned_engine_unavailable",
                     coverage_effect=coverage,
+                    cause_ref=f"{stage}:{cause}",
                 ),
             )
         finally:

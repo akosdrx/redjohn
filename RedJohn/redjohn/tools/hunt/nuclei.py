@@ -30,6 +30,7 @@ if TYPE_CHECKING:
 import yaml
 from agents.sandbox.errors import ExecFailureError
 
+from redjohn.assessment.media_type import MediaTypeDenied, replay_media_type
 from redjohn.assessment.request_body import HOST_REPLAY_BODY_MARKER
 
 
@@ -44,6 +45,22 @@ _POST_CONTENT_TYPE = re.compile(
     r"(?:application/json|application/x-www-form-urlencoded)(?:; charset=utf-8)?"
     r"|multipart/form-data; boundary=[A-Za-z0-9_-]{1,70}\Z"
 )
+
+
+def _public_post_content_type(value: str) -> bool:
+    if _POST_CONTENT_TYPE.fullmatch(value):
+        return True
+    try:
+        parsed = replay_media_type(value, contract_version=3)
+    except MediaTypeDenied:
+        return False
+    # This validates only a public marker template. The private binding still
+    # requires its own explicit body-contract version and exact MIME/charset
+    # before engine admission and again for every materialized proxy request.
+    # Multipart templates retain their existing fixed public-boundary subset.
+    return parsed.family in {"json", "xml", "application/x-www-form-urlencoded"}
+
+
 _CANCEL_SOURCE = """import os, pathlib, signal, sys, time
 p=pathlib.Path('.redjohn-hunt')/(sys.argv[1]+'.pid')
 end=time.monotonic()+1
@@ -259,7 +276,7 @@ def validate_template(raw: bytes, selection: TemplateSelection) -> int:  # noqa:
                 or not isinstance(headers, dict)
                 or set(headers) != {"Content-Type"}
                 or not isinstance(headers["Content-Type"], str)
-                or not _POST_CONTENT_TYPE.fullmatch(headers["Content-Type"])
+                or not _public_post_content_type(headers["Content-Type"])
             ):
                 raise NucleiContractError("POST requires a reviewed host-only replay placeholder")
         elif selection.effect != "read-only" or "body" in request or "headers" in request:
