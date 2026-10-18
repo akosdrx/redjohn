@@ -12,11 +12,14 @@ esac
 test "$#" -eq 2
 task_python="$1"
 task_suite="$2"
+task_workspace="$(pwd -P)"
+test "$task_workspace" = "$GITHUB_WORKSPACE"
 case "$task_suite" in regression|integration) ;; *) exit 2 ;; esac
 test -x "$task_python"
 printf '%s' "$$" > "$REDJOHN_TEST_CGROUP_ROOT/launcher-$task_suite/cgroup.procs"
 exec /usr/bin/setpriv --reuid="$SUDO_UID" --regid="$SUDO_GID" --init-groups \
   env USER="$SUDO_USER" LOGNAME="$SUDO_USER" \
+  PYTHONPATH="$task_workspace/RedJohn:$task_workspace/.github/scripts" \
   "$task_python" .github/scripts/ci.py run --name "python-$task_suite" -- \
   timeout --signal=TERM --kill-after=20s 45m "$task_python" -m pytest \
   RedJohn/tests -q -s -p no:cacheprovider -p pytest_evidence --ci-suite="$task_suite" \

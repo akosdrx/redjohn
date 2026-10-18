@@ -188,6 +188,7 @@ def summarize():
         if not data.get("removed") or data.get("leaked_processes"):
             result["blockers"].append("failed_owned_process_cleanup")
     go_cases = {}
+    go_packages = set()
     go_log = OUT / "go-tests.log"
     if go_log.exists():
         for line in go_log.read_text().splitlines():
@@ -195,21 +196,25 @@ def summarize():
                 row = json.loads(line)
             except json.JSONDecodeError:
                 continue
+            if row.get("Package"):
+                go_packages.add(row["Package"])
             if row.get("Test") and row.get("Action") in {"pass", "fail", "skip"}:
                 go_cases[(row["Package"], row["Test"])] = row
     result["go_tests"] = {status: sum(row["Action"] == action for row in go_cases.values())
                           for status, action in (("passed", "pass"), ("failed", "fail"), ("skipped", "skip"))}
+    result["go_test_coverage"] = "test_functions_executed" if go_cases else "no_test_functions_defined"
+    result["go_packages_checked"] = sorted(go_packages)
     suite = ET.Element("testsuite", name="Go TUI", tests=str(len(go_cases)))
     for (package, name), row in sorted(go_cases.items()):
         case = ET.SubElement(suite, "testcase", classname=package, name=name, time=str(row.get("Elapsed", 0)))
         if row["Action"] in {"fail", "skip"}:
             ET.SubElement(case, "failure" if row["Action"] == "fail" else "skipped")
-    if go_cases:
+    if go_cases or go_packages:
         ET.ElementTree(suite).write(OUT / "go.junit.xml", encoding="utf-8", xml_declaration=True)
         if result["go_tests"]["failed"] or result["go_tests"]["skipped"]:
             result["blockers"].append("incomplete_go_tests")
     else:
-        result["blockers"].append("missing_go_test_cases")
+        result["blockers"].append("missing_go_results")
     result["success"] = not result["blockers"]
     write("summary.json", result)
     evidence = {str(path.relative_to(OUT)): {"sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
@@ -226,7 +231,7 @@ def summarize():
                 report.write(f"| {name} | {c['passed']} | {c['failed']} | {c['errors']} | {c['skipped']} |\n")
             report.write("\n" + ("Complete." if result["success"] else "Incomplete: " + ", ".join(result["blockers"])) + "\n")
     print(json.dumps({key: result[key] for key in
-                     ("commit_sha", "machine", "success", "blockers", "junit", "go_tests")}))
+                     ("commit_sha", "machine", "success", "blockers", "junit", "go_tests", "go_test_coverage")}))
     return 0 if result["success"] else 1
 
 

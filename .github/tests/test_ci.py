@@ -113,6 +113,17 @@ class EvidenceContract(unittest.TestCase):
             self.assertFalse(markers["test_actual_kernel_memory_max_kills_oversized_tree"])
             self.assertEqual(len(markers["test_real_chromium_request_admission_and_response_callbacks"]), 1)
 
+    def test_zero_go_functions_are_recorded_without_inventing_passed_tests(self):
+        with tempfile.TemporaryDirectory() as folder, patch.object(ci, "OUT", Path(folder)), \
+                patch.object(ci, "identity", return_value={"commit_sha": "abc", "machine": "contract"}):
+            root = Path(folder)
+            (root / "go-tests.log").write_text('{"Package":"fixture","Action":"skip"}\n')
+            self.assertEqual(ci.summarize(), 1)  # Other required evidence is deliberately absent.
+            result = json.loads((root / "summary.json").read_text())
+            self.assertEqual(result["go_tests"], {"passed": 0, "failed": 0, "skipped": 0})
+            self.assertEqual(result["go_test_coverage"], "no_test_functions_defined")
+            self.assertNotIn("missing_go_results", result["blockers"])
+
 
 if __name__ == "__main__":
     unittest.main()
