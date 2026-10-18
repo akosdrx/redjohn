@@ -56,7 +56,7 @@ def selected_nmap_row(assessment):
     return next(
         row
         for row in assessment.store.jobs(assessment.policy.engagement_id)
-        if json.loads(row["spec"])["capability"] == "nmap_services"
+        if row["spec"]["capability"] == "nmap_services"
     )
 
 

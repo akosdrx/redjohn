@@ -24,7 +24,9 @@ from redjohn.assessment.service_tools import (
     NmapServiceRunner,
     require_open_observation,
 )
+from redjohn.assessment.store import AssessmentStore
 from tests.test_network_broker_contract import close_stream, owned_job
+from tests.test_service_tools_live import selected_nmap_row
 
 
 def service_config(tmp_path):
@@ -318,3 +320,50 @@ async def test_service_health_failure_is_blocked_capability_not_closed_port_cont
         assert adapter.runner.broker.attempted == 0 and adapter.runner.broker.closed
     finally:
         store.close()
+
+
+def test_native_service_selection_consumes_decoded_sqlite_spec_and_result_after_reopen(tmp_path):
+    """Actual persistent store API; no native engine result is simulated as E2E."""
+    store, policy, _surface, producer = owned_job(tmp_path, 9000)
+    spec = JobSpec(
+        producer["surface_id"],
+        "service-observation",
+        "nmap_services",
+        policy_revision=policy.revision,
+    )
+    try:
+        submitted = store.submit(policy, [spec])
+        assessment = SimpleNamespace(store=store, policy=policy)
+        selected = selected_nmap_row(assessment)
+        assert selected["id"] == submitted[0]
+        assert (
+            isinstance(selected["spec"], dict) and selected["spec"]["capability"] == "nmap_services"
+        )
+        assert selected["result"] is None
+        # The SQLite column is JSON text while the public jobs() API decodes it.
+        raw = store.db.execute("SELECT spec FROM rj_job WHERE id=?", (selected["id"],)).fetchone()[
+            0
+        ]
+        assert isinstance(raw, str)
+        store.finish(producer, AdapterResult("succeeded", "completed"))
+        claimed = store.claim(policy, "owned-selection-test", lease_seconds=30)
+        assert claimed is not None and claimed["id"] == selected["id"]
+        store.finish(
+            claimed,
+            AdapterResult("failed", "inconclusive", summary={"fixture": "store-shape-only"}),
+        )
+        database = store.path
+    finally:
+        store.close()
+    reopened = AssessmentStore(database)
+    try:
+        selected = selected_nmap_row(SimpleNamespace(store=reopened, policy=policy))
+        assert selected["id"] == submitted[0] and selected["attempt"] == 1
+        assert isinstance(selected["spec"], dict) and isinstance(selected["result"], dict)
+        assert selected["result"]["summary"] == {"fixture": "store-shape-only"}
+        assert (
+            selected["execution_status"] == "failed"
+            and selected["coverage_status"] == "inconclusive"
+        )
+    finally:
+        reopened.close()
