@@ -153,6 +153,17 @@ class EvidenceContract(unittest.TestCase):
             self.assertEqual(result["evidence_kinds"]["mock_contract"]["passed"], 1)
             self.assertNotIn("real_integration", result["evidence_kinds"])
 
+    def test_actual_node22_format_without_file_attributes_keeps_fetch_double_label(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "frontend.junit.xml"
+            name = "steering preserves agent and message, HTTP rejection stays failure"
+            path.write_text(f'<testsuites><testcase name="{name}" classname="test"/>'
+                            '<testcase name="parser" classname="test"/></testsuites>')
+            result = ci.junit_summary(path)
+            self.assertEqual(result["counts"]["passed"], 2)
+            self.assertEqual(result["evidence_kinds"]["mock_contract"]["passed"], 1)
+            self.assertEqual(result["evidence_kinds"]["unit_contract_or_mixed"]["passed"], 1)
+
     def test_darwin_cases_are_explicitly_not_applicable_and_namespace_blocks_stay_visible(self):
         spec = importlib.util.spec_from_file_location("evidence", Path(__file__).parents[1] / "scripts/pytest_evidence.py")
         plugin = importlib.util.module_from_spec(spec)

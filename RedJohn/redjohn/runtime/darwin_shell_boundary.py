@@ -28,6 +28,12 @@ if TYPE_CHECKING:
     from redjohn.assessment.resources import ResourceGovernor, ResourceLease
 
 
+def _is_darwin() -> bool:
+    # Keep runtime capability detection independent of mypy's target platform:
+    # Linux CI must type-check this optional backend's complete implementation.
+    return sys.platform == "darwin"
+
+
 class DarwinShellEgressBoundary:
     """One verified profile, never a fallback to an unconfined process."""
 
@@ -88,7 +94,7 @@ class DarwinShellEgressBoundary:
         self._attestation: dict[str, Any] = {}
 
     async def start(self) -> None:
-        if sys.platform != "darwin":
+        if not _is_darwin():
             raise EgressUnavailable("darwin_shell_requires_macos")
         self._sandbox_exec = shutil.which("sandbox-exec", path="/usr/bin:/bin")
         if self._sandbox_exec is None:

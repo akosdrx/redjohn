@@ -82,8 +82,8 @@ jobs:
       REDJOHN_CI_CAPABILITIES: ${{ github.workspace }}/artifacts/capabilities.json
       REDJOHN_CI_APPARMOR_PROFILE: redjohn-ci-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.runner_arch }}
       REDJOHN_TUI_BINARY: ${{ github.workspace }}/artifacts/build/redjohn-tui
-      REDJOHN_SOAK_CYCLES: ${{ inputs.soak_cycles || (contains(github.event.head_commit.message, '[redjohn-long-soak]') && '120') || '2' }}
-      REDJOHN_SOAK_MINIMUM_SECONDS: ${{ inputs.soak_minimum_seconds || (contains(github.event.head_commit.message, '[redjohn-long-soak]') && '1200') || '0' }}
+      REDJOHN_SOAK_CYCLES: ${{ inputs.soak_cycles || ((contains(github.event.head_commit.message, '[redjohn-long-soak]') || contains(github.event.pull_request.body, '[redjohn-long-soak]')) && '120') || '2' }}
+      REDJOHN_SOAK_MINIMUM_SECONDS: ${{ inputs.soak_minimum_seconds || ((contains(github.event.head_commit.message, '[redjohn-long-soak]') || contains(github.event.pull_request.body, '[redjohn-long-soak]')) && '1200') || '0' }}
       GOMAXPROCS: '2'
       GOTOOLCHAIN: local
     steps:

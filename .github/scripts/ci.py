@@ -154,7 +154,9 @@ def junit_summary(path):
         props = {p.get("name"): p.get("value") for p in case.findall("properties/property")}
         # Node's built-in reporter has no custom properties. These six reviewed
         # cases use fetch doubles, and must never be counted as real HTTP E2E.
-        frontend_double = Path(case.get("file", "")).name == "server-source.test.mjs" and case.get("name") in FRONTEND_TRANSPORT_CASES
+        frontend_origin = (Path(case.get("file", "")).name == "server-source.test.mjs"
+                           or Path(path).name == "frontend.junit.xml")
+        frontend_double = frontend_origin and case.get("name") in FRONTEND_TRANSPORT_CASES
         kind = props.get("evidence_kind", "mock_contract" if frontend_double else "unit_contract_or_mixed")
         kinds.setdefault(kind, {key: 0 for key in counts})[status] += 1
         if status == "skipped":
