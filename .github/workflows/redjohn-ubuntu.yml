@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: redjohn-ubuntu-${{ github.event.pull_request.number || github.ref }}
+  group: redjohn-ubuntu-${{ github.event.pull_request.head.repo.full_name || github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}
   cancel-in-progress: false
 
 defaults:
@@ -66,6 +66,7 @@ jobs:
       REDJOHN_CONTINUOUS_REFRESH_MEASUREMENTS: ${{ github.workspace }}/artifacts/continuous-refresh.json
       REDJOHN_AUTOMATIC_SESSION_MEASUREMENTS: ${{ github.workspace }}/artifacts/automatic-session.json
       REDJOHN_MIME_RESTART_MEASUREMENTS: ${{ github.workspace }}/artifacts/mime-restart.json
+      REDJOHN_CI_CAPABILITIES: ${{ github.workspace }}/artifacts/capabilities.json
       GOMAXPROCS: '2'
       GOTOOLCHAIN: local
     steps:
@@ -148,23 +149,21 @@ jobs:
         id: delegation
         run: python .github/scripts/ci.py run --name linux-setup -- bash .github/scripts/prepare-linux.sh
       - name: Run remaining unit, contract and mixed regressions
-        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.delegation.outcome == 'success' }}
         run: |
-          python .github/scripts/ci.py run --name python-regression -- \
-            timeout --signal=TERM --kill-after=20s 25m python -m pytest RedJohn/tests \
-            -q -s -p no:cacheprovider -p pytest_evidence --ci-suite=regression \
-            -o junit_family=xunit1 --junitxml=artifacts/regression.junit.xml \
-            --basetemp="$RUNNER_TEMP/redjohn-regression"
+          task_python="$(command -v python)"
+          task_home="$HOME"
+          sudo -E env HOME="$task_home" REDJOHN_CI_CAPABILITIES='' bash .github/scripts/linux-tests.sh "$task_python" regression
       - name: Attest namespace and memory boundaries without disabling protection
         if: ${{ !cancelled() && steps.delegation.outcome == 'success' }}
         id: capability
         run: python .github/scripts/capabilities.py
       - name: Run actual Chromium, Nuclei, scanners and Linux isolation E2E
-        if: ${{ !cancelled() && steps.capability.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.delegation.outcome == 'success' }}
         run: |
           task_python="$(command -v python)"
           task_home="$HOME"
-          sudo -E env HOME="$task_home" bash .github/scripts/linux-tests.sh "$task_python"
+          sudo -E env HOME="$task_home" bash .github/scripts/linux-tests.sh "$task_python" integration
       - name: Capture and clean only this job's delegated processes
         if: always()
         run: bash .github/scripts/cleanup-linux.sh

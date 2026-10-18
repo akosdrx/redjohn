@@ -62,7 +62,17 @@ or public OAST account is required for controlled local targets.
 Artifacts are uploaded with `always()` for 14 days and include separate Python
 and Go JUnit, complete build/test logs, tool provenance/version receipts,
 source hashes, external process-tree RSS samples, cgroup measurements,
-cleanup evidence and the final strict summary. The evidence index binds every
+cleanup evidence and the final strict summary. Both Python suites start in
+separate fresh cgroups, so the Actions service and preceding compiler/download
+page-cache charges are not misattributed to an assessment controller.
+If namespace or sandboxed Chromium capability is absent, dependent cases are
+explicit capability skips. Existing native loopback Nuclei and kernel-only
+OOM/orphan tests still execute; no remote case changes its egress mode or
+falls back to an uncontained worker. The strict gate rejects those skips.
+The current Go source tree contains no `*_test.go` files; vet/build can pass
+and `go test -race` can finish with zero test functions. This is recorded as
+missing Go test coverage, not a successful Go unit suite.
+The evidence index binds every
 measurement/log by SHA-256 to the exact checked-out Git commit, run ID and
 attempt. A missing JUnit, nonzero command, surviving owned process, skipped
 mandatory case or missing runner boundary prevents a successful summary.

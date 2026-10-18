@@ -6,6 +6,7 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 
@@ -85,6 +86,32 @@ class EvidenceContract(unittest.TestCase):
             index = json.loads((root / "evidence-index.json").read_text())
             self.assertEqual(index["commit_sha"], "abc")
             self.assertIn("summary.json", index["files"])
+
+    def test_missing_browser_does_not_hide_supported_native_or_kernel_cases(self):
+        spec = importlib.util.spec_from_file_location("evidence", Path(__file__).parents[1] / "scripts/pytest_evidence.py")
+        plugin = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(plugin)
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            capability = root / "capabilities.json"
+            capability.write_text('{"browser_available":false,"namespace_available":false,"cgroup_available":true}')
+            items, markers = [], {}
+            for filename, name in (("test_nuclei_live.py", "test_live_pinned_nuclei_native_marker_then_fixed_control"),
+                                   ("test_os_memory_live.py", "test_actual_kernel_memory_max_kills_oversized_tree"),
+                                   ("test_assessment_browser.py", "test_real_chromium_request_admission_and_response_callbacks")):
+                path = root / filename
+                path.write_text("")
+                markers[name] = []
+                items.append(SimpleNamespace(path=path, originalname=name, name=name,
+                    user_properties=[], add_marker=markers[name].append))
+            config = SimpleNamespace(getoption=lambda _: "integration",
+                hook=SimpleNamespace(pytest_deselected=lambda **_: None))
+            with patch.dict(os.environ, {"REDJOHN_CI_CAPABILITIES": str(capability)}):
+                plugin.pytest_collection_modifyitems(config, items)
+            self.assertEqual(len(items), 3)
+            self.assertFalse(markers["test_live_pinned_nuclei_native_marker_then_fixed_control"])
+            self.assertFalse(markers["test_actual_kernel_memory_max_kills_oversized_tree"])
+            self.assertEqual(len(markers["test_real_chromium_request_admission_and_response_callbacks"]), 1)
 
 
 if __name__ == "__main__":

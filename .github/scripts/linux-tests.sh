@@ -9,14 +9,16 @@ case "${REDJOHN_TEST_CGROUP_ROOT:?}" in
   /sys/fs/cgroup/redjohn-ci-[0-9]*-X64|/sys/fs/cgroup/redjohn-ci-[0-9]*-ARM64) ;;
   *) exit 2 ;;
 esac
-test "$#" -eq 1
+test "$#" -eq 2
 task_python="$1"
+task_suite="$2"
+case "$task_suite" in regression|integration) ;; *) exit 2 ;; esac
 test -x "$task_python"
-printf '%s' "$$" > "$REDJOHN_TEST_CGROUP_ROOT/launcher/cgroup.procs"
+printf '%s' "$$" > "$REDJOHN_TEST_CGROUP_ROOT/launcher-$task_suite/cgroup.procs"
 exec /usr/bin/setpriv --reuid="$SUDO_UID" --regid="$SUDO_GID" --init-groups \
   env USER="$SUDO_USER" LOGNAME="$SUDO_USER" \
-  "$task_python" .github/scripts/ci.py run --name python-integration -- \
+  "$task_python" .github/scripts/ci.py run --name "python-$task_suite" -- \
   timeout --signal=TERM --kill-after=20s 45m "$task_python" -m pytest \
-  RedJohn/tests -q -s -p no:cacheprovider -p pytest_evidence --ci-suite=integration \
-  -o junit_family=xunit1 --junitxml=artifacts/integration.junit.xml \
-  --basetemp="$RUNNER_TEMP/redjohn-integration"
+  RedJohn/tests -q -s -p no:cacheprovider -p pytest_evidence --ci-suite="$task_suite" \
+  -o junit_family=xunit1 --junitxml="artifacts/$task_suite.junit.xml" \
+  --basetemp="$RUNNER_TEMP/redjohn-$task_suite"
