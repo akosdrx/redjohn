@@ -1,0 +1,34 @@
+[
+  {
+    "marker_enabled": true,
+    "duration_seconds": 0.4518378330030828,
+    "target_requests": [
+      "/marker"
+    ],
+    "response_statuses": [
+      200
+    ],
+    "execution_status": "succeeded",
+    "coverage_status": "completed",
+    "finding_count": 1,
+    "no_finding_observed": false,
+    "binary_version": "3.11.1",
+    "binary_sha256": "f427ae885dcd60be25cf27c34a416ef18a803b29e153d5568057d7b6012a454d"
+  },
+  {
+    "marker_enabled": false,
+    "duration_seconds": 0.44675550000101794,
+    "target_requests": [
+      "/marker"
+    ],
+    "response_statuses": [
+      200
+    ],
+    "execution_status": "succeeded",
+    "coverage_status": "completed",
+    "finding_count": 0,
+    "no_finding_observed": true,
+    "binary_version": "3.11.1",
+    "binary_sha256": "f427ae885dcd60be25cf27c34a416ef18a803b29e153d5568057d7b6012a454d"
+  }
+]

@@ -1,14 +1,185 @@
 name: RedJohn Ubuntu validation
+
 on:
+  push:
+  pull_request:
   workflow_dispatch:
+
 permissions:
   contents: read
+
+concurrency:
+  group: redjohn-ubuntu-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
 jobs:
-  select-source-branch:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 2
+  ubuntu:
+    name: Ubuntu 24.04 ${{ matrix.arch }} / Python ${{ matrix.python }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        include:
+          - arch: x64
+            runner: ubuntu-24.04
+            runner_arch: X64
+            python: '3.13.16'
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+            runner_arch: ARM64
+            python: '3.12.3'
+    env:
+      PYTHONPATH: ${{ github.workspace }}/RedJohn:${{ github.workspace }}/.github/scripts
+      REDJOHN_TELEMETRY: '0'
+      OPENAI_AGENTS_DISABLE_TRACING: '1'
+      REDJOHN_REQUIRE_REMOTE_E2E: '1'
+      REDJOHN_REQUIRE_FFUF_E2E: '1'
+      REDJOHN_REQUIRE_PD_E2E: '1'
+      REDJOHN_REQUIRE_SPECIALIST_E2E: '1'
+      REDJOHN_REQUIRE_SCHEMA_OAST_E2E: '1'
+      REDJOHN_REQUIRE_OS_MEMORY: '1'
+      REDJOHN_TEST_CGROUP_ROOT: /sys/fs/cgroup/redjohn-ci-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.runner_arch }}
+      REDJOHN_RESOURCE_POOL_PATH: ${{ github.workspace }}/.ci-state/redjohn-resources.sqlite3
+      REDJOHN_OS_MEMORY_MEASUREMENTS: ${{ github.workspace }}/artifacts/os-memory
+      REDJOHN_DNS_FIXTURE_NAME: redjohn-owned-fixture.test
+      REDJOHN_NUCLEI_LOCK: ${{ github.workspace }}/RedJohn/.tools/nuclei/3.11.1/fixture-lock.json
+      REDJOHN_AUTH_SCHEMA_MEASUREMENTS: ${{ github.workspace }}/artifacts/authenticated-schema-oast.json
+      REDJOHN_SCHEMA_OAST_MEASUREMENTS: ${{ github.workspace }}/artifacts/schema-oast.json
+      REDJOHN_SPECIALIST_MEASUREMENTS: ${{ github.workspace }}/artifacts/specialists.json
+      REDJOHN_PD_E2E_MEASUREMENTS: ${{ github.workspace }}/artifacts/projectdiscovery.json
+      REDJOHN_PUBLIC_VULNX_MEASUREMENTS: ${{ github.workspace }}/artifacts/vulnx-public.json
+      REDJOHN_DNS_E2E_MEASUREMENTS: ${{ github.workspace }}/artifacts/dns-https.json
+      REDJOHN_FFUF_E2E_MEASUREMENTS: ${{ github.workspace }}/artifacts/ffuf.json
+      REDJOHN_HTTPS_E2E_MEASUREMENTS: ${{ github.workspace }}/artifacts/https.json
+      REDJOHN_AUTH_E2E_MEASUREMENTS: ${{ github.workspace }}/artifacts/auth.json
+      REDJOHN_REMOTE_E2E_MEASUREMENTS: ${{ github.workspace }}/artifacts/remote.json
+      REDJOHN_NUCLEI_MEASUREMENTS: ${{ github.workspace }}/artifacts/nuclei.json
+      REDJOHN_POST_E2E_MEASUREMENTS: ${{ github.workspace }}/artifacts/post.json
+      REDJOHN_POST_REFRESH_MEASUREMENTS: ${{ github.workspace }}/artifacts/post-refresh.json
+      REDJOHN_BROWSER_TOKEN_MEASUREMENTS: ${{ github.workspace }}/artifacts/browser-tokens.json
+      REDJOHN_CONTINUOUS_REFRESH_MEASUREMENTS: ${{ github.workspace }}/artifacts/continuous-refresh.json
+      REDJOHN_AUTOMATIC_SESSION_MEASUREMENTS: ${{ github.workspace }}/artifacts/automatic-session.json
+      REDJOHN_MIME_RESTART_MEASUREMENTS: ${{ github.workspace }}/artifacts/mime-restart.json
+      GOMAXPROCS: '2'
+      GOTOOLCHAIN: local
     steps:
-      - name: Require the RedJohn source branch
+      - name: Check out the exact event commit
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - name: Set up the locked Python minor
+        id: python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: |
+            .github/requirements-ci.lock
+            RedJohn/requirements-assessment.lock
+            RedJohn/pyproject.toml
+      - name: Set up Node and lockfile-based npm cache
+        if: ${{ !cancelled() }}
+        id: node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22.14.0'
+          cache: npm
+          cache-dependency-path: RedJohn/redjohn/interface/viewer/frontend/package-lock.json
+      - name: Set up Go and module cache
+        if: ${{ !cancelled() }}
+        id: go
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version: '1.25.1'
+          cache-dependency-path: RedJohn/redjohn/interface/tui/go.sum
+      - name: Record commit and all tracked input hashes
+        if: ${{ !cancelled() && steps.python.outcome == 'success' }}
+        run: python .github/scripts/ci.py snapshot
+      - name: Install the complete locked Python dependencies
+        if: ${{ !cancelled() && steps.python.outcome == 'success' }}
+        id: dependencies
         run: |
-          echo '::error::Select the codex/redjohn-ubuntu-actions source branch in Run workflow. The default branch currently contains only the repository bootstrap.'
-          exit 1
+          python .github/scripts/ci.py run --name python-install -- timeout 15m python -m pip install -r .github/requirements-ci.lock
+          python .github/scripts/ci.py run --name pip-check -- python -m pip check
+      - name: Verify Python source quality and strict types
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
+        run: |
+          python .github/scripts/ci.py run --name python-lint -- python -m ruff check RedJohn/redjohn
+          python .github/scripts/ci.py run --name python-types --cwd RedJohn -- timeout 8m python -m mypy redjohn --no-incremental
+      - name: Test the CI evidence contracts
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
+        run: python .github/scripts/ci.py run --name ci-contracts -- python -m unittest discover -s .github/tests -v
+      - name: Install frontend dependencies and check the actual TypeScript sources
+        if: ${{ !cancelled() && steps.node.outcome == 'success' && steps.python.outcome == 'success' }}
+        run: |
+          python .github/scripts/ci.py run --name frontend-install --cwd RedJohn/redjohn/interface/viewer/frontend -- timeout 10m npm ci
+          python .github/scripts/ci.py run --name frontend-types --cwd RedJohn/redjohn/interface/viewer/frontend -- npx --no-install tsc --noEmit
+          python .github/scripts/ci.py run --name frontend-build --cwd RedJohn/redjohn/interface/viewer/frontend -- npm run build
+      - name: Vet, race-test and build the actual Go TUI
+        if: ${{ !cancelled() && steps.go.outcome == 'success' && steps.python.outcome == 'success' }}
+        run: |
+          python .github/scripts/ci.py run --name go-vet --cwd RedJohn/redjohn/interface/tui -- timeout 10m go vet ./...
+          python .github/scripts/ci.py run --name go-tests --cwd RedJohn/redjohn/interface/tui -- timeout 15m go test -p 2 -race -count=1 -json ./...
+          mkdir -p artifacts/build
+          python .github/scripts/ci.py run --name go-build --cwd RedJohn/redjohn/interface/tui -- timeout 10m go build -trimpath -o "$GITHUB_WORKSPACE/artifacts/build/redjohn-tui" ./cmd/redjohn-tui
+      - name: Build the Python distribution using the existing packaging hook
+        if: ${{ !cancelled() && steps.go.outcome == 'success' && steps.dependencies.outcome == 'success' }}
+        run: python .github/scripts/ci.py run --name python-wheel -- timeout 10m python -m pip wheel --no-deps --no-build-isolation RedJohn --wheel-dir artifacts/build
+      - name: Cache version-pinned Chromium downloads
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
+        uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        with:
+          path: ~/.cache/ms-playwright
+          key: chromium-ubuntu-24.04-${{ runner.arch }}-playwright-1.58.0
+      - name: Install Chromium and reviewed optional scanners sequentially
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
+        id: engines
+        run: |
+          python .github/scripts/ci.py run --name linux-dependencies -- timeout 10m bash -c 'sudo apt-get update && sudo apt-get install -y bubblewrap iproute2 && python -m playwright install --with-deps chromium'
+          python .github/scripts/ci.py run --name scanner-install -- timeout 20m bash .github/scripts/install-scanners.sh
+      - name: Delegate the owned cgroup and restore verified provenance fixtures
+        if: ${{ !cancelled() && steps.engines.outcome == 'success' }}
+        id: delegation
+        run: python .github/scripts/ci.py run --name linux-setup -- bash .github/scripts/prepare-linux.sh
+      - name: Run remaining unit, contract and mixed regressions
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
+        run: |
+          python .github/scripts/ci.py run --name python-regression -- \
+            timeout --signal=TERM --kill-after=20s 25m python -m pytest RedJohn/tests \
+            -q -s -p no:cacheprovider -p pytest_evidence --ci-suite=regression \
+            -o junit_family=xunit1 --junitxml=artifacts/regression.junit.xml \
+            --basetemp="$RUNNER_TEMP/redjohn-regression"
+      - name: Attest namespace and memory boundaries without disabling protection
+        if: ${{ !cancelled() && steps.delegation.outcome == 'success' }}
+        id: capability
+        run: python .github/scripts/capabilities.py
+      - name: Run actual Chromium, Nuclei, scanners and Linux isolation E2E
+        if: ${{ !cancelled() && steps.capability.outcome == 'success' }}
+        run: |
+          task_python="$(command -v python)"
+          task_home="$HOME"
+          sudo -E env HOME="$task_home" bash .github/scripts/linux-tests.sh "$task_python"
+      - name: Capture and clean only this job's delegated processes
+        if: always()
+        run: bash .github/scripts/cleanup-linux.sh
+      - name: Require complete evidence and reject skipped capabilities
+        if: always()
+        run: python .github/scripts/ci.py summary
+      - name: Preserve logs, JUnit, tool receipts, input hashes and resource evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: redjohn-ubuntu-${{ matrix.arch }}-${{ github.sha }}-${{ github.run_attempt }}
+          path: |
+            artifacts/**/*.json
+            artifacts/**/*.log
+            artifacts/**/*.txt
+            artifacts/**/*.xml
+          if-no-files-found: error
+          retention-days: 14

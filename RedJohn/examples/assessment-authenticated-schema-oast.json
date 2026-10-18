@@ -1,0 +1,42 @@
+{
+  "policy": {
+    "engagement_id": "replace-with-approved-engagement",
+    "owner_id": "operator",
+    "allowed_origins": ["https://target.owned.example:443"],
+    "allowed_ips": ["198.51.100.10/32"],
+    "actor_ids": ["alice"],
+    "profile": "active-staging",
+    "egress_mode": "enforced",
+    "request_budget": 128,
+    "allowed_replay_urls": ["https://target.owned.example:443/input"],
+    "allowed_refresh_urls": ["https://target.owned.example:443/refresh"]
+  },
+  "resources": {"total_memory_budget": 1610612736, "max_workers": 1},
+  "auth_vault_file": "/absolute/private/vault.json",
+  "refresh_provider_file": "/absolute/private/provider.json",
+  "browser_capture_file": "/absolute/private/capture-approval.json",
+  "seeds": [],
+  "jobs": [],
+  "tinja": {
+    "binary": {
+      "path": "/absolute/path/tinja",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "version": "1.2.0"
+    },
+    "max_requests": 64
+  },
+  "continuous_replay": {
+    "version": 1,
+    "rules": [],
+    "adapter_rules": [{
+      "actor_id": "alice",
+      "tenant_id": "tenant-a",
+      "url": "https://target.owned.example:443/input",
+      "content_type": "application/json",
+      "capability": "tinja_validate",
+      "input_location": "json",
+      "input_name": "/value"
+    }],
+    "session_recovery": {"max_refreshes": 1, "cooldown_seconds": 0}
+  }
+}

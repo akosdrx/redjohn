@@ -1,0 +1,750 @@
+{
+  "tinja": {
+    "repo": "Hackmanit/TInjA",
+    "tag": "1.2.0",
+    "commit": "a434f525798cdc942427b22894608a5d9181037b",
+    "archive_sha256": "09edd0f1e7dfd3151c54445bf431908cf7ddf7ce1338976251096e1e0d38d724",
+    "version": "1.2.0",
+    "license": "Apache-2.0",
+    "assets": {
+      "TInjA_1.2.0_darwin_arm64.tar.gz": {
+        "url": "https://github.com/Hackmanit/TInjA/releases/download/1.2.0/TInjA_1.2.0_darwin_arm64.tar.gz",
+        "sha256": "689ab9c0fbd9136c604128dab0470d4794880e045aeb0222a49b0bd72cf1b7d4"
+      },
+      "TInjA_1.2.0_linux_arm64.tar.gz": {
+        "url": "https://github.com/Hackmanit/TInjA/releases/download/1.2.0/TInjA_1.2.0_linux_arm64.tar.gz",
+        "sha256": "82c83d0c6acb3439c281ac390e12bed21e7fdca1893a7ec1938435f56825afef"
+      },
+      "TInjA_1.2.0_darwin_amd64.tar.gz": {
+        "url": "https://github.com/Hackmanit/TInjA/releases/download/1.2.0/TInjA_1.2.0_darwin_amd64.tar.gz",
+        "sha256": "06c5377323b461e7fda1ce518191fd5ff6a8a2694bd29e6c6bf1b28ac80f6db7"
+      },
+      "TInjA_1.2.0_linux_amd64.tar.gz": {
+        "url": "https://github.com/Hackmanit/TInjA/releases/download/1.2.0/TInjA_1.2.0_linux_amd64.tar.gz",
+        "sha256": "7775dd9df477e67ae4a82b1f5fa238cdc017463520b5d7cbbebe52289098701b"
+      }
+    },
+    "license_file": {
+      "url": "https://raw.githubusercontent.com/Hackmanit/TInjA/a434f525798cdc942427b22894608a5d9181037b/LICENSE",
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+    },
+    "go_mod_sha256": "385b07fe831db4c947c60e44a1e4a2e8a08b4ed497ed4d5165488c3d682072de",
+    "go_sum_sha256": "e5447cf881e4e8e25555ae3445aa41fa73897e1814a71587ced40e2490e9d191"
+  },
+  "interactsh": {
+    "repo": "projectdiscovery/interactsh",
+    "tag": "v1.4.1",
+    "commit": "a5b78b2f1d990cd18c85cc422f0e651cf204c464",
+    "archive_sha256": "46202dfa9ec35d12126597bc08918fb97cc908e5ad2892772bca9abf1e002eaa",
+    "version": "1.4.1",
+    "license": "MIT",
+    "assets": {
+      "interactsh-server_1.4.1_linux_arm64.zip": {
+        "url": "https://github.com/projectdiscovery/interactsh/releases/download/v1.4.1/interactsh-server_1.4.1_linux_arm64.zip",
+        "sha256": "e6113565860916c74ec038f48a7c75ed71922e7fb5029621bf9a4de3cdbbc97f"
+      },
+      "interactsh-server_1.4.1_macOS_arm64.zip": {
+        "url": "https://github.com/projectdiscovery/interactsh/releases/download/v1.4.1/interactsh-server_1.4.1_macOS_arm64.zip",
+        "sha256": "89709813a8da122825695bb2b78bc81c20d686682425d8e835033ccbca3ca63f"
+      },
+      "interactsh-server_1.4.1_linux_amd64.zip": {
+        "url": "https://github.com/projectdiscovery/interactsh/releases/download/v1.4.1/interactsh-server_1.4.1_linux_amd64.zip",
+        "sha256": "b7dde5f294dc4ca5f3ec3d1b9dec5f3ad3939ea77a68e286909c014369f5115e"
+      },
+      "interactsh-server_1.4.1_macOS_amd64.zip": {
+        "url": "https://github.com/projectdiscovery/interactsh/releases/download/v1.4.1/interactsh-server_1.4.1_macOS_amd64.zip",
+        "sha256": "59257fc545c486144133915a3a8e0937067c5fe2be3b4a94913d737f106efca8"
+      },
+      "interactsh-server_1.4.1_windows_amd64.zip": {
+        "url": "https://github.com/projectdiscovery/interactsh/releases/download/v1.4.1/interactsh-server_1.4.1_windows_amd64.zip",
+        "sha256": "3d209a09c54e570d2c916ef0925ad18ff083ea5070cb5ab3dec8b121a37a2489"
+      }
+    },
+    "license_file": {
+      "url": "https://raw.githubusercontent.com/projectdiscovery/interactsh/a5b78b2f1d990cd18c85cc422f0e651cf204c464/LICENSE.md",
+      "sha256": "cbcdaab87df3175107aa28915bd253cebdd618a49c9ac5d6c669c0b1cbebcacb"
+    },
+    "go_mod_sha256": "b37defc37c53256d2551a6c6da75a50e855be29997c599be7dbcef19b4aa95d3",
+    "go_sum_sha256": "be5ed4f9836c78469049273a524173d4833467feee9ef4c5c1758a6418e61f23"
+  },
+  "schemathesis": {
+    "repo": "schemathesis/schemathesis",
+    "tag": "v4.31.1",
+    "commit": "76b10a59d248eaf578df82841edb48c8e25a2e44",
+    "archive_sha256": "a31fb519e1caebe481bbc692f02104611cf6c3a1aa2d1a86ba8c55d49baa5d36",
+    "version": "4.31.1",
+    "license": "MIT",
+    "wheel_locks": {
+      "Darwin-arm64-3.13": [
+        {
+          "name": "anyio",
+          "version": "4.15.1",
+          "filename": "anyio-4.15.1-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/12/b8/4bd346e22b28902df4d651910f5242c28d84e4a5c2435ca5c3f797ed7e2e/anyio-4.15.1-py3-none-any.whl",
+          "sha256": "6152fdbbf9a77fdec97731721bebf7c4c44f7c29b424b0065826173efc7ed101",
+          "license": "MIT"
+        },
+        {
+          "name": "certifi",
+          "version": "2026.7.22",
+          "filename": "certifi-2026.7.22-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/0b/a7/71ac2cff56fec219ed242bb11b8efb69fcc4bec75db06fb7bfe35de520e6/certifi-2026.7.22-py3-none-any.whl",
+          "sha256": "62f22742b58a1a33014a2b6b706588a8d7e2a88ae7bd1a6ebe8c992928483775",
+          "license": "MPL-2.0"
+        },
+        {
+          "name": "charset-normalizer",
+          "version": "3.5.2",
+          "filename": "charset_normalizer-3.5.2-cp313-cp313-macosx_10_13_universal2.whl",
+          "url": "https://files.pythonhosted.org/packages/91/da/3c5a7798c046df7d2d68ad653cf5b6c5a8bfee225055a843c6f2f42aac1a/charset_normalizer-3.5.2-cp313-cp313-macosx_10_13_universal2.whl",
+          "sha256": "6045373d5a89a5ec71afde535db987ca28e76dfa276c2d4c818265b375d4b055",
+          "license": "MIT"
+        },
+        {
+          "name": "click",
+          "version": "8.5.0",
+          "filename": "click-8.5.0-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/58/50/6c0d534c5f134586a8e1ba4e330569e32f057e33372ae556463212fb4cd3/click-8.5.0-py3-none-any.whl",
+          "sha256": "255bc9599cf7748b4b1a446ccc735421bd08a2ae529a8b88597d3de5664ee360",
+          "license": "BSD-3-Clause"
+        },
+        {
+          "name": "graphql-core",
+          "version": "3.2.13",
+          "filename": "graphql_core-3.2.13-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/1f/b4/b52a324b0b297ddc49b8ea31a51d39fae63132f694a267b9381d94e2e0af/graphql_core-3.2.13-py3-none-any.whl",
+          "sha256": "b0eb04f2c31556b2310a77c8fb53c74e8b56570f8fea594d89c6ef7827dbb497",
+          "license": "MIT license"
+        },
+        {
+          "name": "harfile",
+          "version": "0.5.0",
+          "filename": "harfile-0.5.0-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/1e/21/949c004d730d610dac63bcf5964f2585e98aa7bd44ff570ef8844472e76b/harfile-0.5.0-py3-none-any.whl",
+          "sha256": "ab8a01d0d21d3b7f5ad57e7dc56b8b829f6a8855c1fa143aad464e7e8169f5e3",
+          "license": "MIT"
+        },
+        {
+          "name": "hypothesis",
+          "version": "6.170.1",
+          "filename": "hypothesis-6.170.1-cp313-cp313-macosx_11_0_arm64.whl",
+          "url": "https://files.pythonhosted.org/packages/c8/ba/e389f3ac83570fe4e84ff2f68c2296621151949f2fa2f44d9c047d7acf1d/hypothesis-6.170.1-cp313-cp313-macosx_11_0_arm64.whl",
+          "sha256": "be07bf11adcf7b37536a4c893b63d34af95e358966de1232a5711c0193b04a59",
+          "license": "MPL-2.0"
+        },
+        {
+          "name": "hypothesis-graphql",
+          "version": "0.13.2",
+          "filename": "hypothesis_graphql-0.13.2-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/bd/97/43bff05d23714bb533599c55f1bf8cd6810c1e0ca76df674e07421d79007/hypothesis_graphql-0.13.2-py3-none-any.whl",
+          "sha256": "fafcc07b901f04d64ac9c6c2e0c48a66817f04bd330766bd8b91bf76dc341a6a",
+          "license": "MIT"
+        },
+        {
+          "name": "idna",
+          "version": "3.20",
+          "filename": "idna-3.20-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/58/a2/bb081bab032533a855d44de1d56f8e8426114ff1ba5d1f07a438a0a654f8/idna-3.20-py3-none-any.whl",
+          "sha256": "ab7ae7122974553370f0bdb919e1a960b2cd1bc1ef0276416d896db81c14582c",
+          "license": "BSD-3-Clause"
+        },
+        {
+          "name": "iniconfig",
+          "version": "2.3.1",
+          "filename": "iniconfig-2.3.1-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/56/43/4ca9e49d27a1fcf6bece6f6aec0ea46bb9112489b93d4b688fb415457bdb/iniconfig-2.3.1-py3-none-any.whl",
+          "sha256": "9121e2c1fdb355232495be3194c8dfe87ccc2d5dee45947b78e68f499790d7a7",
+          "license": "MIT"
+        },
+        {
+          "name": "jsonschema_rs",
+          "version": "0.58.6",
+          "filename": "jsonschema_rs-0.58.6-cp310-abi3-macosx_10_12_x86_64.macosx_11_0_arm64.macosx_10_12_universal2.whl",
+          "url": "https://files.pythonhosted.org/packages/de/da/2c9ddad3978b50835beaabbd41679c3559ac65047d2c48695c6c426fc5b1/jsonschema_rs-0.58.6-cp310-abi3-macosx_10_12_x86_64.macosx_11_0_arm64.macosx_10_12_universal2.whl",
+          "sha256": "9df8a54ee953197307875a725161033e9ce9a979da33ce0bd2c0740daaa0444a",
+          "license": "MIT"
+        },
+        {
+          "name": "markdown-it-py",
+          "version": "4.2.0",
+          "filename": "markdown_it_py-4.2.0-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/b3/81/4da04ced5a082363ecfa159c010d200ecbd959ae410c10c0264a38cac0f5/markdown_it_py-4.2.0-py3-none-any.whl",
+          "sha256": "9f7ebbcd14fe59494226453aed97c1070d83f8d24b6fc3a3bcf9a38092641c4a",
+          "license": [
+            "License :: OSI Approved :: MIT License"
+          ]
+        },
+        {
+          "name": "MarkupSafe",
+          "version": "3.0.4",
+          "filename": "markupsafe-3.0.4-cp313-cp313-macosx_11_0_arm64.whl",
+          "url": "https://files.pythonhosted.org/packages/ca/e0/4030bea613677e333c8a2c901fd405055f657f9d06acba5b7357984b6ef7/markupsafe-3.0.4-cp313-cp313-macosx_11_0_arm64.whl",
+          "sha256": "73e77980c7207854f00fc4e71fb1626868d5740ab4012623d55c7a99ad122a72",
+          "license": "BSD-3-Clause"
+        },
+        {
+          "name": "mdurl",
+          "version": "0.1.2",
+          "filename": "mdurl-0.1.2-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/b3/38/89ba8ad64ae25be8de66a6d463314cf1eb366222074cfda9ee839c56a4b4/mdurl-0.1.2-py3-none-any.whl",
+          "sha256": "84008a41e51615a49fc9966191ff91509e3c40b939176e643fd50a5c2196b8f8",
+          "license": [
+            "License :: OSI Approved :: MIT License"
+          ]
+        },
+        {
+          "name": "packaging",
+          "version": "26.3",
+          "filename": "packaging-26.3-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/63/34/ba1c580383c9eada3711951fef0795c80b829a078d72188184bcab9dd527/packaging-26.3-py3-none-any.whl",
+          "sha256": "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c",
+          "license": "Apache-2.0 OR BSD-2-Clause"
+        },
+        {
+          "name": "pluggy",
+          "version": "1.7.0",
+          "filename": "pluggy-1.7.0-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/40/9e/2b38731e0fc536806f16490e1a12d7f0dc2a1235aa8cc07bcc75416a7daa/pluggy-1.7.0-py3-none-any.whl",
+          "sha256": "7dd7b0d8832ba3cb632c306926ded123429211b83641b35dc5c41ad2d34f9bec",
+          "license": "MIT"
+        },
+        {
+          "name": "Pygments",
+          "version": "2.21.0",
+          "filename": "pygments-2.21.0-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/71/46/17f022dd3e953bf20a04a028a21ec746d942f8d2af30fa0f124fa0e6a684/pygments-2.21.0-py3-none-any.whl",
+          "sha256": "2363c69b61c4a97c838da3b130dcd6468f4848992b21a82f2a63ec34377137d9",
+          "license": "BSD-2-Clause"
+        },
+        {
+          "name": "pyrate-limiter",
+          "version": "4.5.0",
+          "filename": "pyrate_limiter-4.5.0-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/64/dc/02f88649feeabf4282c8c194a6f6060ca858041bab1204365b5d8ef8a95e/pyrate_limiter-4.5.0-py3-none-any.whl",
+          "sha256": "e7320a715adf404cb7b2f399e05ceb59cae165275b21f7708eb1b9fd9608e91c",
+          "license": "MIT"
+        },
+        {
+          "name": "pytest",
+          "version": "9.1.1",
+          "filename": "pytest-9.1.1-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/24/25/1de2678b631f5a49215c6c96fff41ba892b0a34df68d6d80292b1b48aa7f/pytest-9.1.1-py3-none-any.whl",
+          "sha256": "37a86b45efb9a47a61a36449063e8e18d0cab3161329fc099eb21783169c4f0c",
+          "license": "MIT"
+        },
+        {
+          "name": "PyYAML",
+          "version": "6.0.3",
+          "filename": "pyyaml-6.0.3-cp313-cp313-macosx_11_0_arm64.whl",
+          "url": "https://files.pythonhosted.org/packages/b1/16/95309993f1d3748cd644e02e38b75d50cbc0d9561d21f390a76242ce073f/pyyaml-6.0.3-cp313-cp313-macosx_11_0_arm64.whl",
+          "sha256": "2283a07e2c21a2aa78d9c4442724ec1eb15f5e42a723b99cb3d822d48f5f7ad1",
+          "license": "MIT"
+        },
+        {
+          "name": "requests",
+          "version": "2.34.2",
+          "filename": "requests-2.34.2-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/a0/f4/c67b0b3f1b9245e8d266f0f112c500d50e5b4e83cb6f3b71b6528104182a/requests-2.34.2-py3-none-any.whl",
+          "sha256": "2a0d60c172f83ac6ab31e4554906c0f3b3588d37b5cb939b1c061f4907e278e0",
+          "license": "Apache-2.0"
+        },
+        {
+          "name": "rich",
+          "version": "15.0.0",
+          "filename": "rich-15.0.0-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/82/3b/64d4899d73f91ba49a8c18a8ff3f0ea8f1c1d75481760df8c68ef5235bf5/rich-15.0.0-py3-none-any.whl",
+          "sha256": "33bd4ef74232fb73fe9279a257718407f169c09b78a87ad3d296f548e27de0bb",
+          "license": "MIT"
+        },
+        {
+          "name": "schemathesis",
+          "version": "4.31.1",
+          "filename": "schemathesis-4.31.1-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/49/aa/275e1c4f221b8beac453c142911075f3db0b46b1d33f0528620996960722/schemathesis-4.31.1-py3-none-any.whl",
+          "sha256": "157529ed712cce00ead84a17e9e4a8f6a07e460c0b6e4901d037d9e313db99d1",
+          "license": "MIT"
+        },
+        {
+          "name": "sortedcontainers",
+          "version": "2.4.0",
+          "filename": "sortedcontainers-2.4.0-py2.py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/32/46/9cb0e58b2deb7f82b84065f37f3bffeb12413f947f9388e4cac22c4621ce/sortedcontainers-2.4.0-py2.py3-none-any.whl",
+          "sha256": "a163dcaede0f1c021485e957a39245190e74249897e2ae4b2aa38595db237ee0",
+          "license": "Apache 2.0"
+        },
+        {
+          "name": "typing_extensions",
+          "version": "4.16.0",
+          "filename": "typing_extensions-4.16.0-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/49/d3/b8441a820a491ddfc024b0b0cf0393375b75ea13866d9c66727e54c2fc80/typing_extensions-4.16.0-py3-none-any.whl",
+          "sha256": "481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8",
+          "license": "PSF-2.0"
+        },
+        {
+          "name": "urllib3",
+          "version": "2.8.0",
+          "filename": "urllib3-2.8.0-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/92/9d/c4e665119135114480843e7ab388fa94d8480650450e6f8e26b70d323a4c/urllib3-2.8.0-py3-none-any.whl",
+          "sha256": "0cf3cae568d36aa9576b28dfb35f11328f1cb974ca7647d9475ebb86c75ac6e3",
+          "license": "MIT"
+        },
+        {
+          "name": "Werkzeug",
+          "version": "3.1.9",
+          "filename": "werkzeug-3.1.9-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/a1/38/df03f564f43cec2684823f3cccae1a652ee7face1cbaa76fb223096e64d7/werkzeug-3.1.9-py3-none-any.whl",
+          "sha256": "6392e50c78460ba618e5b21f08a71f59c99ce99cdc6cf6e3dd7e6ccca8754fab",
+          "license": "BSD-3-Clause"
+        }
+      ],
+      "Linux-arm64-3.12": [
+        {
+          "name": "anyio",
+          "version": "4.15.1",
+          "filename": "anyio-4.15.1-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/12/b8/4bd346e22b28902df4d651910f5242c28d84e4a5c2435ca5c3f797ed7e2e/anyio-4.15.1-py3-none-any.whl",
+          "sha256": "6152fdbbf9a77fdec97731721bebf7c4c44f7c29b424b0065826173efc7ed101",
+          "license": "MIT"
+        },
+        {
+          "name": "certifi",
+          "version": "2026.7.22",
+          "filename": "certifi-2026.7.22-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/0b/a7/71ac2cff56fec219ed242bb11b8efb69fcc4bec75db06fb7bfe35de520e6/certifi-2026.7.22-py3-none-any.whl",
+          "sha256": "62f22742b58a1a33014a2b6b706588a8d7e2a88ae7bd1a6ebe8c992928483775",
+          "license": "MPL-2.0"
+        },
+        {
+          "name": "charset-normalizer",
+          "version": "3.5.2",
+          "filename": "charset_normalizer-3.5.2-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+          "url": "https://files.pythonhosted.org/packages/c9/87/2fea8c13dc24b3ca9c6f803a5b2dfdeae73eb4f9e12c7885ed908ff0433c/charset_normalizer-3.5.2-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+          "sha256": "b91363207bd9dc966a691e959bb47f64b30f7ac4b072be9968b366982f7db77c",
+          "license": "MIT"
+        },
+        {
+          "name": "click",
+          "version": "8.5.0",
+          "filename": "click-8.5.0-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/58/50/6c0d534c5f134586a8e1ba4e330569e32f057e33372ae556463212fb4cd3/click-8.5.0-py3-none-any.whl",
+          "sha256": "255bc9599cf7748b4b1a446ccc735421bd08a2ae529a8b88597d3de5664ee360",
+          "license": "BSD-3-Clause"
+        },
+        {
+          "name": "graphql-core",
+          "version": "3.2.13",
+          "filename": "graphql_core-3.2.13-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/1f/b4/b52a324b0b297ddc49b8ea31a51d39fae63132f694a267b9381d94e2e0af/graphql_core-3.2.13-py3-none-any.whl",
+          "sha256": "b0eb04f2c31556b2310a77c8fb53c74e8b56570f8fea594d89c6ef7827dbb497",
+          "license": "MIT license"
+        },
+        {
+          "name": "harfile",
+          "version": "0.5.0",
+          "filename": "harfile-0.5.0-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/1e/21/949c004d730d610dac63bcf5964f2585e98aa7bd44ff570ef8844472e76b/harfile-0.5.0-py3-none-any.whl",
+          "sha256": "ab8a01d0d21d3b7f5ad57e7dc56b8b829f6a8855c1fa143aad464e7e8169f5e3",
+          "license": "MIT"
+        },
+        {
+          "name": "hypothesis",
+          "version": "6.170.1",
+          "filename": "hypothesis-6.170.1-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl",
+          "url": "https://files.pythonhosted.org/packages/10/e2/b8ad5a3fb31945345394cf0a1797efb15aa676cf7f5b539a51ae50226d79/hypothesis-6.170.1-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl",
+          "sha256": "6377456a522fb23784f56aa9f93c1b660cefdbecf642a91c730fd688adb0fa40",
+          "license": "MPL-2.0"
+        },
+        {
+          "name": "hypothesis-graphql",
+          "version": "0.13.2",
+          "filename": "hypothesis_graphql-0.13.2-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/bd/97/43bff05d23714bb533599c55f1bf8cd6810c1e0ca76df674e07421d79007/hypothesis_graphql-0.13.2-py3-none-any.whl",
+          "sha256": "fafcc07b901f04d64ac9c6c2e0c48a66817f04bd330766bd8b91bf76dc341a6a",
+          "license": "MIT"
+        },
+        {
+          "name": "idna",
+          "version": "3.20",
+          "filename": "idna-3.20-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/58/a2/bb081bab032533a855d44de1d56f8e8426114ff1ba5d1f07a438a0a654f8/idna-3.20-py3-none-any.whl",
+          "sha256": "ab7ae7122974553370f0bdb919e1a960b2cd1bc1ef0276416d896db81c14582c",
+          "license": "BSD-3-Clause"
+        },
+        {
+          "name": "iniconfig",
+          "version": "2.3.1",
+          "filename": "iniconfig-2.3.1-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/56/43/4ca9e49d27a1fcf6bece6f6aec0ea46bb9112489b93d4b688fb415457bdb/iniconfig-2.3.1-py3-none-any.whl",
+          "sha256": "9121e2c1fdb355232495be3194c8dfe87ccc2d5dee45947b78e68f499790d7a7",
+          "license": "MIT"
+        },
+        {
+          "name": "jsonschema_rs",
+          "version": "0.58.6",
+          "filename": "jsonschema_rs-0.58.6-cp310-abi3-manylinux_2_28_aarch64.whl",
+          "url": "https://files.pythonhosted.org/packages/d5/26/00bb48747d19f76f42d77dad02330c68a4e6354daa91a9c96405a6b087ea/jsonschema_rs-0.58.6-cp310-abi3-manylinux_2_28_aarch64.whl",
+          "sha256": "eabc742dde55a445f49f6fbe0ab5cd8a58abd71b4337a7acd61dc7876b22b6a7",
+          "license": "MIT"
+        },
+        {
+          "name": "markdown-it-py",
+          "version": "4.2.0",
+          "filename": "markdown_it_py-4.2.0-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/b3/81/4da04ced5a082363ecfa159c010d200ecbd959ae410c10c0264a38cac0f5/markdown_it_py-4.2.0-py3-none-any.whl",
+          "sha256": "9f7ebbcd14fe59494226453aed97c1070d83f8d24b6fc3a3bcf9a38092641c4a",
+          "license": [
+            "License :: OSI Approved :: MIT License"
+          ]
+        },
+        {
+          "name": "MarkupSafe",
+          "version": "3.0.4",
+          "filename": "markupsafe-3.0.4-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+          "url": "https://files.pythonhosted.org/packages/0d/f2/8f18e0b806eb13c1f8d07d917a720831ead54253a6dec011fbc78098a6f8/markupsafe-3.0.4-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+          "sha256": "6a45c3d514f2436064db00d7fc8778d888f0236ebfed649b53d13a59e69ad51b",
+          "license": "BSD-3-Clause"
+        },
+        {
+          "name": "mdurl",
+          "version": "0.1.2",
+          "filename": "mdurl-0.1.2-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/b3/38/89ba8ad64ae25be8de66a6d463314cf1eb366222074cfda9ee839c56a4b4/mdurl-0.1.2-py3-none-any.whl",
+          "sha256": "84008a41e51615a49fc9966191ff91509e3c40b939176e643fd50a5c2196b8f8",
+          "license": [
+            "License :: OSI Approved :: MIT License"
+          ]
+        },
+        {
+          "name": "packaging",
+          "version": "26.3",
+          "filename": "packaging-26.3-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/63/34/ba1c580383c9eada3711951fef0795c80b829a078d72188184bcab9dd527/packaging-26.3-py3-none-any.whl",
+          "sha256": "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c",
+          "license": "Apache-2.0 OR BSD-2-Clause"
+        },
+        {
+          "name": "pluggy",
+          "version": "1.7.0",
+          "filename": "pluggy-1.7.0-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/40/9e/2b38731e0fc536806f16490e1a12d7f0dc2a1235aa8cc07bcc75416a7daa/pluggy-1.7.0-py3-none-any.whl",
+          "sha256": "7dd7b0d8832ba3cb632c306926ded123429211b83641b35dc5c41ad2d34f9bec",
+          "license": "MIT"
+        },
+        {
+          "name": "Pygments",
+          "version": "2.21.0",
+          "filename": "pygments-2.21.0-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/71/46/17f022dd3e953bf20a04a028a21ec746d942f8d2af30fa0f124fa0e6a684/pygments-2.21.0-py3-none-any.whl",
+          "sha256": "2363c69b61c4a97c838da3b130dcd6468f4848992b21a82f2a63ec34377137d9",
+          "license": "BSD-2-Clause"
+        },
+        {
+          "name": "pyrate-limiter",
+          "version": "4.5.0",
+          "filename": "pyrate_limiter-4.5.0-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/64/dc/02f88649feeabf4282c8c194a6f6060ca858041bab1204365b5d8ef8a95e/pyrate_limiter-4.5.0-py3-none-any.whl",
+          "sha256": "e7320a715adf404cb7b2f399e05ceb59cae165275b21f7708eb1b9fd9608e91c",
+          "license": "MIT"
+        },
+        {
+          "name": "pytest",
+          "version": "9.1.1",
+          "filename": "pytest-9.1.1-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/24/25/1de2678b631f5a49215c6c96fff41ba892b0a34df68d6d80292b1b48aa7f/pytest-9.1.1-py3-none-any.whl",
+          "sha256": "37a86b45efb9a47a61a36449063e8e18d0cab3161329fc099eb21783169c4f0c",
+          "license": "MIT"
+        },
+        {
+          "name": "PyYAML",
+          "version": "6.0.3",
+          "filename": "pyyaml-6.0.3-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+          "url": "https://files.pythonhosted.org/packages/ed/23/7a778b6bd0b9a8039df8b1b1d80e2e2ad78aa04171592c8a5c43a56a6af4/pyyaml-6.0.3-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+          "sha256": "9149cad251584d5fb4981be1ecde53a1ca46c891a79788c0df828d2f166bda28",
+          "license": "MIT"
+        },
+        {
+          "name": "requests",
+          "version": "2.34.2",
+          "filename": "requests-2.34.2-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/a0/f4/c67b0b3f1b9245e8d266f0f112c500d50e5b4e83cb6f3b71b6528104182a/requests-2.34.2-py3-none-any.whl",
+          "sha256": "2a0d60c172f83ac6ab31e4554906c0f3b3588d37b5cb939b1c061f4907e278e0",
+          "license": "Apache-2.0"
+        },
+        {
+          "name": "rich",
+          "version": "15.0.0",
+          "filename": "rich-15.0.0-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/82/3b/64d4899d73f91ba49a8c18a8ff3f0ea8f1c1d75481760df8c68ef5235bf5/rich-15.0.0-py3-none-any.whl",
+          "sha256": "33bd4ef74232fb73fe9279a257718407f169c09b78a87ad3d296f548e27de0bb",
+          "license": "MIT"
+        },
+        {
+          "name": "schemathesis",
+          "version": "4.31.1",
+          "filename": "schemathesis-4.31.1-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/49/aa/275e1c4f221b8beac453c142911075f3db0b46b1d33f0528620996960722/schemathesis-4.31.1-py3-none-any.whl",
+          "sha256": "157529ed712cce00ead84a17e9e4a8f6a07e460c0b6e4901d037d9e313db99d1",
+          "license": "MIT"
+        },
+        {
+          "name": "sortedcontainers",
+          "version": "2.4.0",
+          "filename": "sortedcontainers-2.4.0-py2.py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/32/46/9cb0e58b2deb7f82b84065f37f3bffeb12413f947f9388e4cac22c4621ce/sortedcontainers-2.4.0-py2.py3-none-any.whl",
+          "sha256": "a163dcaede0f1c021485e957a39245190e74249897e2ae4b2aa38595db237ee0",
+          "license": "Apache 2.0"
+        },
+        {
+          "name": "typing_extensions",
+          "version": "4.16.0",
+          "filename": "typing_extensions-4.16.0-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/49/d3/b8441a820a491ddfc024b0b0cf0393375b75ea13866d9c66727e54c2fc80/typing_extensions-4.16.0-py3-none-any.whl",
+          "sha256": "481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8",
+          "license": "PSF-2.0"
+        },
+        {
+          "name": "urllib3",
+          "version": "2.8.0",
+          "filename": "urllib3-2.8.0-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/92/9d/c4e665119135114480843e7ab388fa94d8480650450e6f8e26b70d323a4c/urllib3-2.8.0-py3-none-any.whl",
+          "sha256": "0cf3cae568d36aa9576b28dfb35f11328f1cb974ca7647d9475ebb86c75ac6e3",
+          "license": "MIT"
+        },
+        {
+          "name": "Werkzeug",
+          "version": "3.1.9",
+          "filename": "werkzeug-3.1.9-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/a1/38/df03f564f43cec2684823f3cccae1a652ee7face1cbaa76fb223096e64d7/werkzeug-3.1.9-py3-none-any.whl",
+          "sha256": "6392e50c78460ba618e5b21f08a71f59c99ce99cdc6cf6e3dd7e6ccca8754fab",
+          "license": "BSD-3-Clause"
+        }
+      ],
+      "Linux-amd64-3.13": [
+        {
+          "name": "anyio",
+          "version": "4.15.1",
+          "filename": "anyio-4.15.1-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/12/b8/4bd346e22b28902df4d651910f5242c28d84e4a5c2435ca5c3f797ed7e2e/anyio-4.15.1-py3-none-any.whl",
+          "sha256": "6152fdbbf9a77fdec97731721bebf7c4c44f7c29b424b0065826173efc7ed101",
+          "license": "MIT"
+        },
+        {
+          "name": "certifi",
+          "version": "2026.7.22",
+          "filename": "certifi-2026.7.22-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/0b/a7/71ac2cff56fec219ed242bb11b8efb69fcc4bec75db06fb7bfe35de520e6/certifi-2026.7.22-py3-none-any.whl",
+          "sha256": "62f22742b58a1a33014a2b6b706588a8d7e2a88ae7bd1a6ebe8c992928483775",
+          "license": "MPL-2.0"
+        },
+        {
+          "name": "charset-normalizer",
+          "version": "3.5.2",
+          "filename": "charset_normalizer-3.5.2-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+          "url": "https://files.pythonhosted.org/packages/4b/85/41d27f234b82e47c167a5f6c0f62501dc0c640585ff4aba79e08a390336a/charset_normalizer-3.5.2-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+          "sha256": "7218e8f32b0956cfcd048fd42d9d5779809745ca1d86113ca56f66e7ae1549c4",
+          "license": "MIT"
+        },
+        {
+          "name": "click",
+          "version": "8.5.0",
+          "filename": "click-8.5.0-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/58/50/6c0d534c5f134586a8e1ba4e330569e32f057e33372ae556463212fb4cd3/click-8.5.0-py3-none-any.whl",
+          "sha256": "255bc9599cf7748b4b1a446ccc735421bd08a2ae529a8b88597d3de5664ee360",
+          "license": "BSD-3-Clause"
+        },
+        {
+          "name": "graphql-core",
+          "version": "3.2.13",
+          "filename": "graphql_core-3.2.13-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/1f/b4/b52a324b0b297ddc49b8ea31a51d39fae63132f694a267b9381d94e2e0af/graphql_core-3.2.13-py3-none-any.whl",
+          "sha256": "b0eb04f2c31556b2310a77c8fb53c74e8b56570f8fea594d89c6ef7827dbb497",
+          "license": "MIT license"
+        },
+        {
+          "name": "harfile",
+          "version": "0.5.0",
+          "filename": "harfile-0.5.0-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/1e/21/949c004d730d610dac63bcf5964f2585e98aa7bd44ff570ef8844472e76b/harfile-0.5.0-py3-none-any.whl",
+          "sha256": "ab8a01d0d21d3b7f5ad57e7dc56b8b829f6a8855c1fa143aad464e7e8169f5e3",
+          "license": "MIT"
+        },
+        {
+          "name": "hypothesis",
+          "version": "6.170.1",
+          "filename": "hypothesis-6.170.1-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+          "url": "https://files.pythonhosted.org/packages/cf/40/eed6741ee50c5687c951acff0edd5f95f42722bad81eedfaedb52f8e2de2/hypothesis-6.170.1-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+          "sha256": "804f35f16c2232c800e4755d74704f1168a10d2ceed176e08361f6ccccd235f0",
+          "license": "MPL-2.0"
+        },
+        {
+          "name": "hypothesis-graphql",
+          "version": "0.13.2",
+          "filename": "hypothesis_graphql-0.13.2-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/bd/97/43bff05d23714bb533599c55f1bf8cd6810c1e0ca76df674e07421d79007/hypothesis_graphql-0.13.2-py3-none-any.whl",
+          "sha256": "fafcc07b901f04d64ac9c6c2e0c48a66817f04bd330766bd8b91bf76dc341a6a",
+          "license": "MIT"
+        },
+        {
+          "name": "idna",
+          "version": "3.20",
+          "filename": "idna-3.20-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/58/a2/bb081bab032533a855d44de1d56f8e8426114ff1ba5d1f07a438a0a654f8/idna-3.20-py3-none-any.whl",
+          "sha256": "ab7ae7122974553370f0bdb919e1a960b2cd1bc1ef0276416d896db81c14582c",
+          "license": "BSD-3-Clause"
+        },
+        {
+          "name": "iniconfig",
+          "version": "2.3.1",
+          "filename": "iniconfig-2.3.1-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/56/43/4ca9e49d27a1fcf6bece6f6aec0ea46bb9112489b93d4b688fb415457bdb/iniconfig-2.3.1-py3-none-any.whl",
+          "sha256": "9121e2c1fdb355232495be3194c8dfe87ccc2d5dee45947b78e68f499790d7a7",
+          "license": "MIT"
+        },
+        {
+          "name": "jsonschema_rs",
+          "version": "0.58.6",
+          "filename": "jsonschema_rs-0.58.6-cp310-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+          "url": "https://files.pythonhosted.org/packages/44/1a/fd7526d02fc50a6713b2d18fea2355579167b27dddd5cbd2dcc03adc49cb/jsonschema_rs-0.58.6-cp310-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+          "sha256": "0e56428f4803dfbe6dee4f1d07e1710b5af377ed769275df256b81c1eb4178ea",
+          "license": "MIT"
+        },
+        {
+          "name": "markdown-it-py",
+          "version": "4.2.0",
+          "filename": "markdown_it_py-4.2.0-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/b3/81/4da04ced5a082363ecfa159c010d200ecbd959ae410c10c0264a38cac0f5/markdown_it_py-4.2.0-py3-none-any.whl",
+          "sha256": "9f7ebbcd14fe59494226453aed97c1070d83f8d24b6fc3a3bcf9a38092641c4a",
+          "license": [
+            "License :: OSI Approved :: MIT License"
+          ]
+        },
+        {
+          "name": "MarkupSafe",
+          "version": "3.0.4",
+          "filename": "markupsafe-3.0.4-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+          "url": "https://files.pythonhosted.org/packages/63/e0/cec6865dfe88cb48fedd4b20aed6af5158e41092adcbf3e028bcc6ec2108/markupsafe-3.0.4-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+          "sha256": "434139499bb20b502ed3baa1f169e618f924a97e7a777fea1a49446d80106cf6",
+          "license": "BSD-3-Clause"
+        },
+        {
+          "name": "mdurl",
+          "version": "0.1.2",
+          "filename": "mdurl-0.1.2-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/b3/38/89ba8ad64ae25be8de66a6d463314cf1eb366222074cfda9ee839c56a4b4/mdurl-0.1.2-py3-none-any.whl",
+          "sha256": "84008a41e51615a49fc9966191ff91509e3c40b939176e643fd50a5c2196b8f8",
+          "license": [
+            "License :: OSI Approved :: MIT License"
+          ]
+        },
+        {
+          "name": "packaging",
+          "version": "26.3",
+          "filename": "packaging-26.3-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/63/34/ba1c580383c9eada3711951fef0795c80b829a078d72188184bcab9dd527/packaging-26.3-py3-none-any.whl",
+          "sha256": "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c",
+          "license": "Apache-2.0 OR BSD-2-Clause"
+        },
+        {
+          "name": "pluggy",
+          "version": "1.7.0",
+          "filename": "pluggy-1.7.0-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/40/9e/2b38731e0fc536806f16490e1a12d7f0dc2a1235aa8cc07bcc75416a7daa/pluggy-1.7.0-py3-none-any.whl",
+          "sha256": "7dd7b0d8832ba3cb632c306926ded123429211b83641b35dc5c41ad2d34f9bec",
+          "license": "MIT"
+        },
+        {
+          "name": "Pygments",
+          "version": "2.21.0",
+          "filename": "pygments-2.21.0-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/71/46/17f022dd3e953bf20a04a028a21ec746d942f8d2af30fa0f124fa0e6a684/pygments-2.21.0-py3-none-any.whl",
+          "sha256": "2363c69b61c4a97c838da3b130dcd6468f4848992b21a82f2a63ec34377137d9",
+          "license": "BSD-2-Clause"
+        },
+        {
+          "name": "pyrate-limiter",
+          "version": "4.5.0",
+          "filename": "pyrate_limiter-4.5.0-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/64/dc/02f88649feeabf4282c8c194a6f6060ca858041bab1204365b5d8ef8a95e/pyrate_limiter-4.5.0-py3-none-any.whl",
+          "sha256": "e7320a715adf404cb7b2f399e05ceb59cae165275b21f7708eb1b9fd9608e91c",
+          "license": "MIT"
+        },
+        {
+          "name": "pytest",
+          "version": "9.1.1",
+          "filename": "pytest-9.1.1-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/24/25/1de2678b631f5a49215c6c96fff41ba892b0a34df68d6d80292b1b48aa7f/pytest-9.1.1-py3-none-any.whl",
+          "sha256": "37a86b45efb9a47a61a36449063e8e18d0cab3161329fc099eb21783169c4f0c",
+          "license": "MIT"
+        },
+        {
+          "name": "PyYAML",
+          "version": "6.0.3",
+          "filename": "pyyaml-6.0.3-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+          "url": "https://files.pythonhosted.org/packages/74/27/e5b8f34d02d9995b80abcef563ea1f8b56d20134d8f4e5e81733b1feceb2/pyyaml-6.0.3-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+          "sha256": "0f29edc409a6392443abf94b9cf89ce99889a1dd5376d94316ae5145dfedd5d6",
+          "license": "MIT"
+        },
+        {
+          "name": "requests",
+          "version": "2.34.2",
+          "filename": "requests-2.34.2-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/a0/f4/c67b0b3f1b9245e8d266f0f112c500d50e5b4e83cb6f3b71b6528104182a/requests-2.34.2-py3-none-any.whl",
+          "sha256": "2a0d60c172f83ac6ab31e4554906c0f3b3588d37b5cb939b1c061f4907e278e0",
+          "license": "Apache-2.0"
+        },
+        {
+          "name": "rich",
+          "version": "15.0.0",
+          "filename": "rich-15.0.0-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/82/3b/64d4899d73f91ba49a8c18a8ff3f0ea8f1c1d75481760df8c68ef5235bf5/rich-15.0.0-py3-none-any.whl",
+          "sha256": "33bd4ef74232fb73fe9279a257718407f169c09b78a87ad3d296f548e27de0bb",
+          "license": "MIT"
+        },
+        {
+          "name": "schemathesis",
+          "version": "4.31.1",
+          "filename": "schemathesis-4.31.1-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/49/aa/275e1c4f221b8beac453c142911075f3db0b46b1d33f0528620996960722/schemathesis-4.31.1-py3-none-any.whl",
+          "sha256": "157529ed712cce00ead84a17e9e4a8f6a07e460c0b6e4901d037d9e313db99d1",
+          "license": "MIT"
+        },
+        {
+          "name": "sortedcontainers",
+          "version": "2.4.0",
+          "filename": "sortedcontainers-2.4.0-py2.py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/32/46/9cb0e58b2deb7f82b84065f37f3bffeb12413f947f9388e4cac22c4621ce/sortedcontainers-2.4.0-py2.py3-none-any.whl",
+          "sha256": "a163dcaede0f1c021485e957a39245190e74249897e2ae4b2aa38595db237ee0",
+          "license": "Apache 2.0"
+        },
+        {
+          "name": "typing_extensions",
+          "version": "4.16.0",
+          "filename": "typing_extensions-4.16.0-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/49/d3/b8441a820a491ddfc024b0b0cf0393375b75ea13866d9c66727e54c2fc80/typing_extensions-4.16.0-py3-none-any.whl",
+          "sha256": "481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8",
+          "license": "PSF-2.0"
+        },
+        {
+          "name": "urllib3",
+          "version": "2.8.0",
+          "filename": "urllib3-2.8.0-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/92/9d/c4e665119135114480843e7ab388fa94d8480650450e6f8e26b70d323a4c/urllib3-2.8.0-py3-none-any.whl",
+          "sha256": "0cf3cae568d36aa9576b28dfb35f11328f1cb974ca7647d9475ebb86c75ac6e3",
+          "license": "MIT"
+        },
+        {
+          "name": "Werkzeug",
+          "version": "3.1.9",
+          "filename": "werkzeug-3.1.9-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/a1/38/df03f564f43cec2684823f3cccae1a652ee7face1cbaa76fb223096e64d7/werkzeug-3.1.9-py3-none-any.whl",
+          "sha256": "6392e50c78460ba618e5b21f08a71f59c99ce99cdc6cf6e3dd7e6ccca8754fab",
+          "license": "BSD-3-Clause"
+        }
+      ]
+    },
+    "license_file": {
+      "url": "https://raw.githubusercontent.com/schemathesis/schemathesis/76b10a59d248eaf578df82841edb48c8e25a2e44/LICENSE",
+      "sha256": "3bd53b80e2c136e6350abe9e51e5c75af45bdf76430fcf9c7da66db954b87ddf"
+    }
+  }
+}

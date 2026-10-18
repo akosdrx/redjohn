@@ -1,0 +1,16 @@
+{
+  "test": "real_native_supervisor_cancel_mock_scanner",
+  "scanner_engine": "explicit_mock",
+  "live_nuclei_verified": false,
+  "cancellation_cleanup_seconds": 1.090996,
+  "process_groups_after_cancel": {
+    "supervisor": "absent",
+    "mock_scanner": "absent"
+  },
+  "active_sessions": 0,
+  "reserved_worker_slots": 0,
+  "pid_or_child_markers": 0,
+  "temporary_worker_directories": 0,
+  "python": "3.13.16",
+  "model_calls": 0
+}

@@ -1,0 +1,1263 @@
+package app
+
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+	"sort"
+	"strconv"
+	"strings"
+
+	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
+	"github.com/redjohn-ai/redjohn/tui/internal/protocol"
+	"github.com/redjohn-ai/redjohn/tui/internal/render"
+)
+
+// eventSpan records which content lines of the chat trace belong to an
+// expandable tool event, so clicks can toggle its collapsed state.
+type eventSpan struct {
+	start, end int
+	eventID    string
+}
+
+// Older backends send only a bounded skill-name list. Prefer the registry's
+// total when supplied; registration never implies live adapter coverage.
+func (m Model) registeredSkillCount() int {
+	return max(m.snapshot.SkillCount, len(m.snapshot.Skills))
+}
+
+// renderedBlock is a chat block kept across frames: rendering (syntax
+// highlighting, image placements, wrapping) is expensive and only changes
+// when the event, the chat width, or its expanded state changes.
+type renderedBlock struct {
+	version    int
+	width      int
+	expanded   bool
+	live       bool
+	wrapped    string
+	expandable bool
+	height     int
+}
+
+func (m *Model) renderEvent(event protocol.Event, width int, live bool) renderedBlock {
+	expanded := m.expandedEvents[event.ID]
+	if cached, ok := m.blockCache[event.ID]; ok &&
+		cached.version == event.Version && cached.width == width && cached.expanded == expanded && cached.live == live {
+		return cached
+	}
+	var block string
+	expandable := false
+	switch event.Type {
+	case "chat":
+		block = render.Chat(event.Data)
+	case "tool":
+		name := render.StringValue(event.Data["tool_name"])
+		block, expandable = render.CollapseTool(render.Tool(event.Data), name, expanded)
+	}
+	if !live {
+		block = render.StopSpinners(block)
+	}
+	entry := renderedBlock{version: event.Version, width: width, expanded: expanded, live: live, expandable: expandable}
+	if block != "" {
+		entry.wrapped = wrapBlock(block, width)
+		entry.height = strings.Count(entry.wrapped, "\n") + 1
+	}
+	if m.blockCache == nil {
+		m.blockCache = map[string]renderedBlock{}
+	}
+	m.blockCache[event.ID] = entry
+	return entry
+}
+
+func composeHeaderRow(left, right string, width int) string {
+	if width <= 0 {
+		return ""
+	}
+	rw := lipgloss.Width(right)
+	if rw >= width {
+		return truncate(left, width)
+	}
+	maxLeft := max(1, width-rw-1)
+	left = truncate(left, maxLeft)
+	gap := max(1, width-lipgloss.Width(left)-rw)
+	return left + strings.Repeat(" ", gap) + right
+}
+
+func (m Model) redJohnHeaderBlock(width int) string {
+	if width < 20 || len(m.snapshot.Agents) == 0 {
+		return ""
+	}
+	targetLabel := "Security audit"
+	if len(m.snapshot.Targets) > 0 && strings.TrimSpace(m.snapshot.Targets[0]) != "" {
+		targetLabel = strings.TrimSpace(m.snapshot.Targets[0])
+	}
+	brandLeft := lipgloss.NewStyle().Bold(true).Foreground(red).Render("☻ RedJohn") +
+		lipgloss.NewStyle().Foreground(dim).Render(" / ") +
+		lipgloss.NewStyle().Bold(true).Foreground(white).Render(targetLabel) +
+		lipgloss.NewStyle().Foreground(dim).Render("  │  RJ-001")
+	brandRight := lipgloss.NewStyle().Foreground(green).Render("●") +
+		lipgloss.NewStyle().Foreground(white).Render(" API Live") +
+		lipgloss.NewStyle().Foreground(dim).Render("  │  ") +
+		lipgloss.NewStyle().Foreground(green).Render("●") +
+		lipgloss.NewStyle().Foreground(white).Render(" Swarm Live")
+	row1 := composeHeaderRow(brandLeft, brandRight, width)
+
+	totalMcp := len(m.snapshot.Connections)
+	liveMcp := 0
+	for _, conn := range m.snapshot.Connections {
+		if !conn.Dead {
+			liveMcp++
+		}
+	}
+	keyStyle := lipgloss.NewStyle().Foreground(white).Background(lipgloss.Color("#262626")).Bold(true)
+	lblStyle := lipgloss.NewStyle().Foreground(mid)
+	valStyle := lipgloss.NewStyle().Foreground(lightBlue).Bold(true)
+	totalTargets := max(m.snapshot.TargetCount, len(m.snapshot.Targets))
+	row2 := truncate(
+		keyStyle.Render(" F2 ")+lblStyle.Render(" All Agents   ")+
+			keyStyle.Render(" F3 ")+lblStyle.Render(" MCPs ")+valStyle.Render(fmt.Sprintf("%d/%d", liveMcp, totalMcp))+lblStyle.Render("   ")+
+			keyStyle.Render(" F4 ")+lblStyle.Render(" Skill List ")+valStyle.Render(strconv.Itoa(m.registeredSkillCount()))+lblStyle.Render("   ")+
+			keyStyle.Render(" F5 ")+lblStyle.Render(" Active Targets ")+valStyle.Render(strconv.Itoa(totalTargets))+lblStyle.Render("   ")+
+			keyStyle.Render(" F1 ")+lblStyle.Render(" Help"),
+		width,
+	)
+
+	rule := lipgloss.NewStyle().Foreground(dark).Render(strings.Repeat("─", width))
+
+	activeTabStyle := lipgloss.NewStyle().Background(crimson).Foreground(brightWhite).Bold(true)
+	inactiveTabStyle := lipgloss.NewStyle().Foreground(mid)
+	sep := lipgloss.NewStyle().Foreground(dark).Render(" │ ")
+	var tabs []string
+	if m.allAgentsView {
+		tabs = append(tabs, activeTabStyle.Render(" 0 All agents "))
+	} else {
+		tabs = append(tabs, inactiveTabStyle.Render(" 0 All agents "))
+	}
+	for i, agent := range m.snapshot.Agents {
+		label := fmt.Sprintf(" %d %s ", i+1, agent.Name)
+		if !m.allAgentsView && i == m.selectedAgent {
+			tabs = append(tabs, activeTabStyle.Render(label))
+		} else {
+			tabs = append(tabs, inactiveTabStyle.Render(label))
+		}
+	}
+	row4 := truncate(strings.Join(tabs, sep), width)
+
+	subLeft := lipgloss.NewStyle().Bold(true).Foreground(white).Render("Live Terminal — All Swarm Agents")
+	if !m.allAgentsView && m.selectedAgent >= 0 && m.selectedAgent < len(m.snapshot.Agents) {
+		ag := m.snapshot.Agents[m.selectedAgent]
+		subLeft = lipgloss.NewStyle().Bold(true).Foreground(white).Render("Live Terminal — "+ag.Name) +
+			lipgloss.NewStyle().Foreground(dim).Render(" / "+ag.ID)
+	}
+	subRight := lipgloss.NewStyle().Foreground(green).Render("●") + lipgloss.NewStyle().Foreground(dim).Render(" Following")
+	if !m.followOutput {
+		subRight = lipgloss.NewStyle().Foreground(amber).Render("○") + lipgloss.NewStyle().Foreground(dim).Render(" Scrollback")
+	}
+	row5 := composeHeaderRow(subLeft, subRight, width)
+
+	return strings.Join([]string{row1, row2, rule, row4, row5, rule}, "\n")
+}
+
+func (m Model) redJohnFindingCardBlock(width int) string {
+	if width < 20 || len(m.snapshot.Vulnerabilities) == 0 {
+		return ""
+	}
+	idx := min(max(0, m.selectedVuln), len(m.snapshot.Vulnerabilities)-1)
+	vuln := m.snapshot.Vulnerabilities[idx]
+	fid := lipgloss.NewStyle().Bold(true).Foreground(red).Render(fmt.Sprintf("F-%03d", idx+1))
+	title := render.StringValue(vuln["title"])
+	if title == "" {
+		title = "Confirmed Vulnerability"
+	}
+	sevRaw := strings.ToLower(render.StringValue(vuln["severity"]))
+	if sevRaw == "" {
+		sevRaw = "high"
+	}
+	sevColor, ok := panelSeverityColors[sevRaw]
+	if !ok {
+		sevColor = red
+	}
+	target := render.StringValue(vuln["endpoint"])
+	if target == "" {
+		target = render.StringValue(vuln["target"])
+	}
+	if target == "" && len(m.snapshot.Targets) > 0 {
+		target = m.snapshot.Targets[0]
+	}
+	if target == "" {
+		target = "in-scope target"
+	}
+	agentName := render.StringValue(vuln["agent_name"])
+	if agentName == "" {
+		agentName = "Swarm Specialist"
+	}
+	agentID := render.StringValue(vuln["agent_id"])
+	if agentID != "" {
+		agentName = agentName + " / " + agentID
+	}
+	rule := lipgloss.NewStyle().Foreground(dark).Render(strings.Repeat("─", width))
+	kStyle := lipgloss.NewStyle().Foreground(dim)
+	vStyle := lipgloss.NewStyle().Foreground(white)
+	lines := []string{
+		rule,
+		truncate(fid+"  "+lipgloss.NewStyle().Bold(true).Foreground(white).Render(title), width),
+		truncate(kStyle.Render("Severity    ")+lipgloss.NewStyle().Bold(true).Foreground(sevColor).Render(titleCase(sevRaw)), width),
+		truncate(kStyle.Render("Target      ")+vStyle.Render(target), width),
+		truncate(kStyle.Render("Agent       ")+vStyle.Render(agentName), width),
+		truncate(kStyle.Render("Status      ")+lipgloss.NewStyle().Foreground(green).Render("Ready for review"), width),
+		rule,
+	}
+	return strings.Join(lines, "\n")
+}
+
+func (m *Model) chatContent() string {
+	if len(m.snapshot.Agents) == 0 {
+		switch m.snapshot.ScanState {
+		case "failed":
+			message := "Scan failed"
+			if m.snapshot.Error != nil && strings.TrimSpace(*m.snapshot.Error) != "" {
+				detail := strings.ReplaceAll(strings.TrimSpace(*m.snapshot.Error), "\n", " ")
+				message += "\n\n" + ansi.Truncate(detail, max(1, m.viewport.Width-4), "...")
+			}
+			return centeredPlaceholder(message, m.viewport.Width, m.viewport.Height)
+		case "stopped":
+			return centeredPlaceholder("Scan stopped", m.viewport.Width, m.viewport.Height)
+		case "completed":
+			return centeredPlaceholder("Scan completed", m.viewport.Width, m.viewport.Height)
+		case "preparing":
+			return centeredPlaceholder("Preparing scan...", m.viewport.Width, m.viewport.Height)
+		default:
+			return centeredPlaceholder("Loading...", m.viewport.Width, m.viewport.Height)
+		}
+	}
+	if m.selectedAgent >= len(m.snapshot.Agents) {
+		return ""
+	}
+	agentID := m.snapshot.Agents[m.selectedAgent].ID
+	agentNameByID := make(map[string]string, len(m.snapshot.Agents))
+	for _, ag := range m.snapshot.Agents {
+		agentNameByID[ag.ID] = ag.Name
+	}
+	events := append([]protocol.Event(nil), m.snapshot.Events...)
+	// Match _gather_agent_events: sort by (timestamp, id).
+	sort.SliceStable(events, func(i, j int) bool {
+		if events[i].Timestamp != events[j].Timestamp {
+			return events[i].Timestamp < events[j].Timestamp
+		}
+		return events[i].ID < events[j].ID
+	})
+	// .chat-content has padding: 0 1 — one column of horizontal padding, so wrap
+	// to width-2 and indent every line by one cell.
+	contentWidth := max(1, m.viewport.Width-2)
+	render.SetImageWidth(contentWidth - 2)
+	// A parked agent is waiting on its latest tool call.
+	parkedOn := ""
+	if !m.allAgentsView && m.snapshot.Agents[m.selectedAgent].Status == "waiting" {
+		for _, event := range events {
+			if event.AgentID == agentID && event.Type == "tool" {
+				parkedOn = event.ID
+			}
+		}
+	}
+	headerBlock := m.redJohnHeaderBlock(contentWidth)
+	var blocks []string
+	var spans []eventSpan
+	line := 0
+	if headerBlock != "" {
+		blocks = append(blocks, headerBlock)
+		line = strings.Count(headerBlock, "\n") + 1
+	}
+	eventBlocksCount := 0
+	for _, event := range events {
+		if !m.allAgentsView && event.AgentID != agentID {
+			continue
+		}
+		entry := m.renderEvent(event, contentWidth, event.ID == parkedOn)
+		if entry.wrapped == "" {
+			continue
+		}
+		wrapped := entry.wrapped
+		if m.allAgentsView {
+			badge := lipgloss.NewStyle().Bold(true).Foreground(lightBlue).Render("[" + strings.ToUpper(agentNameByID[event.AgentID]) + "] ")
+			wrapped = truncate(badge+strings.SplitN(wrapped, "\n", 2)[0], contentWidth)
+			if rest := strings.SplitN(entry.wrapped, "\n", 2); len(rest) == 2 {
+				wrapped += "\n" + rest[1]
+			}
+		}
+		if len(blocks) > 0 {
+			line++ // blank separator line between blocks
+		}
+		if entry.expandable {
+			spans = append(spans, eventSpan{start: line, end: line + entry.height - 1, eventID: event.ID})
+		}
+		line += entry.height
+		blocks = append(blocks, wrapped)
+		eventBlocksCount++
+	}
+	m.eventSpans = spans
+	if eventBlocksCount == 0 {
+		return centeredPlaceholder("Starting agent...", m.viewport.Width, m.viewport.Height)
+	}
+	if card := m.redJohnFindingCardBlock(contentWidth); card != "" {
+		blocks = append(blocks, card)
+	}
+	return indentLines(strings.Join(blocks, "\n\n"), " ")
+}
+
+// indentLines prefixes every line with the given pad (chat-content padding-left).
+func indentLines(s, pad string) string {
+	lines := strings.Split(s, "\n")
+	for i, line := range lines {
+		lines[i] = pad + line
+	}
+	return strings.Join(lines, "\n")
+}
+
+func centeredPlaceholder(text string, width, height int) string {
+	return lipgloss.Place(width, height, lipgloss.Center, lipgloss.Center, lipgloss.NewStyle().Foreground(dim).Italic(true).Render(text))
+}
+
+// truncate clips to a display-cell width, honoring wide runes and ANSI styling.
+func truncate(value string, limit int) string {
+	if limit <= 0 {
+		return ""
+	}
+	if ansi.StringWidth(value) <= limit {
+		return value
+	}
+	return ansi.Truncate(value, limit, "…")
+}
+
+// wrapBlock hard-wraps each line of a rendered block to the given cell width so
+// content never spills past the chat border, matching Textual's word wrapping.
+func wrapBlock(value string, width int) string {
+	if width <= 0 {
+		return value
+	}
+	var out []string
+	for _, line := range strings.Split(value, "\n") {
+		if ansi.StringWidth(line) <= width {
+			out = append(out, line)
+			continue
+		}
+		out = append(out, strings.Split(ansi.Wrap(line, width, " -"), "\n")...)
+	}
+	return strings.Join(out, "\n")
+}
+
+// hyperlinkBlock wraps a URL to the column width and marks every wrapped line
+// as an OSC 8 hyperlink to the whole URL. Terminals that linkify by text only
+// see the first line of a wrapped URL, which for the viewer meant opening it
+// with a truncated token.
+func hyperlinkBlock(url string, width int, style lipgloss.Style) string {
+	lines := strings.Split(wrapBlock(url, width), "\n")
+	for i, line := range lines {
+		lines[i] = ansi.SetHyperlink(url) + style.Render(line) + ansi.ResetHyperlink()
+	}
+	return strings.Join(lines, "\n")
+}
+
+// scrollbarThumb brightens the bar being dragged so the grab reads as taking
+// hold of it.
+func (m Model) scrollbarThumb(target scrollbarTarget) lipgloss.Color {
+	if m.draggingScrollbar == target {
+		return thumbActive
+	}
+	return thumbResting
+}
+
+func verticalScrollbar(height, total, visible, offset int, thumb lipgloss.Color) string {
+	if height <= 0 || total <= visible {
+		return ""
+	}
+	visible = min(max(1, visible), max(1, total))
+	total = max(visible, total)
+	thumbHeight := height
+	thumbStart := 0
+	if total > visible {
+		thumbHeight = max(1, height*visible/total)
+		maxOffset := total - visible
+		thumbStart = (height - thumbHeight) * min(max(0, offset), maxOffset) / maxOffset
+	}
+	thumbStyle := lipgloss.NewStyle().Foreground(thumb)
+	bar := make([]string, height)
+	for row := range bar {
+		bar[row] = " "
+		if row >= thumbStart && row < thumbStart+thumbHeight {
+			bar[row] = thumbStyle.Render("█")
+		}
+	}
+	return strings.Join(bar, "\n")
+}
+
+// withVerticalScrollbar reserves a single column for the bar, and only while the
+// panel actually overflows.
+func withVerticalScrollbar(
+	content string,
+	width, height, total, visible, offset int,
+	thumb lipgloss.Color,
+) string {
+	if total <= visible {
+		return fixedPanelBody(content, width, height)
+	}
+	body := fixedPanelBody(content, max(1, width-1), height)
+	bar := verticalScrollbar(height, total, visible, offset, thumb)
+	return lipgloss.JoinHorizontal(lipgloss.Top, body, bar)
+}
+
+func visibleContent(content string, offset, height int) string {
+	if height <= 0 || content == "" {
+		return ""
+	}
+	lines := strings.Split(content, "\n")
+	start := min(max(0, offset), len(lines))
+	end := min(len(lines), start+height)
+	return strings.Join(lines[start:end], "\n")
+}
+
+func fixedPanelBody(content string, width, height int) string {
+	lines := strings.Split(content, "\n")
+	body := make([]string, max(0, height))
+	for row := range body {
+		line := ""
+		if row < len(lines) {
+			line = ansi.Truncate(lines[row], max(1, width), "")
+		}
+		padding := strings.Repeat(" ", max(0, width-ansi.StringWidth(line)))
+		// End every source style before padding; otherwise inline-code and tool
+		// backgrounds can paint the empty space through to the panel border.
+		body[row] = line + "\x1b[0m" + blackBG + padding
+	}
+	return strings.Join(body, "\n")
+}
+
+func (m Model) View() string {
+	view := fillBackground(m.viewInner())
+	// Kitty graphics transmissions ride out of band: they carry no visible
+	// cells, so writing them directly keeps the Bubble Tea frame diff clean.
+	for _, seq := range render.DrainImageTransmissions() {
+		_, _ = os.Stdout.WriteString(seq)
+	}
+	return view
+}
+
+func (m Model) viewInner() string {
+	if m.showSplash {
+		return m.splashView()
+	}
+	if !m.ready {
+		return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, lipgloss.NewStyle().Foreground(dim).Render("Connecting to RedJohn…"), lipgloss.WithWhitespaceBackground(black))
+	}
+	main := m.mainView()
+	if m.snapshot.SetupMode {
+		main = m.setupView()
+	}
+	if m.modal == modalConfirmMount {
+		// A corner prompt, not a dialog: it sits out of the way in the live view
+		// while the scan waits on the answer.
+		main = m.cornerOverlay(main, m.modalView())
+	} else if m.modal != modalNone {
+		// Only the vulnerability detail dims its backdrop (#000000 80%); Help,
+		// Quit and Stop are transparent.
+		main = m.overlay(main, m.modalView(), m.modal == modalVulnerability)
+	}
+	return m.toastOverlay(main)
+}
+
+// mountPromptBounds is where the working-directory prompt is drawn. It is placed
+// by cornerOverlay rather than centered, so a click has to be tested against
+// these bounds and not the ones the other modals use.
+func (m Model) mountPromptBounds() (left, top int, panel string) {
+	panel = m.modalView()
+	if panel == "" {
+		return 0, 0, ""
+	}
+	_, _, chatWidth, _ := m.layout()
+	left = max(0, min(chatWidth, m.width)-lipgloss.Width(panel))
+	statusH := 0
+	if m.statusVisible() {
+		statusH = 1
+	}
+	return left, max(0, m.inputTop()-statusH-lipgloss.Height(panel)), panel
+}
+
+// cornerOverlay splices a panel in directly above the composer, right-aligned
+// with it, leaving the rest of the view visible behind it.
+func (m Model) cornerOverlay(view, panel string) string {
+	if panel == "" {
+		return view
+	}
+	fg := strings.Split(panel, "\n")
+	bg := strings.Split(view, "\n")
+	panelWidth := lipgloss.Width(panel)
+	// Right edge of the chat column, so it lines up with the composer rather
+	// than covering the sidebar.
+	_, _, chatWidth, _ := m.layout()
+	left := max(0, min(chatWidth, m.width)-panelWidth)
+	// Bottom row sits just above the composer, clearing the status line so the
+	// scan state and quit hint stay readable.
+	statusH := 0
+	if m.statusVisible() {
+		statusH = 1
+	}
+	top := max(0, m.inputTop()-statusH-len(fg))
+	for row := top; row < min(len(bg), top+len(fg)); row++ {
+		fgLine := ansi.Truncate(fg[row-top], max(0, m.width-left), "")
+		rightStart := left + lipgloss.Width(fgLine)
+		leftPart := padToWidth(ansi.Truncate(bg[row], left, ""), left)
+		rightPart := ""
+		if lipgloss.Width(bg[row]) > rightStart {
+			rightPart = ansi.TruncateLeft(bg[row], rightStart, "")
+		}
+		bg[row] = leftPart + fgLine + rightPart
+	}
+	return strings.Join(bg, "\n")
+}
+
+// toastOverlay splices a transient notification into the bottom-right corner,
+// where Textual's notify() toasts appeared.
+func (m Model) toastOverlay(view string) string {
+	if m.toast == "" {
+		return view
+	}
+	box := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(red).
+		Background(black).
+		Foreground(textColor).
+		Padding(0, 1).
+		Render(m.toast)
+	fg := strings.Split(box, "\n")
+	bg := strings.Split(view, "\n")
+	boxWidth := lipgloss.Width(box)
+	left := max(0, m.width-boxWidth-2)
+	top := max(0, m.height-len(fg)-1)
+	for row := top; row < min(len(bg), top+len(fg)); row++ {
+		fgLine := fg[row-top]
+		rightStart := left + boxWidth
+		leftPart := padToWidth(ansi.Truncate(bg[row], left, ""), left)
+		rightPart := ""
+		if lipgloss.Width(bg[row]) > rightStart {
+			rightPart = ansi.TruncateLeft(bg[row], rightStart, "")
+		}
+		bg[row] = leftPart + fgLine + rightPart
+	}
+	return strings.Join(bg, "\n")
+}
+
+// Base frame colors are reapplied after full SGR resets so the TUI does not
+// inherit an unreadable foreground from the user's terminal profile.
+const (
+	blackBG         = "\x1b[48;2;0;0;0m"
+	textFG          = "\x1b[38;2;212;212;212m"
+	baseFrameColors = blackBG + textFG
+)
+
+// fillBackground paints the whole frame black like Textual's Screen background.
+// Bubble Tea has no screen compositor, so any cell the view does not explicitly
+// color shows the terminal's default background. lipgloss emits a reset
+// (\x1b[0m, or the bare \x1b[m that x/ansi uses) at the end of every styled
+// span, which clears both foreground and background. Reasserting only black
+// made uncolored and faint text inherit the terminal profile's foreground;
+// light profiles therefore rendered that text
+// black-on-black. Reapply both base colors after each reset (and at the start).
+// Spans that set their own colors — inline code, selected rows, buttons — keep
+// them, because their color is emitted after the base style.
+func fillBackground(view string) string {
+	if view == "" {
+		return view
+	}
+	return baseFrameColors + baseColorRestorer.Replace(view)
+}
+
+var baseColorRestorer = strings.NewReplacer(
+	"\x1b[0m", "\x1b[0m"+baseFrameColors,
+	"\x1b[m", "\x1b[m"+baseFrameColors,
+)
+
+func (m Model) splashView() string {
+	shine := "Starting RedJohn Swarm"
+	chars := []rune(shine)
+	pos := m.splashFrame % (len(chars) + 8)
+	var start strings.Builder
+	for i, char := range chars {
+		distance := i - pos
+		if distance < 0 {
+			distance = -distance
+		}
+		// Tiers match SplashScreen._build_start_line_text:
+		// bright_white / white / #a3a3a3 / #525252.
+		color := lipgloss.Color("#525252")
+		bold := false
+		switch {
+		case distance <= 1:
+			color, bold = brightWhite, true
+		case distance <= 3:
+			color, bold = white, true
+		case distance <= 5:
+			color = lipgloss.Color("#a3a3a3")
+		}
+		start.WriteString(lipgloss.NewStyle().Foreground(color).Bold(bold).Render(string(char)))
+	}
+	welcome := lipgloss.NewStyle().Bold(true).Foreground(white).Render("Welcome to ") +
+		lipgloss.NewStyle().Bold(true).Foreground(red).Render("RED") +
+		lipgloss.NewStyle().Bold(true).Foreground(brightWhite).Render("JOHN")
+	version := lipgloss.NewStyle().Bold(true).Foreground(red).Render("◈  " + versionLabel() + "  ◈")
+	tagline := lipgloss.NewStyle().Foreground(white).Faint(true).Render("Autonomous P2P Multi-Agent Offensive Swarm")
+	url := lipgloss.NewStyle().Foreground(dim).Render(fmt.Sprintf("%d registered skills  ·  P2P Signal Bus  ·  Kali Native", m.registeredSkillCount()))
+	// The wordmark is shared with the launch screen so the two read as one moment.
+	content := wordmark() + "\n\n" +
+		welcome + "\n" + version + "\n" + tagline + "\n\n" +
+		start.String() + "\n\n" + url
+	panel := lipgloss.NewStyle().Border(lipgloss.DoubleBorder()).BorderForeground(red).Padding(1, 6).Align(lipgloss.Center).Render(content)
+	// #splash_screen background is solid black.
+	return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, panel,
+		lipgloss.WithWhitespaceBackground(black))
+}
+
+// chatPaneKey identifies everything the bordered trace depends on.
+type chatPaneKey struct {
+	offset        int
+	width, height int
+	border        lipgloss.Color
+	selection     selectionState
+	spinnerFrame  int
+}
+
+// chatPane memoizes the bordered trace: slicing, scrollbar padding and border
+// styling all re-measure every visible cell, which is costly when inline image
+// placeholders (a base rune plus two combining marks per cell) fill the pane,
+// and the trace is unchanged across most frames.
+var chatPane struct {
+	key     chatPaneKey
+	content string
+	out     string
+}
+
+func (m Model) renderChatPane(width, height int, border lipgloss.Color) string {
+	visible := visibleContent(m.viewportContent, m.viewport.YOffset, height)
+	// Only a trace with a spinner on screen changes with the tick.
+	spinnerFrame := 0
+	if strings.Contains(visible, render.SpinnerMarker) {
+		spinnerFrame = m.sweepFrame / 2
+	}
+	key := chatPaneKey{offset: m.viewport.YOffset, width: width, height: height, border: border, selection: m.selection, spinnerFrame: spinnerFrame}
+	if chatPane.out != "" && chatPane.key == key && chatPane.content == m.viewportContent {
+		return chatPane.out
+	}
+	trace := withVerticalScrollbar(
+		render.AnimateSpinners(m.highlightSelection(visible, m.viewport.YOffset), spinnerFrame),
+		width,
+		height,
+		m.viewport.TotalLineCount(),
+		m.viewport.VisibleLineCount(),
+		m.viewport.YOffset,
+		m.scrollbarThumb(scrollbarTrace),
+	)
+	out := lipgloss.NewStyle().Width(width).Height(height).
+		Border(lipgloss.RoundedBorder()).BorderForeground(border).Render(trace)
+	chatPane.key, chatPane.content, chatPane.out = key, m.viewportContent, out
+	return out
+}
+
+func (m Model) mainView() string {
+	showSidebar, sidebarWidth, chatWidth, chatHeight := m.layout()
+	// Matches tui_styles.tcss: #chat_history border is near-black when idle and
+	// green on focus.
+	chatBorder := lipgloss.Color("#0a0a0a")
+	if m.focus == focusChat {
+		chatBorder = green
+	}
+	traceHeight := chatHeight - 2
+	chat := m.renderChatPane(chatWidth-2, traceHeight, chatBorder)
+
+	inputBorder := dark
+	if m.focus == focusInput {
+		inputBorder = green
+	}
+	input := lipgloss.NewStyle().Width(chatWidth - 2).Height(m.input.Height()).
+		Border(lipgloss.RoundedBorder()).BorderForeground(inputBorder).PaddingLeft(1).
+		Render(m.composerView())
+
+	// Chat column: chat history, optional status row, then input — all chat-width.
+	leftParts := []string{chat}
+	if m.statusVisible() {
+		leftParts = append(leftParts, m.statusView(chatWidth))
+	}
+	leftParts = append(leftParts, input)
+	leftColumn := strings.Join(leftParts, "\n")
+
+	body := leftColumn
+	if showSidebar {
+		body = lipgloss.JoinHorizontal(lipgloss.Top, leftColumn, " ", m.sidebarView(sidebarWidth, m.height))
+	} else if m.railVisible() {
+		body = lipgloss.JoinHorizontal(lipgloss.Top, leftColumn, " ", m.sidebarRail(m.height))
+	}
+	return lipgloss.NewStyle().Background(black).Foreground(textColor).Render(body)
+}
+
+// Every panel that Tab can reach shows focus the way the chat and the composer
+// do, with a green border. The stylesheet asked for near-black on the tree
+// instead, through a Tree:focus rule that lost to the #agents_tree id selector
+// and so never applied - honoring it made the outline vanish on the one panel
+// that had just become active.
+func (m Model) sidebarView(width, height int) string {
+	statsHeight, vulnHeight, mcpHeight, agentHeight := m.sidebarHeights()
+	parts := []string{lipgloss.NewStyle().
+		Width(width-2).
+		Height(m.viewerHeight()-2).
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(dark).
+		Padding(0, 1).
+		Render(m.viewerBox(width - 4))}
+	if targetsHeight := m.targetsBoxHeight(); targetsHeight > 0 {
+		parts = append(parts, lipgloss.NewStyle().
+			Width(width-2).
+			Height(targetsHeight-2).
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(dark).
+			Padding(0, 1).
+			Render(m.targetsView(width-4, targetsHeight-2)))
+	}
+	agents := ""
+	if agentHeight > 1 {
+		agentRows := max(1, agentHeight-4)
+		agents = withVerticalScrollbar(
+			m.agentsView(max(1, width-5), agentRows),
+			width-4,
+			agentRows,
+			len(agentTreeEntries(m.snapshot.Agents, m.collapsedAgents)),
+			agentRows,
+			m.agentOffset,
+			m.scrollbarThumb(scrollbarAgents),
+		)
+	}
+	parts = append(parts, m.panelBox(panelAgents, agents, width, agentHeight, m.focus == focusAgents))
+	if vulnHeight > 0 {
+		findings := ""
+		if vulnHeight > 1 {
+			vulnRows := max(1, vulnHeight-4)
+			totalRows, offsetRows := m.vulnerabilityScrollRows()
+			findings = withVerticalScrollbar(
+				m.vulnerabilitiesView(m.vulnerabilityListWidth(), vulnRows),
+				width-4,
+				vulnRows,
+				totalRows,
+				vulnRows,
+				offsetRows,
+				m.scrollbarThumb(scrollbarFindings),
+			)
+		}
+		parts = append(parts, m.panelBox(panelFindings, findings, width, vulnHeight, m.focus == focusVulnerabilities))
+	}
+	if mcpHeight > 0 {
+		roster := ""
+		if mcpHeight > 1 {
+			roster = m.mcpConnectionsView(width-4, max(1, mcpHeight-4))
+		}
+		parts = append(parts, m.panelBox(panelMcp, roster, width, mcpHeight, m.focus == focusMcp))
+	}
+	if gap := m.sidebarGap(); gap > 0 {
+		parts = append(parts, lipgloss.NewStyle().Width(width).Height(gap).Render(""))
+	}
+	stats := ""
+	if statsHeight > 1 {
+		stats = fixedPanelBody(lipgloss.NewStyle().Width(width-4).Render(m.statsView()), width-4, statsHeight-2)
+	}
+	parts = append(parts, m.panelBox(panelStats, stats, width, statsHeight, false))
+	return lipgloss.JoinVertical(lipgloss.Left, parts...)
+}
+
+func (m Model) sidebarHeights() (statsHeight, vulnHeight, mcpHeight, agentHeight int) {
+	_, statsHeight, vulnHeight, mcpHeight, agentHeight = m.sidebarLayout()
+	return
+}
+
+// sidebarLayout sizes the targets box and the panels. The targets box only
+// takes rows no panel needs, so it never squeezes the panels below it.
+func (m Model) sidebarLayout() (targetsHeight, statsHeight, vulnHeight, mcpHeight, agentHeight int) {
+	// Measure the stats panel the way its box will render it: a long model name
+	// wraps inside the sidebar, and counting only its newlines would size the
+	// box short and push the whole frame past the bottom of the terminal.
+	statsRows := lipgloss.Height(lipgloss.NewStyle().Width(m.sidebarInnerWidth()).Render(m.statsView()))
+	statsHeight = m.panelHeight(panelStats, min(15, statsRows+2))
+	if len(m.snapshot.Vulnerabilities) > 0 {
+		vulnHeight = m.panelHeight(panelFindings, min(13, len(m.vulnerabilityRows(m.vulnerabilityListWidth()))+4))
+	}
+	// Header lines plus one row per MCP server and skill. Capped so a long
+	// roster scrolls instead of crowding out the agent tree.
+	if items := m.resourceCount(); items > 0 {
+		mcpHeight = m.panelHeight(panelMcp, min(14, items+2))
+	}
+	agentHeight = m.panelHeight(panelAgents, 5)
+	for _, p := range []struct {
+		h     *int
+		floor int
+	}{{&statsHeight, 4}, {&mcpHeight, 5}, {&vulnHeight, 5}} {
+		over := m.viewerHeight() + statsHeight + vulnHeight + mcpHeight + agentHeight - m.height
+		if over <= 0 {
+			break
+		}
+		if *p.h > p.floor {
+			*p.h -= min(over, *p.h-p.floor)
+		}
+	}
+	for _, h := range []*int{&mcpHeight, &vulnHeight, &statsHeight} {
+		if m.viewerHeight()+statsHeight+vulnHeight+mcpHeight+agentHeight <= m.height {
+			break
+		}
+		if *h > 1 {
+			*h = 1
+		}
+	}
+	spare := max(0, m.height-m.viewerHeight()-statsHeight-vulnHeight-mcpHeight-agentHeight)
+	// The box needs its border and two rows: the header and a target or the
+	// count of hidden ones. A zoomed panel keeps the whole sidebar.
+	if targets := m.targetsView(m.sidebarInnerWidth(), maxTargetRows); targets != "" && m.zoomedPanel == panelNone {
+		if fit := min(lipgloss.Height(targets)+2, spare); fit >= 4 {
+			targetsHeight = fit
+			spare -= fit
+		}
+	}
+	switch {
+	case m.zoomedPanel == panelFindings && vulnHeight > 1:
+		vulnHeight += spare
+	case m.zoomedPanel == panelMcp && mcpHeight > 1:
+		mcpHeight += spare
+	case agentHeight > 1:
+		agentHeight += spare
+	}
+	return
+}
+
+func (m Model) viewerHeight() int {
+	return strings.Count(m.viewerView(m.viewerContentWidth()), "\n") + 3
+}
+
+// sidebarTopHeight is the rows above the panels: the viewer box and, when the
+// run has targets, the targets box under it.
+func (m Model) sidebarTopHeight() int {
+	return m.viewerHeight() + m.targetsBoxHeight()
+}
+
+func (m Model) targetsBoxHeight() int {
+	targetsHeight, _, _, _, _ := m.sidebarLayout()
+	return targetsHeight
+}
+
+func (m Model) sidebarInnerWidth() int {
+	_, sidebarWidth, _, _ := m.layout()
+	if sidebarWidth == 0 {
+		sidebarWidth = 24
+	}
+	return max(1, sidebarWidth-4)
+}
+
+func (m Model) viewerContentWidth() int {
+	return max(1, m.sidebarInnerWidth()-toggleButtonWidth-1)
+}
+
+func (m Model) viewerView(width int) string {
+	switch m.snapshot.ViewerStatus {
+	case "running":
+		status := lipgloss.NewStyle().Foreground(green).Render("● Viewer running")
+		if m.snapshot.ViewerURL != nil && strings.TrimSpace(*m.snapshot.ViewerURL) != "" {
+			return status + "\n" + hyperlinkBlock(strings.TrimSpace(*m.snapshot.ViewerURL), width, lipgloss.NewStyle().Foreground(dim))
+		}
+		return status
+	case "unavailable":
+		return truncate(lipgloss.NewStyle().Foreground(amber).Render("Viewer UI not built"), width)
+	case "failed":
+		return truncate(lipgloss.NewStyle().Foreground(red).Render("Viewer failed to start"), width)
+	default:
+		return truncate(lipgloss.NewStyle().Foreground(textColor).Render("▶ Watch live in browser"), width)
+	}
+}
+
+func (m Model) statsView() string {
+	w := lipgloss.NewStyle().Foreground(white)
+	var b strings.Builder
+	if model := m.snapshot.Model; model != "" {
+		b.WriteString(w.Render(model))
+	}
+	if m.snapshot.Subscription {
+		if b.Len() > 0 {
+			b.WriteString("\n")
+		}
+		label := "ChatGPT subscription"
+		if strings.HasPrefix(m.snapshot.Model, "grok/") {
+			label = "SuperGrok subscription"
+		}
+		b.WriteString(lipgloss.NewStyle().Foreground(green).Render(label))
+	}
+	total := numberValue(m.snapshot.Usage["total_tokens"])
+	if total > 0 {
+		if b.Len() > 0 {
+			b.WriteString("\n")
+		}
+		b.WriteString(w.Render(fmt.Sprintf("%s tokens", formatCount(total))))
+		if cost := floatValue(m.snapshot.Usage["cost"]); !m.snapshot.Subscription && cost > 0 {
+			b.WriteString(w.Render(fmt.Sprintf(" · $%.2f", cost)))
+		}
+	}
+	if caido := m.snapshot.CaidoURL; caido != "" {
+		if b.Len() > 0 {
+			b.WriteString("\n")
+		}
+		b.WriteString(lipgloss.NewStyle().Bold(true).Foreground(white).Render("Caido: ") + w.Render(caido))
+	}
+	if b.Len() > 0 {
+		b.WriteString("\n")
+	}
+	b.WriteString(lipgloss.NewStyle().Bold(true).Foreground(red).Render(versionLabel()))
+	return b.String()
+}
+
+// mcpConnectionsView renders the sidebar MCP roster: one row per connection with
+// a status glyph and its tool count (or "offline").
+//   - a solid green dot marks an attached, idle connection;
+//   - a green cycling quarter-circle (◐ ◓ ◑ ◒) marks a call running against it;
+//   - a red dot plus "offline" marks a connection whose live session has died.
+//
+// When there are more connections than the panel can show, the visible window
+// is chosen by m.mcpOffset and withVerticalScrollbar draws a thumb in the
+// reserved last column, exactly as the agent tree and findings list scroll.
+//
+// "In use" is derived from the connection-tagged tool-call events in the stream,
+// not carried on the connection roster, so a call in flight shows motion without
+// any extra backend signal. The quarter-circle rides the shared sweepFrame tick.
+func (m Model) mcpConnectionsView(width, rows int) string {
+	bodyRows := max(1, rows)
+	lines := m.resourceLines(max(1, width-1))
+	start := windowStart(m.mcpOffset, len(lines), bodyRows)
+	end := min(len(lines), start+bodyRows)
+	roster := withVerticalScrollbar(
+		strings.Join(lines[start:end], "\n"),
+		width,
+		bodyRows,
+		len(lines),
+		bodyRows,
+		m.mcpOffset,
+		m.scrollbarThumb(scrollbarMcp),
+	)
+	return roster
+}
+
+func (m Model) resourceCount() int {
+	count := 0
+	if len(m.snapshot.Connections) > 0 {
+		count += 1 + len(m.snapshot.Connections)
+	}
+	if len(m.snapshot.Skills) > 0 {
+		if count > 0 {
+			count++
+		}
+		count += 1 + len(m.snapshot.Skills)
+	}
+	return count
+}
+
+// resourceLines lists MCP servers and skills for the right-hand roster.
+// Green is a live MCP session. Red is a server that is down or not connected.
+func (m Model) resourceLines(width int) []string {
+	if width <= 0 {
+		return nil
+	}
+	inUse := m.mcpInUse()
+	frames := []rune{'◐', '◓', '◑', '◒'}
+	var lines []string
+	if len(m.snapshot.Connections) > 0 {
+		lines = append(lines, lipgloss.NewStyle().Foreground(lightBlue).Render("MCP"))
+		for _, conn := range m.snapshot.Connections {
+			var glyph, right string
+			switch {
+			case conn.Dead:
+				glyph = lipgloss.NewStyle().Foreground(red).Render("●")
+				right = lipgloss.NewStyle().Foreground(red).Render("offline")
+			case inUse[conn.Name]:
+				glyph = lipgloss.NewStyle().Foreground(green).Render(string(frames[m.sweepFrame%len(frames)]))
+				right = lipgloss.NewStyle().Foreground(dim).Render(toolsLabel(conn.ToolCount))
+			default:
+				glyph = lipgloss.NewStyle().Foreground(green).Render("●")
+				right = lipgloss.NewStyle().Foreground(dim).Render(toolsLabel(conn.ToolCount))
+			}
+			rightWidth := lipgloss.Width(right)
+			name := truncate(lipgloss.NewStyle().Foreground(textColor).Render(conn.Name), max(1, width-2-rightWidth-1))
+			gap := max(1, width-2-lipgloss.Width(name)-rightWidth)
+			lines = append(lines, glyph+" "+name+strings.Repeat(" ", gap)+right)
+		}
+	}
+	if len(m.snapshot.Skills) > 0 {
+		if len(lines) > 0 {
+			lines = append(lines, "")
+		}
+		lines = append(lines, lipgloss.NewStyle().Foreground(lightBlue).Render("Skills"))
+		for _, skill := range m.snapshot.Skills {
+			lines = append(lines, lipgloss.NewStyle().Foreground(textColor).Render(truncate(skill, width)))
+		}
+	}
+	return lines
+}
+
+// mcpPageSize is how many connection rows the roster shows at once, below its
+// fixed header line.
+func (m Model) mcpPageSize() int {
+	_, _, mcpHeight, _ := m.sidebarHeights()
+	// mcpHeight = 2 (border) + header (1) + roster rows.
+	return max(1, mcpHeight-3)
+}
+
+// clampMcpOffset keeps the roster offset within the range that still shows a
+// full page of connections at the bottom.
+func (m Model) clampMcpOffset(offset int) int {
+	return min(max(0, offset), max(0, m.resourceCount()-m.mcpPageSize()))
+}
+
+// mcpInUse is the set of MCP connections with a tool call currently running,
+// read off the connection-tagged tool events the model already holds. Each MCP
+// dispatch event carries the connection name (mcp_connection) and a status that
+// moves running -> completed as its own event is upserted, so a connection is
+// "in use" exactly while one of its events is still running.
+func (m Model) mcpInUse() map[string]bool {
+	inUse := map[string]bool{}
+	for _, event := range m.snapshot.Events {
+		if event.Type != "tool" {
+			continue
+		}
+		connection := render.StringValue(event.Data["mcp_connection"])
+		if connection == "" {
+			continue
+		}
+		if render.StringValue(event.Data["status"]) == "running" {
+			inUse[connection] = true
+		}
+	}
+	return inUse
+}
+
+func toolsLabel(count int) string {
+	if count == 1 {
+		return "1 tool"
+	}
+	return fmt.Sprintf("%d tools", count)
+}
+
+func numberValue(value any) int64 {
+	switch v := value.(type) {
+	case float64:
+		return int64(v)
+	case int64:
+		return v
+	case int:
+		return int64(v)
+	case json.Number:
+		n, _ := v.Int64()
+		return n
+	}
+	return 0
+}
+func floatValue(value any) float64 {
+	switch v := value.(type) {
+	case float64:
+		return v
+	case int:
+		return float64(v)
+	case string:
+		n, _ := strconv.ParseFloat(v, 64)
+		return n
+	}
+	return 0
+}
+func formatCount(value int64) string {
+	if value >= 1_000_000 {
+		return fmt.Sprintf("%.1fM", float64(value)/1_000_000)
+	}
+	if value >= 1_000 {
+		return fmt.Sprintf("%.1fK", float64(value)/1_000)
+	}
+	return strconv.FormatInt(value, 10)
+}
+
+func (m Model) statusView(width int) string {
+	// Status text color mirrors #status_text (#a3a3a3); keymap hints use white
+	// keys and dim actions (keymap_styled). See _get_status_display_content.
+	left, right := "", ""
+	if len(m.snapshot.Agents) > 0 && !m.snapshot.SetupMode {
+		agent := m.snapshot.Agents[m.selectedAgent]
+		quitHint := lipgloss.NewStyle().Foreground(white).Render("ctrl-q") + lipgloss.NewStyle().Foreground(dim).Render(" ") + lipgloss.NewStyle().Foreground(dim).Render("quit")
+		switch agent.Status {
+		case "running":
+			if m.agentHasEvents(agent.ID) {
+				left = m.sweepView() + lipgloss.NewStyle().Foreground(white).Render("esc") + lipgloss.NewStyle().Foreground(dim).Render(" ") + lipgloss.NewStyle().Foreground(dim).Render("stop")
+			} else {
+				left = m.sweepView() + lipgloss.NewStyle().Foreground(white).Render("Initializing")
+			}
+			right = quitHint
+		case "waiting":
+			left = lipgloss.NewStyle().Foreground(dim).Render("Send message to resume")
+			if msg := agent.ErrorMessage; msg != "" {
+				left = statusMessage(msg, red, " · Send message to resume", width)
+			}
+		case "budget_paused":
+			left = lipgloss.NewStyle().Foreground(amber).Render("Budget limit reached") +
+				lipgloss.NewStyle().Foreground(dim).Render(" · Send a message to continue")
+			right = quitHint
+		case "completed":
+			left = lipgloss.NewStyle().Foreground(mid).Render("Agent completed")
+		case "stopped":
+			left = lipgloss.NewStyle().Foreground(mid).Render("Agent stopped")
+		case "failed", "crashed":
+			msg := agent.ErrorMessage
+			if msg == "" {
+				msg = "Agent failed"
+			}
+			left = statusMessage(msg, red, " · Send message to resume", width)
+		}
+	}
+	if m.errorText != "" {
+		left = statusMessage(m.errorText, red, "", width-lipgloss.Width(right))
+	}
+	return composeStatusRow(left, right, width)
+}
+
+// composeStatusRow lays the status text and the corner hint on one row exactly
+// width columns wide. A wider row would widen the whole chat column, because
+// JoinHorizontal pads every row of a block to its widest, which pushes the
+// sidebar off screen and wraps the frame.
+func composeStatusRow(left, right string, width int) string {
+	if width <= 0 {
+		return ""
+	}
+	const leading = 1 // the row is indented one column, like the panels above it
+	// A terminal can be narrower than the hint itself. Drop the hint rather than
+	// keep it at the cost of the status, which is the part carrying information;
+	// ctrl-q works whether or not the row has room to say so.
+	if lipgloss.Width(right) > 0 && width < lipgloss.Width(right)+leading+2 {
+		right = ""
+	}
+	separator := 0
+	if lipgloss.Width(right) > 0 {
+		separator = 1
+	}
+	left = truncate(left, max(0, width-leading-lipgloss.Width(right)-separator))
+	padding := max(0, width-leading-lipgloss.Width(left)-lipgloss.Width(right))
+	return " " + left + strings.Repeat(" ", padding) + right
+}
+
+// statusMessage fits a message and its trailing hint on the one status row. A
+// model or backend error can be a wrapped exception several lines long, so it is
+// flattened to a single line and clipped, leaving the hint readable.
+func statusMessage(message string, color lipgloss.Color, hint string, width int) string {
+	styledHint := lipgloss.NewStyle().Foreground(dim).Render(hint)
+	room := max(1, width-2-lipgloss.Width(styledHint))
+	flat := truncate(flattenStatus(message), room)
+	return lipgloss.NewStyle().Foreground(color).Render(flat) + styledHint
+}
+
+// flattenStatus turns a multi-line message into one line, collapsing the runs of
+// whitespace that joining its lines leaves behind.
+func flattenStatus(message string) string {
+	message = strings.NewReplacer("\r\n", " ", "\r", " ", "\n", " ", "\t", " ").Replace(message)
+	return strings.Join(strings.Fields(message), " ")
+}
+
+func (m Model) sweepView() string {
+	palette := []lipgloss.Color{
+		black, lipgloss.Color("#031a09"), lipgloss.Color("#052e16"), lipgloss.Color("#0d4a2a"),
+		lipgloss.Color("#15803d"), green, brightGreen, lipgloss.Color("#86efac"),
+	}
+	const numSquares = 6
+	numColors := len(palette)
+	offset := numColors - 1
+	maxPos := (numSquares - 1) + offset
+	totalRange := maxPos + offset
+	cycleLength := totalRange * 2
+	frameInCycle := m.sweepFrame % cycleLength
+	wavePos := totalRange - abs(totalRange-frameInCycle)
+	sweepPos := wavePos - offset
+
+	dotColor := lipgloss.Color("#0a3d1f")
+	var b strings.Builder
+	for i := 0; i < numSquares; i++ {
+		dist := abs(i - sweepPos)
+		colorIdx := numColors - 1 - dist
+		if colorIdx <= 0 {
+			b.WriteString(lipgloss.NewStyle().Foreground(dotColor).Render("·"))
+		} else {
+			b.WriteString(lipgloss.NewStyle().Foreground(palette[colorIdx]).Render("▪"))
+		}
+	}
+	b.WriteString(" ")
+	return b.String()
+}
+
+func abs(x int) int {
+	if x < 0 {
+		return -x
+	}
+	return x
+}
+
+func titleCase(s string) string {
+	return strings.Title(strings.ToLower(s))
+}
+
+// overlay composites a centered dialog on top of the live main view. When
+// dimmed is true (vulnerability detail, background: #000000 80%) the backdrop is
+// recolored to a dark grey; otherwise it is left untouched to match Textual's
+// transparent modal backdrop (background: $background 0%).
+func (m Model) overlay(background, foreground string, dimmed bool) string {
+	bg := strings.Split(background, "\n")
+	fg := strings.Split(foreground, "\n")
+	dialogHeight := len(fg)
+	dialogWidth := lipgloss.Width(foreground)
+	top := max(0, (m.height-dialogHeight)/2)
+	left := max(0, (m.width-dialogWidth)/2)
+	dimStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#3f3f46"))
+	for row := 0; row < len(bg); row++ {
+		if row < top || row >= top+dialogHeight {
+			if dimmed {
+				bg[row] = dimStyle.Render(ansi.Strip(bg[row]))
+			}
+			continue
+		}
+		fgLine := fg[row-top]
+		rightStart := left + dialogWidth
+		var leftPart, rightPart string
+		if dimmed {
+			bgLine := ansi.Strip(bg[row])
+			leftPart = dimStyle.Render(truncateToWidth(bgLine, left))
+			if lipgloss.Width(bgLine) > rightStart {
+				rightPart = dimStyle.Render(ansi.TruncateLeft(bgLine, rightStart, ""))
+			}
+		} else {
+			// Preserve the original styling of the visible backdrop segments.
+			leftPart = padToWidth(ansi.Truncate(bg[row], left, ""), left)
+			if lipgloss.Width(bg[row]) > rightStart {
+				rightPart = ansi.TruncateLeft(bg[row], rightStart, "")
+			}
+		}
+		bg[row] = leftPart + fgLine + rightPart
+	}
+	return strings.Join(bg, "\n")
+}
+
+// padToWidth right-pads an ANSI string to an exact display width.
+func padToWidth(value string, width int) string {
+	w := lipgloss.Width(value)
+	if w >= width {
+		return value
+	}
+	return value + strings.Repeat(" ", width-w)
+}
+
+func truncateToWidth(value string, width int) string {
+	if width <= 0 {
+		return ""
+	}
+	if lipgloss.Width(value) <= width {
+		return value + strings.Repeat(" ", width-lipgloss.Width(value))
+	}
+	return ansi.Truncate(value, width, "")
+}

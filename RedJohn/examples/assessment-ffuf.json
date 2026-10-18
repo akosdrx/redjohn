@@ -1,0 +1,32 @@
+{
+  "policy": {
+    "engagement_id": "operator-approved-web-assessment",
+    "owner_id": "operator",
+    "allowed_origins": ["https://authorized.example:443"],
+    "allowed_ips": ["192.0.2.10/32"],
+    "profile": "active-staging",
+    "egress_mode": "enforced",
+    "request_budget": 24
+  },
+  "resources": {
+    "total_memory_budget": 2147483648,
+    "worker_memory_budget": 268435456,
+    "max_workers": 1
+  },
+  "ffuf": {
+    "binary": {
+      "path": "/absolute/path/to/reviewed/ffuf",
+      "version": "2.1.0",
+      "sha256": "REPLACE_WITH_VERIFIED_RECEIPT_BINARY_SHA256"
+    },
+    "paths": ["health", "api/status", "docs"],
+    "rate_limit": 5,
+    "request_timeout": 5
+  },
+  "seeds": [
+    {
+      "url": "https://authorized.example:443/",
+      "capabilities": ["browser_discover", "ffuf_discover"]
+    }
+  ]
+}

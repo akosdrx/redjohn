@@ -1,0 +1,19 @@
+{
+  "version": "3.11.1",
+  "source_commit": "a8c88feb4a1c8e961b7902534ce3af97e9d524a4",
+  "release": "https://github.com/projectdiscovery/nuclei/releases/tag/v3.11.1",
+  "archive_url": "https://github.com/projectdiscovery/nuclei/releases/download/v3.11.1/nuclei_3.11.1_macOS_arm64.zip",
+  "archive_sha256": "7d7e291addd1fc29a9bf8d089afe878a9799b20229cbea2fb1693fc40fd4c5f0",
+  "checksums_url": "https://github.com/projectdiscovery/nuclei/releases/download/v3.11.1/nuclei_3.11.1_checksums.txt",
+  "checksums_sha256": "8c55f4113c54dfa4a202e32eaaa8b78abc741a13ed7941651322748fb233a05e",
+  "binary_sha256": "f427ae885dcd60be25cf27c34a416ef18a803b29e153d5568057d7b6012a454d",
+  "binary_bytes": 136853122,
+  "license": "MIT",
+  "license_url": "https://raw.githubusercontent.com/projectdiscovery/nuclei/a8c88feb4a1c8e961b7902534ce3af97e9d524a4/LICENSE.md",
+  "license_sha256": "5fa6644d2dd1987a79c06f4af210d2cf8cfc4ee799999029d0f9980c9cf95a2c",
+  "verification": "embedded SHA256 pin + official release checksums; not an independent signature",
+  "platform": [
+    "Darwin",
+    "arm64"
+  ]
+}

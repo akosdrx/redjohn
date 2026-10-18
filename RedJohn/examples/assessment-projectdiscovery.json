@@ -1,0 +1,54 @@
+{
+  "policy": {
+    "engagement_id": "operator-approved-discovery",
+    "owner_id": "operator",
+    "allowed_origins": ["https://authorized.example:443"],
+    "allowed_ips": ["192.0.2.10/32"],
+    "profile": "active-staging",
+    "egress_mode": "enforced",
+    "request_budget": 48
+  },
+  "resources": {
+    "total_memory_budget": 2147483648,
+    "worker_memory_budget": 268435456,
+    "max_workers": 1
+  },
+  "httpx": {
+    "binary": {
+      "path": "/absolute/path/to/reviewed/httpx",
+      "version": "1.12.0",
+      "sha256": "REPLACE_WITH_VERIFIED_RECEIPT_BINARY_SHA256"
+    },
+    "rate_limit": 5,
+    "request_timeout": 5
+  },
+  "katana": {
+    "binary": {
+      "path": "/absolute/path/to/reviewed/katana",
+      "version": "1.8.0",
+      "sha256": "REPLACE_WITH_VERIFIED_RECEIPT_BINARY_SHA256"
+    },
+    "rate_limit": 5,
+    "request_timeout": 5,
+    "depth": 2,
+    "max_pages": 16,
+    "js_crawl": true
+  },
+  "vulnx": {
+    "binary": {
+      "path": "/absolute/path/to/reviewed/vulnx",
+      "version": "2.0.2",
+      "sha256": "REPLACE_WITH_VERIFIED_RECEIPT_BINARY_SHA256"
+    },
+    "cve_ids": ["CVE-2024-3094"],
+    "api_ips": ["REPLACE_WITH_APPROVED_PUBLIC_PROVIDER_IP"],
+    "request_timeout": 10,
+    "ttl_seconds": 3600
+  },
+  "seeds": [
+    {
+      "url": "https://authorized.example:443/",
+      "capabilities": ["browser_discover", "httpx_probe", "katana_discover", "vulnx_intelligence"]
+    }
+  ]
+}
