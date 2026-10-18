@@ -18,6 +18,9 @@ PATTERNS = {
     "aws_access_key": re.compile(rb"(?:AKIA|ASIA)[A-Z0-9]{16}"),
     "credential_url": re.compile(rb"https?://[^\s/:'\"]+:[^\s/@'\"]{10,}@"),
 }
+DOCUMENT_JSON = frozenset({
+    "redjohn-capabilities.json", "redjohn-schemas.json", "third-party-references.json",
+})
 
 
 def selected():
@@ -31,8 +34,10 @@ def selected():
                 raise ValueError("refuse_publishing_symlink:" + str(relative))
             if not path.is_file():
                 continue
-            if directory == "docs" and (path.suffix != ".md" or "changed-files" in path.name):
-                continue
+            if directory == "docs":
+                reviewed_json = len(relative.parts) == 2 and path.name in DOCUMENT_JSON
+                if (path.suffix != ".md" and not reviewed_json) or "changed-files" in path.name:
+                    continue
             if (path.name.startswith(".env") or path.suffix in {".log", ".pyc", ".sqlite3", ".db", ".pem", ".key"}
                     or path.name == ".DS_Store"):
                 continue

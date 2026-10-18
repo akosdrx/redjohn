@@ -12,6 +12,8 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+from redjohn.assessment.os_memory import MemoryLimitUnavailableError
+from redjohn.assessment.policy import EngagementPolicy
 from redjohn.config.settings import LlmSettings, Settings
 from redjohn.core import execution, runner
 from redjohn.tools.mcp import McpConnectionConfig, McpConnectionRequest
@@ -88,6 +90,40 @@ async def test_root_binds_actual_service_and_keeps_configured_mcps_inert(
     assert report["metrics"]["resources"]["active"] == {}
     assert root_environment.logging_closed == [True]
     root_environment.cleanup.assert_awaited_once_with("root-bound")
+
+
+async def test_required_memory_gate_precedes_model_and_sandbox_start(
+    root_environment, monkeypatch, tmp_path
+):
+    model_loop = AsyncMock()
+    monkeypatch.setattr(runner, "run_agent_loop", model_loop)
+    path = tmp_path / "approved.json"
+    path.write_text(
+        json.dumps(
+            {
+                "policy": EngagementPolicy(
+                    "required-memory", "operator", ("https://example.invalid",)
+                ).to_dict(),
+                "os_memory": {"delegated_root": str(tmp_path / "missing-delegation")},
+            }
+        )
+    )
+    path.chmod(0o600)
+    with pytest.raises(
+        MemoryLimitUnavailableError, match="inline_controller_requires_precontained_process"
+    ):
+        await runner.run_redjohn_scan(
+            scan_config=scan_for("https://example.invalid"),
+            image="must-not-start",
+            scan_id="required-memory",
+            assessment_config_path=path,
+            assessment_caller="operator",
+            mcp_connection_requests=[],
+        )
+    model_loop.assert_not_awaited()
+    root_environment.create.assert_not_awaited()
+    root_environment.cleanup.assert_not_awaited()
+    assert root_environment.logging_closed == []
 
 
 async def test_prompt_context_cannot_replace_host_approval(root_environment, monkeypatch):

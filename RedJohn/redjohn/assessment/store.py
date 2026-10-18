@@ -1541,6 +1541,14 @@ class AssessmentStore:
                     {"job_id": row["id"], "outcome": "unknown"},
                 )
                 count += 1
+        # A worker death may bypass the auth adapter's finally block. No
+        # private checkpoint is available here, so retain uncertainty rather
+        # than reopening an admitted one-use challenge.
+        if count:
+            with self._lock:
+                current_policy = self._capture_policy_fenced(self.db, policy)
+            if current_policy:
+                self.auth_flows.reconcile_expired(policy)
         return count
 
     def network_request_usage(self, policy: EngagementPolicy) -> int:

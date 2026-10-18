@@ -290,6 +290,13 @@ class SchemaToolConfig(SpecialistConfig):
             if not re.fullmatch(r"/[A-Za-z_][A-Za-z0-9_]{0,63}", name):
                 raise ValueError("schema_post_single_top_level_integer_required")
             name = name[1:]
+        elif surface.input_location == "xml":
+            selected_xml = re.fullmatch(
+                r"/[A-Za-z_][A-Za-z0-9_]{0,63}/@?([A-Za-z_][A-Za-z0-9_]{0,63})", name
+            )
+            if selected_xml is None:
+                raise ValueError("schema_post_single_reviewed_xml_integer_required")
+            name = selected_xml[1]
         if (
             not isinstance(shape, dict)
             or set(shape) != {"type", "properties", "required", "additionalProperties"}
@@ -404,7 +411,11 @@ class SchemaToolAdapter(SpecialistAdapter):
         return transform
 
     def unsupported_profiles(self) -> list[str]:
-        return ["file_part_mutation", "duplicate_selected_field", "general_stateful_or_graphql"]
+        return [
+            "binary_or_unreviewed_file_part_mutation",
+            "ambiguous_or_unreviewed_duplicate_selected_field",
+            "general_stateful_or_graphql_scanner_generation",
+        ]
 
     def argv(
         self, alias: str, proxy: str, surface: Surface, workspace: Path, _payload: str

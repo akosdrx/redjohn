@@ -58,6 +58,12 @@ REAL_FILES = {
     "test_mcp_target_live.py",
     "test_browser_auth_flow_live.py",
     "test_mcp_stdio_bounded_live.py",
+    "test_graphql_workflow_live.py",
+    "test_extended_input_replay_live.py",
+    "test_owned_memory_live.py",
+    "test_service_tools_live.py",
+    "test_preparation_native.py",
+    "test_preparation_scheduler.py",
 }
 
 REAL_CASES = {
@@ -88,11 +94,15 @@ LOCAL_PROCESS_FILES = {
     "test_mcp_authorization_live.py", "test_inventory_workflows_live.py",
     "test_workflow_execution_failures_live.py",
     "test_mcp_stdio_bounded_live.py",
+    "test_graphql_workflow_live.py",
+    "test_preparation_scheduler.py",
 }
 LOCAL_BROWSER_FILES = {"test_viewer_steering_live.py", "test_browser_auth_flow_live.py"}
 NAMESPACE_ONLY_FILES = {"test_source_tools_live.py", "test_legacy_shell_boundary_live.py",
-                        "test_network_tools_live.py", "test_mcp_target_live.py"}
-PLATFORM_FILES = {"test_legacy_shell_darwin_live.py": "Darwin"}
+                        "test_network_tools_live.py", "test_mcp_target_live.py",
+                        "test_service_tools_live.py", "test_preparation_native.py"}
+PLATFORM_FILES = {"test_legacy_shell_darwin_live.py": "Darwin", "test_owned_memory_live.py": "Linux"}
+KERNEL_ONLY_FILES = {"test_owned_memory_live.py"}
 LOCAL_PROCESS_CASES = {
     "test_real_stdio_unknown_mutation_is_never_replayed",
     "test_real_stdio_cancellation_terminates_worker_and_releases_lease",
@@ -133,7 +143,10 @@ def pytest_collection_modifyitems(config, items):
              "mock_contract" if doubles else "unit_contract_or_mixed")
         )
         if real and capabilities is not None:
-            required = ({"namespace_available"} if filename in NAMESPACE_ONLY_FILES else
+            required = ({"cgroup_available", "browser_available", "namespace_available"}
+                        if filename == "test_owned_memory_live.py" and name == "test_actual_browser_sdk_mcp_and_native_worker_inherit_the_owner_hard_fence" else
+                        {"cgroup_available"} if filename in KERNEL_ONLY_FILES else
+                        {"namespace_available"} if filename in NAMESPACE_ONLY_FILES else
                         {"browser_available"} if filename in LOCAL_BROWSER_FILES else
                         set() if filename in LOCAL_NUCLEI_FILES or filename in LOCAL_PROCESS_FILES or name in LOCAL_PROCESS_CASES
                         else {"cgroup_available"} if name in KERNEL_ONLY_CASES

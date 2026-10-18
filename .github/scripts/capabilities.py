@@ -2,6 +2,7 @@
 """Probe real runner boundaries; never disable host security controls."""
 
 import asyncio
+import argparse
 import json
 import os
 import platform
@@ -15,10 +16,13 @@ from redjohn.assessment.os_memory import LinuxMemoryBoundary
 from redjohn.assessment.resources import MIB
 
 
-async def probe():
-    result = {"available": False, "blockers": [], "uid": os.getuid(),
+async def probe(*, native_only=False):
+    from ci import identity
+    result = {**identity(), "available": False, "blockers": [], "uid": os.getuid(),
               "machine": platform.machine(), "kernel": platform.release(),
-              "namespace_available": False, "browser_available": False, "cgroup_available": False}
+              "namespace_available": False, "browser_available": False, "cgroup_available": False,
+              "validation_profile": "native_only" if native_only else "full",
+              "browser_probe": "not_requested_native_profile" if native_only else "required"}
     for name in ("apparmor_restrict_unprivileged_userns", "apparmor_restrict_unprivileged_unconfined", "unprivileged_userns_clone"):
         path = Path("/proc/sys/kernel") / name
         result[name] = path.read_text().strip() if path.exists() else "absent"
@@ -67,30 +71,31 @@ async def probe():
             result["cgroup_available"] = True
     except Exception as exc:
         result["blockers"].append("cgroup:" + type(exc).__name__ + ":" + str(exc))
-    try:
-        from playwright.async_api import async_playwright
-        async with async_playwright() as playwright:
-            browser = await playwright.chromium.launch(headless=True, chromium_sandbox=True,
-                executable_path=playwright.chromium.executable_path, timeout=15000)
-            try:
-                page = await browser.new_page()
-                await page.goto("chrome://sandbox", timeout=5000)
-                sandbox = await page.locator("body").inner_text()
-                result["chromium_sandbox_status"] = sandbox
-                for check in ("PID namespaces\tYes", "Network namespaces\tYes", "Seccomp-BPF sandbox\tYes"):
-                    assert check in sandbox
-                cdp = await browser.new_browser_cdp_session()
-                argv = (await cdp.send("Browser.getBrowserCommandLine"))["arguments"]
-                result["unsafe_chromium_flags_absent"] = not any(flag in argv for flag in (
-                    "--no-sandbox", "--disable-namespace-sandbox", "--disable-seccomp-filter-sandbox"))
-                assert result["unsafe_chromium_flags_absent"]
-                result["chromium_version"] = browser.version
-                result["browser_available"] = True
-            finally:
-                await browser.close()
-    except Exception as exc:
-        # Preserve the capability outcome without reflecting raw launch argv.
-        result["blockers"].append("sandboxed_chromium:" + type(exc).__name__)
+    if not native_only:
+        try:
+            from playwright.async_api import async_playwright
+            async with async_playwright() as playwright:
+                browser = await playwright.chromium.launch(headless=True, chromium_sandbox=True,
+                    executable_path=playwright.chromium.executable_path, timeout=15000)
+                try:
+                    page = await browser.new_page()
+                    await page.goto("chrome://sandbox", timeout=5000)
+                    sandbox = await page.locator("body").inner_text()
+                    result["chromium_sandbox_status"] = sandbox
+                    for check in ("PID namespaces\tYes", "Network namespaces\tYes", "Seccomp-BPF sandbox\tYes"):
+                        assert check in sandbox
+                    cdp = await browser.new_browser_cdp_session()
+                    argv = (await cdp.send("Browser.getBrowserCommandLine"))["arguments"]
+                    result["unsafe_chromium_flags_absent"] = not any(flag in argv for flag in (
+                        "--no-sandbox", "--disable-namespace-sandbox", "--disable-seccomp-filter-sandbox"))
+                    assert result["unsafe_chromium_flags_absent"]
+                    result["chromium_version"] = browser.version
+                    result["browser_available"] = True
+                finally:
+                    await browser.close()
+        except Exception as exc:
+            # Preserve the capability outcome without reflecting raw launch argv.
+            result["blockers"].append("sandboxed_chromium:" + type(exc).__name__)
     result["available"] = not result["blockers"]
     Path("artifacts").mkdir(exist_ok=True)
     Path("artifacts/capabilities.json").write_text(json.dumps(result, indent=2) + "\n")
@@ -99,4 +104,6 @@ async def probe():
 
 
 if __name__ == "__main__":
-    raise SystemExit(asyncio.run(probe()))
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--native-only", action="store_true")
+    raise SystemExit(asyncio.run(probe(native_only=parser.parse_args().native_only)))

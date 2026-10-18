@@ -165,6 +165,7 @@ class PinnedToolRunner:
             "trivy",
             "naabu",
             "dnsx",
+            "nmap",
         }:
             config["max_file_bytes"] = 1024 * 1024
         source = Path(__file__).parents[1].joinpath("tools/hunt/bounded_worker.py").read_text()

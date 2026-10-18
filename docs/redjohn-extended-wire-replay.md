@@ -98,6 +98,7 @@ x64/ARM64 matrix. Before/after JUnit, metrics and hashes are retained separately
 under `docs/measurements/master-completion-20261018/extended-wire/`.
 
 Selected specialist input mutation for these new XML/codec/file profiles is a
-separate capability boundary. Existing TInjA/Schemathesis/OAST UTF-8 POST support
-continues to work; this change does not claim unverified extended profiles for
-those engines.
+separate capability boundary. Its reviewed selectors, exact byte-preservation
+rules and targeted actual TInjA/Schemathesis/owned-OAST results are documented in
+[the specialist input profile](redjohn-extended-input-replay.md). Those local
+results do not replace the required final hosted x64/ARM64 validation.

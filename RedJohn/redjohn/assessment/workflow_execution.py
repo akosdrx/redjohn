@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, Any
 from redjohn.assessment.auth_replay import AuthReplayVault
 from redjohn.assessment.browser_proxy import BrowserEgressProxy
 from redjohn.assessment.browser_tls import BrowserTLSConfig
+from redjohn.assessment.graphql_workflow import GraphQLContract, GraphQLExecution
 from redjohn.assessment.inventory import InventoryConflictError
 from redjohn.assessment.models import AdapterResult, JobSpec, Surface, error_record, stable_key
 from redjohn.assessment.policy import EngagementPolicy, PolicyDenied, origin_for
@@ -38,6 +39,8 @@ class WorkflowExecutionConfig:
     timeout_seconds: float = 10
     max_response_bytes: int = 256 * 1024
     definitions: tuple[WorkflowDefinition, ...] = ()
+    graphql_contracts: tuple[GraphQLContract, ...] = ()
+    private_state_file: Path | None = None
 
     def __post_init__(self) -> None:
         if (
@@ -51,6 +54,18 @@ class WorkflowExecutionConfig:
             or len(self.definitions) > 16
             or any(
                 not isinstance(definition, WorkflowDefinition) for definition in self.definitions
+            )
+            or not isinstance(self.graphql_contracts, tuple)
+            or len(self.graphql_contracts) > 32
+            or any(not isinstance(contract, GraphQLContract) for contract in self.graphql_contracts)
+            or len({contract.name for contract in self.graphql_contracts})
+            != len(self.graphql_contracts)
+            or (
+                self.graphql_contracts
+                and (
+                    not isinstance(self.private_state_file, Path)
+                    or not self.private_state_file.is_absolute()
+                )
             )
         ):
             raise ValueError("invalid_workflow_execution_config")
@@ -69,7 +84,36 @@ class WorkflowExecutionConfig:
             converted["definitions"] = tuple(
                 WorkflowDefinition.from_mapping(item) for item in converted["definitions"]
             )
+        if "graphql_contracts" in converted:
+            if not isinstance(converted["graphql_contracts"], list):
+                raise ValueError("invalid_graphql_contract_config")
+            converted["graphql_contracts"] = tuple(
+                GraphQLContract.from_mapping(item) for item in converted["graphql_contracts"]
+            )
+        if "private_state_file" in converted:
+            if not isinstance(converted["private_state_file"], str):
+                raise ValueError("invalid_graphql_private_state_path")
+            converted["private_state_file"] = Path(converted["private_state_file"])
         return cls(**converted)
+
+    def validate(self, policy: EngagementPolicy) -> None:
+        contracts = {item.name: item for item in self.graphql_contracts}
+        if contracts:
+            from redjohn.assessment.workflow_inputs import PrivateWorkflowState  # noqa: PLC0415 - explicit profile
+
+            assert self.private_state_file is not None
+            PrivateWorkflowState(self.private_state_file, policy)
+        for definition in self.definitions:
+            for step in definition.steps:
+                step.authorize(policy)
+                if step.graphql_contract:
+                    contract = contracts.get(step.graphql_contract)
+                    if (
+                        contract is None
+                        or step.method != "POST"
+                        or ((contract.operation_type == "query") != (step.effect == "read_only"))
+                    ):
+                        raise ValueError("workflow_graphql_contract_not_selected")
 
 
 def reviewed_step(
@@ -133,11 +177,13 @@ class WorkflowExecutionAdapter:
         tls_config: BrowserTLSConfig | None = None,
         auth_vault_file: Path,
     ) -> None:
+        config.validate(policy)
         self.config, self.policy, self.store = config, policy, store
         self.rate_limits, self.tls_config = rate_limits, tls_config or BrowserTLSConfig()
         self.auth_vault_file = Path(auth_vault_file)
         # Construction validates private-file protection, not only existence.
         AuthReplayVault.from_file(self.auth_vault_file, policy)
+        self.graphql_contracts = {item.name: item for item in config.graphql_contracts}
         for definition in config.definitions:
             store.inventory.register_workflow(policy, definition)
         self._proxies: set[BrowserEgressProxy] = set()
@@ -221,6 +267,23 @@ class WorkflowExecutionAdapter:
             if surface.method == "POST":
                 binding.validate_capture(surface.content_type, surface.body_sha256)
                 binding.body_for_mutation()
+            graphql = None
+            if step.graphql_contract:
+                contract = self.graphql_contracts.get(step.graphql_contract)
+                if (
+                    contract is None
+                    or surface.method != "POST"
+                    or ((contract.operation_type == "query") != (step.effect == "read_only"))
+                ):
+                    raise PolicyDenied("workflow_graphql_contract_not_selected")
+                assert self.config.private_state_file is not None
+                graphql = GraphQLExecution(
+                    contract,
+                    binding,
+                    self.policy,
+                    self.store.inventory.workflow(self.policy, instance_id),
+                    self.config.private_state_file,
+                )
             timeout = min(self.config.timeout_seconds, spec.timeout_seconds)
             if self.policy.deadline:
                 timeout = min(timeout, self.policy.deadline - time.time())
@@ -264,6 +327,16 @@ class WorkflowExecutionAdapter:
                 if self.rate_limits is not None:
                     self.rate_limits.observe(origin_for(url), status, headers)
 
+            def rewrite(
+                url: str, method: str, headers: list[tuple[str, str]], body: bytes
+            ) -> tuple[list[tuple[str, str]], bytes]:
+                rewritten, original = binding.rewrite_request(url, method, headers, body)
+                if graphql is None:
+                    return rewritten, original
+                return [
+                    (name, value) for name, value in rewritten if name.lower() != "content-length"
+                ] + [("Content-Length", str(len(graphql.body)))], graphql.body
+
             proxy = BrowserEgressProxy(
                 self.policy,
                 max_connections=2,
@@ -272,7 +345,7 @@ class WorkflowExecutionAdapter:
                 tls_config=self.tls_config,
                 request_admission=admit,
                 request_policy=lambda url, method: binding.validate(url, method, self.policy),
-                request_replay=binding.rewrite_request,
+                request_replay=rewrite,
                 on_response=observe,
                 on_complete=complete,
             )
@@ -285,6 +358,7 @@ class WorkflowExecutionAdapter:
                 body = HOST_REPLAY_BODY_MARKER.encode("ascii")
             digest = hashlib.sha256()
             size = 0
+            graphql_response = bytearray()
             async with asyncio.timeout(timeout):
                 async with (
                     httpx.AsyncClient(
@@ -305,12 +379,20 @@ class WorkflowExecutionAdapter:
                         if size > self.config.max_response_bytes:
                             raise ValueError("workflow_response_budget_exceeded")  # noqa: TRY301 - single lifecycle
                         digest.update(chunk)
+                        if graphql is not None:
+                            if size > 256 * 1024:
+                                raise ValueError("graphql_response_budget_exceeded")  # noqa: TRY301 - one admitted lifecycle
+                            graphql_response.extend(chunk)
             self._job_fence(job, spec)
             if not admitted or not framed or proxy.upstream_tls_failures:
                 return self._result("workflow_response_not_proven_complete", admitted=admitted)
             valid = response.status_code in step.expected_statuses and (
                 not step.response_sha256 or digest.hexdigest() == step.response_sha256
             )
+            if graphql is not None:
+                valid = valid and graphql.observe(
+                    bytes(graphql_response), content_type=response.headers.get("content-type", "")
+                )
             outcome_ref = self.store.inventory.record_http_outcome(
                 self.policy,
                 instance_id,
@@ -344,6 +426,7 @@ class WorkflowExecutionAdapter:
                     "requests": proxy.forwarded_requests,
                     "response_bytes": size,
                     "automatic_replay": False,
+                    "graphql_contract": step.graphql_contract,
                 },
             )
         except asyncio.CancelledError:

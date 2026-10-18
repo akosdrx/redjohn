@@ -91,7 +91,9 @@ class XMLTokenSpan:
             raise XMLBodyDenied("token_not_representable_in_charset") from None
 
 
-def xml_token_span(wire: WireText, selector: str, occurrence: int) -> XMLTokenSpan:  # noqa: PLR0912, PLR0915 - bounded lossless token walk
+def xml_token_span(  # noqa: PLR0912, PLR0915 - bounded lossless token walk
+    wire: WireText, selector: str, occurrence: int, *, unique: bool = False
+) -> XMLTokenSpan:
     inspect_xml(wire)
     if (
         not isinstance(selector, str)
@@ -118,7 +120,7 @@ def xml_token_span(wire: WireText, selector: str, occurrence: int) -> XMLTokenSp
         raise XMLBodyDenied("invalid_xml_selector")
     text = wire.text
     frames: list[tuple[str, int, bool]] = []
-    spans: list[tuple[int, int, str]] = []
+    spans: list[tuple[int, int, str] | None] = []
     index = 0
     while index < len(text):
         opening = text.find("<", index)
@@ -148,9 +150,11 @@ def xml_token_span(wire: WireText, selector: str, occurrence: int) -> XMLTokenSp
         if tag.startswith("/"):
             name, content_start, has_child = frames.pop()
             path = [f[0] for f in frames] + [name]
-            if attribute is None and path == parts and not has_child:
+            if attribute is None and path == parts:
                 inner = text[content_start:opening]
-                if "<" not in inner:
+                if has_child:
+                    spans.append(None)
+                elif "<" not in inner:
                     spans.append((content_start, opening, "text"))
                 elif (
                     inner.startswith("<![CDATA[")
@@ -159,7 +163,7 @@ def xml_token_span(wire: WireText, selector: str, occurrence: int) -> XMLTokenSp
                 ):
                     spans.append((content_start + 9, opening - 3, "cdata"))
                 else:
-                    raise XMLBodyDenied("xml_selected_value_not_contiguous")
+                    spans.append(None)
         else:
             if frames:
                 name, content_start, _ = frames[-1]
@@ -172,10 +176,18 @@ def xml_token_span(wire: WireText, selector: str, occurrence: int) -> XMLTokenSp
                     for match in _ATTRIBUTE.finditer(tag)
                     if match[1] == attribute
                 )
-            if not tag.rstrip().endswith("/"):
+            if tag.rstrip().endswith("/"):
+                if attribute is None and path == parts:
+                    spans.append(None)
+            else:
                 frames.append((name, end + 1, False))
         index = end + 1
     if occurrence >= len(spans):
         raise XMLBodyDenied("xml_selector_not_found")
-    start, end, kind = spans[occurrence]
+    if unique and len(spans) != 1:
+        raise XMLBodyDenied("xml_selector_ambiguous")
+    selected = spans[occurrence]
+    if selected is None:
+        raise XMLBodyDenied("xml_selected_value_not_contiguous")
+    start, end, kind = selected
     return XMLTokenSpan(wire.byte_offset(start), wire.byte_offset(end), kind, wire.encoding)

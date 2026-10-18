@@ -9,7 +9,7 @@ from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Any
 
 from redjohn.assessment.auth_replay import AuthReplayVault
-from redjohn.assessment.input_replay import BODY_CAPABILITIES, MEDIA_LOCATIONS
+from redjohn.assessment.input_replay import BODY_CAPABILITIES, input_location_matches
 from redjohn.assessment.models import JobSpec, Surface
 from redjohn.assessment.policy import PolicyDenied
 from redjohn.assessment.session_recovery import (
@@ -118,6 +118,7 @@ class _AdapterRule:
     capability: str
     input_location: str
     input_name: str
+    input_occurrence: int | None = None
 
     def matches(self, surface: Surface) -> bool:
         return (
@@ -232,8 +233,21 @@ class ContinuousBrowserWorkflow:
         for raw in value:
             if (
                 not isinstance(raw, dict)
-                or set(raw) != set(_AdapterRule.__dataclass_fields__)
-                or any(not isinstance(v, str) or len(v.encode()) > 4096 for v in raw.values())
+                or not set(_AdapterRule.__dataclass_fields__) - {"input_occurrence"}
+                <= set(raw)
+                <= set(_AdapterRule.__dataclass_fields__)
+                or any(
+                    not isinstance(v, str) or len(v.encode()) > 4096
+                    for k, v in raw.items()
+                    if k != "input_occurrence"
+                )
+                or (
+                    "input_occurrence" in raw
+                    and (
+                        type(raw["input_occurrence"]) is not int
+                        or not 0 <= raw["input_occurrence"] <= 127
+                    )
+                )
             ):
                 raise ValueError("continuous_adapter_invalid_rule")
             rule = _AdapterRule(**raw)
@@ -243,7 +257,9 @@ class ContinuousBrowserWorkflow:
                 rule.actor_id == "anonymous"
                 or rule.capability not in BODY_CAPABILITIES
                 or rule.capability not in self.adapter_versions
-                or rule.input_location != MEDIA_LOCATIONS.get(rule.content_type)
+                or not input_location_matches(
+                    rule.content_type, rule.input_location, routing_only=True
+                )
                 or not rule.input_name
                 or len(rule.input_name.encode()) > 512
                 or rule in rules
@@ -355,7 +371,10 @@ class ContinuousBrowserWorkflow:
                 )
             for adapter in adapter_matches:
                 selected = replace(
-                    surface, input_location=adapter.input_location, input_name=adapter.input_name
+                    surface,
+                    input_location=adapter.input_location,
+                    input_name=adapter.input_name,
+                    input_occurrence=adapter.input_occurrence,
                 )
                 selected_id = self.store.upsert_surface(self.policy.engagement_id, selected)
                 hint = self.store.evidence_put(

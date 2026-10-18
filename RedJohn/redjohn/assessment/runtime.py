@@ -70,9 +70,24 @@ class AssessmentRuntime:
         workflow_execution_config: dict[str, Any] | None = None,
         naabu_config: dict[str, Any] | None = None,
         dnsx_config: dict[str, Any] | None = None,
+        nmap_config: dict[str, Any] | None = None,
+        prowler_config: dict[str, Any] | None = None,
+        kube_bench_config: dict[str, Any] | None = None,
         browser_auth_flow_config: dict[str, Any] | None = None,
     ) -> None:
         policy.authorize(caller)
+        nmap_service_config = None
+        if nmap_config is not None:
+            from redjohn.assessment.service_tools import NmapServiceConfig  # noqa: PLC0415
+
+            nmap_service_config = NmapServiceConfig.from_mapping(nmap_config)
+        selected_preparations = []
+        if prowler_config is not None or kube_bench_config is not None:
+            from redjohn.assessment.preparation_tools import PreparationConfig  # noqa: PLC0415
+
+            for tool, document in (("prowler", prowler_config), ("kube-bench", kube_bench_config)):
+                if document is not None:
+                    selected_preparations.append(PreparationConfig.from_mapping(tool, document))
         auth_flow_config = None
         if browser_auth_flow_config is not None:
             from redjohn.assessment.browser_auth_flow import BrowserAuthFlowConfig  # noqa: PLC0415
@@ -89,6 +104,7 @@ class AssessmentRuntime:
             if auth_vault_file is None:
                 raise ValueError("workflow_execution_private_vault_required")
             workflow_config = WorkflowExecutionConfig.from_mapping(workflow_execution_config)
+            workflow_config.validate(policy)
             AuthReplayVault.from_file(Path(auth_vault_file), policy)
         if continuous_replay is not None and not isinstance(continuous_replay, dict):
             raise ValueError("continuous_replay_invalid_configuration")
@@ -131,6 +147,9 @@ class AssessmentRuntime:
             browser_auth_flow_configured=auth_flow_config is not None,
             naabu_config=naabu_config,
             dnsx_config=dnsx_config,
+            nmap_config=nmap_config,
+            prowler_config=prowler_config,
+            kube_bench_config=kube_bench_config,
         )
         self.technology = TechnologyDetector(store.path)
 
@@ -215,6 +234,15 @@ class AssessmentRuntime:
                 tls_config=browser_tls,
                 auth_vault_file=Path(auth_vault_file),
             )
+        if nmap_service_config is not None:
+            from redjohn.assessment.service_tools import NmapServiceAdapter  # noqa: PLC0415
+
+            adapters["nmap_services"] = NmapServiceAdapter(nmap_service_config, policy, store)
+        if selected_preparations:
+            from redjohn.assessment.preparation_tools import PreparationAdapter  # noqa: PLC0415
+
+            for preparation in selected_preparations:
+                adapters[preparation.capability] = PreparationAdapter(preparation, policy, store)
         if naabu_config is not None or dnsx_config is not None:
             from redjohn.assessment.network_tools import (  # noqa: PLC0415 - selected engines only
                 CAPABILITIES as NETWORK_TOOLS,

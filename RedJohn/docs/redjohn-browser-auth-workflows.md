@@ -142,6 +142,15 @@ the ready CAS; the ready session UPDATE must change exactly one row. A failure
 in the subsequent capture/bootstrap callback downgrades the committed identity
 to uncertain rather than leaving a successful-looking session.
 
+Restart also reconciles at most 128 interrupted authentication flows. An exact
+still-leased producing job remains untouched. A dead producer with no unsettled
+admission can become `awaiting_input` only when its protected private checkpoint
+matches the committed action index and identity; a checkpoint ahead of SQLite,
+missing required checkpoint, legacy unknown producer, or admitted request stays
+`uncertain`. The normal scheduler's expired-job recovery also fences abandoned
+auth flows conservatively when no protected checkpoint is available. No path
+resets consumed one-use references or automatically repeats the request.
+
 When reviewed `browser_capture_file`, `auth_vault_file`, and optional continuous
 replay rules are configured, the capture service validates the real
 `auth_flow_outcome`, current ready flow/session, producing scheduler job and
@@ -174,7 +183,7 @@ not live authentication evidence. It checks one-use persistence, cancellation
 admission, callback failure, session CAS, private-file CAS, actor/tenant binding,
 removed plans and independent network-budget concurrency/restart fences.
 
-The four real cases use an owned CA-verified HTTPS application and actual
+The five real cases use an owned CA-verified HTTPS application and actual
 sandboxed Chromium. The positive case performs two actors' login/MFA/whoami,
 Alice's missing-input pause and SQLite restart, private session restore,
 automatic browser POST capture, two actual pinned Nuclei positive replays and
@@ -183,6 +192,10 @@ two fixed retests, restart deduplication, and logout/revocation. The oracle chec
 replay POSTs, 8 settled one-use references, and zero final server sessions or
 challenges. JUnit suite properties retain these counts. Negative real cases
 cover wrong MFA, an off-scope form blocked before any POST, and wrong identity.
+The fifth case cancels a real MFA POST after the owned server has consumed its
+code and created a session but before returning a response. It proves local
+cleanup and a persistent uncertain outcome with no repeated POST; the server's
+unknown session is reported explicitly and is not described as rolled back.
 Uncertain negative application sessions are not described as rolled back.
 
 All cases assert browser context cleanup; runtime/fixture teardown closes the

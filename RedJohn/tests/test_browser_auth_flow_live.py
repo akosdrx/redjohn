@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import html
 import json
@@ -10,6 +11,7 @@ import time
 from collections import Counter
 from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler
+from threading import Event
 from urllib.parse import parse_qs
 
 import pytest
@@ -94,8 +96,10 @@ def auth_plan(origin, actor, *, logout=False):
     }
 
 
-@pytest.mark.parametrize("case", ["positive", "wrong_mfa", "offscope_form", "wrong_identity"])
-async def test_actual_chromium_mfa_private_input_restart_two_actors_capture_and_logout(  # noqa: PLR0915 - actual owned lifecycle
+@pytest.mark.parametrize(
+    "case", ["positive", "wrong_mfa", "offscope_form", "wrong_identity", "cancel_mfa"]
+)
+async def test_actual_chromium_mfa_private_input_restart_two_actors_capture_and_logout(  # noqa: PLR0912, PLR0915 - actual owned lifecycle
     tmp_path, monkeypatch, record_testsuite_property, case
 ):
     monkeypatch.setenv("REDJOHN_HOST_RESOURCE_DB", str(tmp_path / "host-pool.db"))
@@ -104,6 +108,7 @@ async def test_actual_chromium_mfa_private_input_restart_two_actors_capture_and_
     nonces, challenges, sessions, used_codes = {}, {}, {}, set()
     seen = Counter()
     oracle = {"fixed": False}
+    mfa_admitted, release_mfa = Event(), Event()
 
     class Handler(BaseHTTPRequestHandler):
         def cookies(self):
@@ -206,14 +211,23 @@ async def test_actual_chromium_mfa_private_input_restart_two_actors_capture_and_
                     challenges.pop(cookies["challenge"])
                     session = secrets.token_urlsafe(32)
                     sessions[session] = actor
-                    self.respond(
-                        200,
-                        b'<html><body id="authenticated">Authenticated</body></html>',
-                        cookie=[
-                            "session=" + session + "; Secure; HttpOnly; SameSite=Strict; Path=/",
-                            "challenge=; Max-Age=0; Secure; HttpOnly; Path=/",
-                        ],
-                    )
+                    if case == "cancel_mfa":
+                        mfa_admitted.set()
+                        release_mfa.wait(10)
+                    try:
+                        self.respond(
+                            200,
+                            b'<html><body id="authenticated">Authenticated</body></html>',
+                            cookie=[
+                                "session="
+                                + session
+                                + "; Secure; HttpOnly; SameSite=Strict; Path=/",
+                                "challenge=; Max-Age=0; Secure; HttpOnly; Path=/",
+                            ],
+                        )
+                    except OSError:
+                        if case != "cancel_mfa":
+                            raise
                 else:
                     self.respond(403)
             elif (
@@ -427,6 +441,56 @@ async def test_actual_chromium_mfa_private_input_restart_two_actors_capture_and_
             )
             private_json(inputs, input_data)
             async with ConfiguredAssessment(config, output, caller="operator") as assessment:
+                if case == "cancel_mfa":
+                    current = assessment.store.auth_flows.get(assessment.policy, alice)
+                    submitted = await assessment.runtime.control.call(
+                        "auth_flow_submit",
+                        {
+                            "policy_revision": "1",
+                            "flow_id": alice,
+                            "expected_revision": current["revision"],
+                        },
+                    )
+                    assert submitted["ok"], submitted
+                    job_id = submitted["result"]["job_ids"][0]
+                    running = asyncio.create_task(
+                        assessment.runtime.scheduler.run_until_idle(max_jobs=1)
+                    )
+                    try:
+                        async with asyncio.timeout(10):
+                            while not mfa_admitted.is_set():
+                                if running.done():
+                                    pytest.fail("actual MFA request did not reach the owned app")
+                                await asyncio.sleep(0.02)
+                        assert sessions and used_codes == {"alice"}
+                        await asyncio.wait_for(
+                            assessment.runtime.scheduler.cancel(job_id), timeout=5
+                        )
+                        assert await asyncio.wait_for(running, timeout=5) == [job_id]
+                    finally:
+                        release_mfa.set()
+                        if not running.done():
+                            running.cancel()
+                        await asyncio.gather(running, return_exceptions=True)
+                    assert (
+                        assessment.store.auth_flows.get(assessment.policy, alice)["status"]
+                        == "uncertain"
+                    )
+                    assert (
+                        assessment.store.db.execute(
+                            "SELECT count(*) FROM rj_auth_input_use WHERE state='admitted'"
+                        ).fetchone()[0]
+                        == 2
+                    )
+                    assert assessment.runtime.browser.healthcheck()["active_contexts"] == 0
+                    assert assessment.runtime.governor.snapshot()["active"] == {}
+                    assert await assessment.runtime.scheduler.run_until_idle(max_jobs=2) == []
+                    assert seen[("POST", "/login")] == seen[("POST", "/mfa")] == 1
+                    record_testsuite_property("browser_auth_actual_cancelled_mfa_posts", 1)
+                    record_testsuite_property(
+                        "browser_auth_cancel_unknown_server_sessions", len(sessions)
+                    )
+                    return
                 result = await submit(assessment, alice)
                 if case in {"wrong_mfa", "wrong_identity"}:
                     assert result["execution_status"] == "failed", result
@@ -607,5 +671,6 @@ async def test_actual_chromium_mfa_private_input_restart_two_actors_capture_and_
                 assessment.runtime if False else True
             )  # closed runtime is intentionally inaccessible.
     finally:
+        release_mfa.set()
         assert not fixture.thread.is_alive()
         assert not fixture.certificate_directory.exists()

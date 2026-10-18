@@ -75,6 +75,8 @@ class BrowserAuthFlowAdapter:
         self.rate_limits = rate_limits
         self.plan_ids = tuple(store.auth_flows.register(policy, plan) for plan in config.plans)
         self._active_task: asyncio.Task[Any] | None = None
+        private = PrivateWorkflowState(config.private_state_file, policy)
+        store.auth_flows.reconcile_expired(policy, private.data["flows"])
         self._restore_ready_sessions()
 
     def _restore_ready_sessions(self) -> None:
@@ -153,6 +155,9 @@ class BrowserAuthFlowAdapter:
             spec.capability != "browser_auth_flow"
             or spec.idempotent
             or set(spec.options) != {"flow_id", "expected_revision"}
+            or not isinstance(spec.options["flow_id"], str)
+            or type(spec.options["expected_revision"]) is not int
+            or spec.options["expected_revision"] < 1
         ):
             return AdapterResult(
                 "failed",

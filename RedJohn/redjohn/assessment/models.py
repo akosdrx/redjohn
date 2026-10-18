@@ -67,6 +67,7 @@ class Surface:
     network_port: str = ""
     dns_name: str = ""
     dns_type: str = ""
+    input_occurrence: int | None = None
 
     def __post_init__(self) -> None:  # noqa: PLR0912 - independent typed resource validation
         if self.source not in {"observed", "imported", "inferred"}:
@@ -75,6 +76,13 @@ class Surface:
             raise ValueError("unsupported_http_method")
         if self.body_sha256 and not re.fullmatch(r"[0-9a-f]{64}", self.body_sha256):
             raise ValueError("invalid_request_body_digest")
+        if self.input_occurrence is not None and (
+            type(self.input_occurrence) is not int
+            or not 0 <= self.input_occurrence <= 127
+            or self.method != "POST"
+            or self.input_location not in {"json", "form", "multipart", "multipart_file", "xml"}
+        ):
+            raise ValueError("invalid_body_input_occurrence")
         if self.resource_kind not in {"", "source_artifact", "network_endpoint", "dns_name"}:
             raise ValueError("unsupported_surface_resource_kind")
         if self.resource_kind == "source_artifact":
@@ -117,7 +125,8 @@ class Surface:
             raise ValueError("network_resource_kind_required")
         if any(
             not isinstance(value, str) or len(value.encode()) > 8192
-            for value in asdict(self).values()
+            for name, value in asdict(self).items()
+            if name != "input_occurrence"
         ):
             raise ValueError("surface_field_too_large")
 
@@ -129,6 +138,7 @@ class Surface:
                 k: v
                 for k, v in asdict(self).items()
                 if k not in {"request_ref", "source"}
+                and not (k == "input_occurrence" and v is None)
                 and not (k == "body_sha256" and not v)
                 and not (
                     k

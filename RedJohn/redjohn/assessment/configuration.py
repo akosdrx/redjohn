@@ -60,6 +60,11 @@ def validate_configuration(value: object) -> dict[str, Any]:
         "naabu",
         "dnsx",
         "network_jobs",
+        "nmap",
+        "service_jobs",
+        "prowler",
+        "kube_bench",
+        "preparation_jobs",
         "browser_auth_flow",
         "workflow_execution",
         "jobs",
@@ -78,6 +83,8 @@ def enqueue_configured_jobs(
 ) -> None:
     specs = []
     specs.extend(_configured_network_jobs(store, policy, config))
+    specs.extend(_configured_service_jobs(store, policy, config))
+    specs.extend(_configured_preparation_jobs(store, policy, config))
     for seed in config.get("seeds", []):
         if not isinstance(seed, dict) or set(seed) - {
             "url",
@@ -201,6 +208,48 @@ def enqueue_configured_jobs(
     store.submit(policy, specs)
 
 
+def _configured_preparation_jobs(
+    store: AssessmentStore, policy: EngagementPolicy, config: dict[str, Any]
+) -> list[JobSpec]:
+    from redjohn.assessment.preparation_tools import (  # noqa: PLC0415 - explicit local inputs only
+        CAPABILITIES,
+        PreparationConfig,
+        preparation_job,
+    )
+
+    jobs = config.get("preparation_jobs", [])
+    if not isinstance(jobs, list) or len(jobs) > 64:
+        raise ValueError("invalid_preparation_job_list")
+    specs = []
+    for item in jobs:
+        if (
+            not isinstance(item, dict)
+            or set(item) - {"capability", "timeout_seconds", "retest_revision"}
+            or item.get("capability") not in CAPABILITIES.values()
+        ):
+            raise ValueError("invalid_preparation_job")
+        tool = next(
+            tool for tool, capability in CAPABILITIES.items() if capability == item["capability"]
+        )
+        document = config.get("kube_bench" if tool == "kube-bench" else tool)
+        if not isinstance(document, dict):
+            raise TypeError("explicit_preparation_configuration_required")
+        selected = PreparationConfig.from_mapping(tool, document)
+        timeout = item.get("timeout_seconds", 20)
+        if type(timeout) not in {int, float} or not 1 <= timeout <= 30:
+            raise ValueError("invalid_preparation_job_timeout")
+        specs.append(
+            preparation_job(
+                selected,
+                policy,
+                store,
+                timeout_seconds=timeout,
+                retest_revision=item.get("retest_revision", ""),
+            )
+        )
+    return specs
+
+
 def _configured_network_jobs(
     store: AssessmentStore,
     policy: EngagementPolicy,
@@ -271,6 +320,66 @@ def _configured_network_jobs(
                 template_version=selected.revision,
                 policy_revision=policy.revision,
                 timeout_seconds=item.get("timeout_seconds", 30),
+                retest_revision=item.get("retest_revision", ""),
+            )
+        )
+    return specs
+
+
+def _configured_service_jobs(
+    store: AssessmentStore, policy: EngagementPolicy, config: dict[str, Any]
+) -> list[JobSpec]:
+    from redjohn.assessment.service_tools import (  # noqa: PLC0415 - explicitly selected jobs
+        NmapServiceConfig,
+        require_open_observation,
+    )
+
+    jobs = config.get("service_jobs", [])
+    if not isinstance(jobs, list) or len(jobs) > 64:
+        raise ValueError("invalid_service_job_list")
+    specs = []
+    for item in jobs:
+        if (
+            not isinstance(item, dict)
+            or set(item)
+            - {"address", "port", "open_evidence_ref", "timeout_seconds", "retest_revision"}
+            or not isinstance(item.get("address"), str)
+            or not isinstance(item.get("port"), str)
+            or not isinstance(item.get("open_evidence_ref"), str)
+            or not isinstance(config.get("nmap"), dict)
+        ):
+            raise ValueError("explicit_observed_service_job_required")
+        selected = NmapServiceConfig.from_mapping(config["nmap"])
+        asset = store.inventory.record_asset(
+            policy, kind="ip_address", locator=item["address"], source="imported"
+        )
+        surface = Surface(
+            "",
+            resource_kind="network_endpoint",
+            asset_ref=asset,
+            network_address=item["address"],
+            network_port=item["port"],
+            input_location="network_endpoint",
+            input_name=selected.revision,
+            source="imported",
+            workflow_state="approved_seed",
+        )
+        policy.check_surface(surface)
+        require_open_observation(store, policy, surface, item["open_evidence_ref"])
+        sid = store.upsert_surface(policy.engagement_id, surface)
+        timeout = item.get("timeout_seconds", 20)
+        if type(timeout) not in {int, float} or not 1 <= timeout <= 30:
+            raise ValueError("invalid_service_job_timeout")
+        specs.append(
+            JobSpec(
+                sid,
+                "service_identification",
+                "nmap_services",
+                tool_version=selected.version,
+                template_version=selected.revision,
+                policy_revision=policy.revision,
+                options={"open_evidence_ref": item["open_evidence_ref"]},
+                timeout_seconds=timeout,
                 retest_revision=item.get("retest_revision", ""),
             )
         )
@@ -394,7 +503,7 @@ class ConfiguredAssessment:
         metrics["performance"] = runtime.scheduler.monitor.snapshot()
         metrics["resources"] = runtime.governor.snapshot()
         metrics["resources"]["os_memory"] = (
-            os_boundary.snapshot() if os_boundary is not None else {"enforced": False}
+            os_boundary.snapshot() if os_boundary is not None else metrics["resources"]["os_memory"]
         )
         return metrics
 
@@ -452,6 +561,9 @@ class ConfiguredAssessment:
                 browser_auth_flow_config=config.get("browser_auth_flow"),
                 naabu_config=config.get("naabu"),
                 dnsx_config=config.get("dnsx"),
+                nmap_config=config.get("nmap"),
+                prowler_config=config.get("prowler"),
+                kube_bench_config=config.get("kube_bench"),
             )
             self.policy = self._runtime.policy
             enqueue_configured_jobs(self.runtime, store, policy, config)

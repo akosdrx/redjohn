@@ -9,7 +9,6 @@ from __future__ import annotations
 import json
 import time
 import uuid
-from dataclasses import asdict
 from typing import TYPE_CHECKING, Any, cast
 from urllib.parse import urlsplit
 
@@ -577,7 +576,7 @@ class InventoryRepository:
         for step in definition.steps:
             step.authorize(policy)
         identity = stable_key([policy.engagement_id, definition.name, definition.revision])
-        encoded = json.dumps(asdict(definition), sort_keys=True, separators=(",", ":"))
+        encoded = json.dumps(definition.to_mapping(), sort_keys=True, separators=(",", ":"))
         with self.store.transaction() as db:
             self._fence(db, policy)
             old = db.execute(

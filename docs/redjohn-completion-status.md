@@ -14,37 +14,66 @@ nem helyettesíti a teljes rendszer elfogadását. A részletes követelménykap
 
 ## Aktuális fejlesztési és igazolási határ
 
-A legutóbbi teljesen lezárt Ubuntu-bizonyíték továbbra is a
-`57141b25ed32169e24d0065b4bc21a0422e83fab` commit. Az új
-`5cfd51d286c65558b92a6c070bcd7edd5a8b432b` snapshot
-[tényleges Actions-futásában](https://github.com/akosdrx/redjohn/actions/runs/39144694827)
-az x64 és ARM64 Python-/frontend-/Go-ellenőrzés és a valódi integrációs szakasz
-már átment; mindkét job a hosszú vegyes terhelést futtatja. A teljes új futás
-ezért még nem nevezhető sikeresnek.
+A legutóbbi teljesen lezárt, sikeres Ubuntu-mátrix a
+`5cfd51d286c65558b92a6c070bcd7edd5a8b432b` source commit
+[39144694827 futása](https://github.com/akosdrx/redjohn/actions/runs/39144694827):
+platformonként 1281 Python-teszt, ebből 333 valódi integráció; 14 frontend
+(6 fetch-dublőr), 21 Go-eset és 120 valódi vegyes browser/scanner ciklus.
+Hiba és teszt-skip nincs. Ez az adott korábbi SHA bizonyítéka.
 
-A következő, helyi forrásállapot már tartalmazza a Semgrep/Trivy offline
-source-adaptereket, az asset/service/workflow inventoryt és az autentikált,
-tartós workflow-végrehajtót. A 27 új inventory/workflow esetből 6 valódi HTTPS;
-két actor 8 CRUD-lépése, 1 scheduled refresh és SQLite restart után a maradó
-objektumok/lease-ek/foglalások száma 0. A natív source-engine-ek négy esete
-macOS-en hiányzó Linux-képesség miatt blokkolt, nem sikeres. Ezek a következő
-hosted futásban kötelezők.
+A későbbi [phase 2](redjohn-github-actions-master-phase2.md) és
+[köztes hotfix](redjohn-github-actions-master-phase2-hotfix2.md) mátrixok
+mindkét platformon hibával zárultak: 1431 Python-pass és 5 hiba. A hibák
+oracle-/Semgrep-inicializálás-/Nuclei-MIME okát elkülönítettük; a javított
+`9ff92a8abf4e5ad516bef7b3ce4dd297ea82055c` jelölt
+[39151591978 futása](https://github.com/akosdrx/redjohn/actions/runs/39151591978)
+már ténylegesen fut. Folyamatban lévő futásra nem állítunk teljes sikert.
 
-Az explicit v3 XML/vendor JSON/charset és jóváhagyott text-file tokenfrissítés
-implementált; 170 célzott parser, vault, régi TLS/Nuclei és hibakontraktus
-sikeres. A két új valódi Chromium–Nuclei v3 lánc a következő hosted futásig
-nem igazolt. A régi általános MCP támogatás megmaradt; az account-/repository-
-kötésű, verzió-/sémaellenőrzött provider műveletek valódi stdio/HTTP kontrolljai
-elkészültek. A távoli MCP céloldali hatása attesztáció nélkül blokkolt marad.
-A macOS bound Shell saját Seatbelt-határa 3 valódi helyi tesztben igazolt;
-az Ubuntu-mátrix ezeket platformon kívüliként, végrehajtás nélkül rögzíti.
+A további jelenlegi implementáció és célzott igazolás:
 
-A teljes master-cél továbbra is aktív. Nyitott többek között a további hálózati,
-DNS-, WordPress-, cloud/Kubernetes adapter, a teljes login/MFA/GraphQL és
-egyszerhasználatos bemenet, a Docker bound Shell, az összesített OS-szintű
-memóriakeret, a teljes provider-agent E2E, OAST/DNS/IPv6, reproducer- és
-kiadási/platform-igazolás. Az alábbi régebbi állapottábla történeti baseline;
-a fenti új implementációkat és a külön mérési dokumentumokat kell mellé olvasni.
+- Semgrep/Trivy offline source, asset/service/workflow inventory, kétactoros
+  autentikált CRUD és tartós restart/refresh. A Semgrep-javítás után 2 valódi
+  ARM64 eset sikeres; a source típusból a Trivy továbbra is csak a reviewed
+  offline filesystem misconfiguration profilt valósítja meg.
+- Naabu/dnsx külön engedélyezett IP/port/resolver scope-pal, tartós kvótával és
+  izolált workerrel; a javított relay CA-út után 8 valódi ARM64 eset sikeres.
+- Nmap 7.992 korlátos, saját próbaprofillal kész; 23 kontraktus sikeres,
+  4 natív eset macOS-en blokkolt. Tényleges build és engine E2E még hosted
+  ellenőrzésre vár; az előző Naabu-open bizonyíték kötelező.
+- Login/logout/MFA és egyszerhasználatos inputok tartós flow-val, Chromium
+  capture-rel és Nuclei-replayjel; valódi pozitív/javított esetek sikeresek.
+  A megszakított MFA után létrejött ismeretlen szerveroldali session külön
+  bizonytalanság, nem automatikus siker vagy rollback.
+- Pinned GraphQL-séma/operation és privát object-ID állapot, kétactoros valódi
+  TLS CRUD/restart/cross-actor kontroll; a FIFO-preflight hiba javítva.
+- V3 vendor JSON UTF-16 és XML Latin-1 Chromium–Nuclei lánc 2 valódi ARM64
+  esetben sikeres. A specialisták kiválasztott ismételt mező/text-file/XML
+  profiljai és automatikus refresh-e külön célzott macOS E2E-kkel igazoltak:
+  [pontos mérések és korlátok](redjohn-extended-input-replay.md).
+- Az általános MCP megmaradt. A verzió-/séma-/account-/repository-kötött
+  provider műveletek és az anonim exact-GET target MCP külön határokkal futnak;
+  4 valódi izolált target-MCP eset sikeres ARM64-en. Autentikált/mutáló target
+  MCP és attesztálatlan távoli végrehajtás továbbra is blokkolt.
+- A Linux opt-in CLI/TUI/SDK tulajdonos és örökölt leszármazottainak közös
+  cgroup-memóriakerete készül végső hosted igazolásra. Ez nem a host összes
+  folyamatának univerzális korlátja: a supervisor, külső daemonok és távoli
+  workerek külön határ. macOS összesített fizikai hard limit nincs igazolva.
+- Cloud/Kubernetes manifest-előkészítés külön capabilityvel kész; a natív
+  kube-benchből csak izolált verzióparancs engedett. Élő audit halasztott,
+  Prowler teljes immutable függőségpillanatkép hiányában blokkolt.
+
+A teljes master-cél aktív. Nyitott: a legújabb forrás teljes hosted x64/ARM64
+mátrixa; WPScan és auditált Ruby/gem/license lánca; Trivy image/SBOM/adatbázis
+módok; teljes provider–agent felhasználói E2E; Docker/remote MCP és macOS teljes
+memóriagaranciák; Nuclei–OAST binding, DNS/IPv6/publikus OAST; szélesebb
+technológia/verzióellentmondás/érintettség/korreláció/reproducer kontrollok;
+eredeti hiányzó RCE-fixture; Kali AMD64, tiszta telepítés/upgrade/csomagolás és
+kiadási licencellenőrzés. A hosszú terhelés alatti RSS-emelkedés pontos
+attribúciója sem tekinthető lezártnak. A halasztott élő cloud/Kubernetes audit
+nem akadálya a többi fejlesztésnek, de később külön valós igazolás kell hozzá.
+
+Az alábbi táblák történeti baseline-ok. A fenti új állapot és a külön, SHA-hoz
+kötött mérési dokumentumok az elsődlegesek a már implementált részekhez.
 
 ## Korábbi közös-runtime baseline
 

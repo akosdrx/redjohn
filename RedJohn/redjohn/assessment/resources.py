@@ -324,6 +324,8 @@ class ResourceGovernor:
             self._closed = True
 
     def snapshot(self) -> dict[str, object]:
+        from redjohn.assessment.os_memory import active_memory_measurement  # noqa: PLC0415
+
         with self._lock:
             return {
                 "pressure": self._pressure,
@@ -343,6 +345,7 @@ class ResourceGovernor:
                 if self._last_memory
                 else "not_sampled",
                 "host": self._host_pool.snapshot() if self._host_pool is not None else None,
+                "os_memory": active_memory_measurement(),
             }
 
 

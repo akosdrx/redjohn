@@ -50,6 +50,7 @@ class LinuxEgressBoundary:
         max_connections: int = 64,
         max_stream_bytes: int = 4 * 1024**2,
         timeout_seconds: float = 30,
+        controller_preamble: bytes = b"",
     ) -> None:
         parsed = urlsplit(proxy_url)
         if (
@@ -67,6 +68,8 @@ class LinuxEgressBoundary:
             not 1 <= max_connections <= 128
             or not 1024 <= max_stream_bytes <= 16 * 1024**2
             or not 0 < timeout_seconds <= 180
+            or not isinstance(controller_preamble, bytes)
+            or len(controller_preamble) > 256
         ):
             raise ValueError("invalid_egress_limits")
         self.worker_proxy_url = f"http://127.0.0.1:{parsed.port}"
@@ -77,6 +80,7 @@ class LinuxEgressBoundary:
         self.max_connections = max_connections
         self.max_stream_bytes = max_stream_bytes
         self.timeout_seconds = timeout_seconds
+        self._controller_preamble = controller_preamble
         self._server: asyncio.Server | None = None
         self._tasks: set[asyncio.Task[None]] = set()
         self._writers: set[asyncio.StreamWriter] = set()
@@ -237,6 +241,11 @@ class LinuxEgressBoundary:
                 asyncio.open_connection("127.0.0.1", self._proxy_port), 5
             )
             outside = outside_stream
+            if self._controller_preamble:
+                # Host-only framing after the authenticated kernel peer gate.
+                # The raw service worker never receives this per-job secret.
+                outside_stream.write(self._controller_preamble)
+                await outside_stream.drain()
             self.relay_connections += 1
             self._writers.add(outside_stream)
             transferred = 0

@@ -144,6 +144,66 @@ def test_auth_session_commit_requires_exact_row_cas(tmp_path):
     store.close()
 
 
+@pytest.mark.parametrize("checkpoint", ["matching", "ahead", "absent", "legacy_matching"])
+def test_expired_auth_producer_checkpoint_reconciliation_is_fenced(tmp_path, checkpoint):
+    store, policy, flow, job = prepared(tmp_path)
+    store.auth_flows.admit(policy, job, flow, ("nonce-once",))
+    store.auth_flows.checkpoint(policy, job, flow, 4)
+    snapshots = (
+        {
+            flow: {
+                "next_action": 4 if checkpoint in {"matching", "legacy_matching"} else 5,
+                "actor_id": "alice",
+                "tenant_id": "a",
+            }
+        }
+        if checkpoint != "absent"
+        else {}
+    )
+    if checkpoint == "legacy_matching":
+        store.db.execute("UPDATE rj_auth_flow SET job_id=NULL WHERE id=?", (flow,))
+    assert store.auth_flows.reconcile_expired(policy, snapshots) == {
+        "awaiting_input": 0,
+        "uncertain": 0,
+    }
+    assert store.auth_flows.get(policy, flow)["status"] == "running"
+    store.db.execute("UPDATE rj_job SET lease_until=0 WHERE id=?", (job["id"],))
+    store.close()
+    store = AssessmentStore(tmp_path / "state.db")
+    counts = store.auth_flows.reconcile_expired(policy, snapshots)
+    expected = "awaiting_input" if checkpoint in {"matching", "legacy_matching"} else "uncertain"
+    assert counts[expected] == 1
+    state = store.auth_flows.get(policy, flow)
+    assert state["status"] == expected and state["revision"] == 2
+    assert store.db.execute("SELECT state FROM rj_auth_input_use").fetchone()[0] == "settled"
+    assert store.recover_expired(policy) == 1
+    assert store.auth_flows.get(policy, flow)["status"] == expected
+    assert store.auth_flows.reconcile_expired(policy, snapshots) == {
+        "awaiting_input": 0,
+        "uncertain": 0,
+    }
+    store.close()
+
+
+def test_scheduler_recovery_never_reopens_admitted_auth_request(tmp_path):
+    store, policy, flow, job = prepared(tmp_path)
+    store.auth_flows.admit(policy, job, flow, ("mfa-once", "nonce-once"))
+    store.db.execute("UPDATE rj_job SET lease_until=0 WHERE id=?", (job["id"],))
+    assert store.recover_expired(policy) == 1
+    assert store.auth_flows.get(policy, flow)["status"] == "uncertain"
+    assert (
+        store.db.execute(
+            "SELECT count(*) FROM rj_auth_input_use WHERE state='admitted'"
+        ).fetchone()[0]
+        == 2
+    )
+    assert store.request_usage(policy) == 1
+    state = store.session_state(policy, Surface(ORIGIN, actor_id="alice", tenant_id="a"))
+    assert state["status"] == "uncertain"
+    assert store.claim(policy, "new-worker") is None
+    store.close()
+
+
 def test_private_checkpoint_cas_prevents_cross_actor_lost_update(tmp_path):
     store, policy, _flow, _job = prepared(tmp_path)
     identity = {
@@ -241,7 +301,10 @@ def test_concurrent_network_budget_cannot_overspend(tmp_path):
     second.close()
 
 
-async def test_removed_auth_plan_never_executes_or_reappears_as_current_config(tmp_path):
+@pytest.mark.parametrize("invalid_options", [None, "boolean_revision", "nonstring_flow"])
+async def test_removed_auth_plan_never_executes_or_reappears_as_current_config(
+    tmp_path, invalid_options
+):
     """No-browser contract double proves a removed plan cannot reach Chromium."""
     store, policy, flow, job = prepared(tmp_path)
     old = store.auth_flows.get(policy, flow)
@@ -265,10 +328,17 @@ async def test_removed_auth_plan_never_executes_or_reappears_as_current_config(t
         BrowserAuthFlowConfig(inputs, state, (configured,)), policy, store, object()
     )
     spec = JobSpec(**json.loads(job["spec"]))
+    if invalid_options:
+        spec = replace(
+            spec,
+            options={
+                "flow_id": [] if invalid_options == "nonstring_flow" else flow,
+                "expected_revision": True if invalid_options == "boolean_revision" else 1,
+            },
+        )
     result = await adapter.run(job, store.surface(policy.engagement_id, spec.surface_id), spec)
-    assert (
-        result.coverage_status == "blocked"
-        and result.error["code"] == "auth_plan_not_currently_configured"
+    assert result.coverage_status == "blocked" and result.error["code"] == (
+        "invalid_auth_flow_job" if invalid_options else "auth_plan_not_currently_configured"
     )
     assert store.request_usage(policy) == 0
     control = AssessmentControl(store, policy, caller=policy.owner_id)

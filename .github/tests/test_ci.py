@@ -221,6 +221,37 @@ class EvidenceContract(unittest.TestCase):
                     self.assertIn(("required_runner_capabilities", "namespace_available"), item.user_properties)
                     self.assertEqual(len(markers[item.path.name]), int(not namespace))
 
+    def test_owned_memory_cases_require_kernel_capability_and_remain_nonapplicable_on_darwin(self):
+        spec = importlib.util.spec_from_file_location("evidence", Path(__file__).parents[1] / "scripts/pytest_evidence.py")
+        plugin = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(plugin)
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            path = root / "test_owned_memory_live.py"
+            path.write_text("")
+            capability = root / "capabilities.json"
+            for system, kernel in (("Darwin", True), ("Linux", False), ("Linux", True)):
+                capability.write_text(json.dumps({"cgroup_available": kernel,
+                                                  "browser_available": False,
+                                                  "namespace_available": False}))
+                markers, deselected = [], []
+                item = SimpleNamespace(path=path, originalname="test_real", name="test_real",
+                    nodeid=path.name + "::test_real", user_properties=[], add_marker=markers.append)
+                items = [item]
+                config = SimpleNamespace(getoption=lambda _: "integration",
+                    hook=SimpleNamespace(pytest_deselected=lambda **kw: deselected.extend(kw["items"])))
+                with patch.dict(os.environ, {"REDJOHN_CI_CAPABILITIES": str(capability)}), \
+                        patch.object(plugin.platform, "system", return_value=system):
+                    plugin.pytest_collection_modifyitems(config, items)
+                if system == "Darwin":
+                    self.assertEqual(items, [])
+                    self.assertEqual(deselected, [item])
+                    self.assertEqual(markers, [])
+                else:
+                    self.assertEqual(items, [item])
+                    self.assertIn(("required_runner_capabilities", "cgroup_available"), item.user_properties)
+                    self.assertEqual(len(markers), int(not kernel))
+
 
 if __name__ == "__main__":
     unittest.main()

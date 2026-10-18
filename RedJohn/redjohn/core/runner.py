@@ -19,6 +19,7 @@ from openai import RateLimitError
 from redjohn.agents.factory import build_redjohn_agent, make_child_factory
 from redjohn.agents.prompt import render_scope_prompt, render_system_prompt
 from redjohn.assessment.host_resources import HostResourcePool, default_pool_path
+from redjohn.assessment.os_memory import require_inline_memory_boundary
 from redjohn.assessment.resources import ResourceGovernor
 from redjohn.config import codex, grok, load_settings
 from redjohn.config.models import (
@@ -303,6 +304,8 @@ async def run_redjohn_scan(
     )
     if prepared_assessment is not None:
         prepared_assessment.check_workspace_authority(local_sources or [])
+        configured = prepared_assessment.host.configured
+        require_inline_memory_boundary(configured.config, configured.envelope.total_memory_budget)
     teardown_logging = setup_scan_logging(run_dir)
     root_id: str | None = None
     sessions_to_close: list[SQLiteSession] = []

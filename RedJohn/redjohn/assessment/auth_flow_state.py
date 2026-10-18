@@ -42,6 +42,8 @@ class AuthFlowRepository:
                 "CREATE INDEX IF NOT EXISTS rj_auth_flow_identity ON "
                 "rj_auth_flow(engagement,actor,tenant,policy_revision,status)"
             )
+            if "job_id" not in {row[1] for row in db.execute("PRAGMA table_info(rj_auth_flow)")}:
+                db.execute("ALTER TABLE rj_auth_flow ADD COLUMN job_id TEXT")
             db.execute(
                 "CREATE TABLE IF NOT EXISTS rj_auth_input_use(engagement TEXT NOT "
                 "NULL,actor TEXT NOT NULL,tenant TEXT NOT NULL,policy_revision TEXT "
@@ -109,7 +111,9 @@ class AuthFlowRepository:
             if not revision.isascii() or not revision.isdigit() or not 1 <= int(revision) < 10**18:
                 raise ValueError("auth_flow_numeric_session_revision_required")
             db.execute(
-                "INSERT INTO rj_auth_flow VALUES(?,?,?,?,?,?,?,?,1,'prepared',0,NULL,NULL,0,?)",
+                "INSERT INTO rj_auth_flow(id,engagement,policy_revision,plan_id,run_key,"
+                "actor,tenant,from_revision,revision,status,next_action,owner,attempt,"
+                "admitted,updated_at) VALUES(?,?,?,?,?,?,?,?,1,'prepared',0,NULL,NULL,0,?)",
                 (
                     identity,
                     policy.engagement_id,
@@ -204,10 +208,113 @@ class AuthFlowRepository:
             )
             db.execute(
                 "UPDATE rj_auth_flow SET "
-                "status='running',owner=?,attempt=?,updated_at=? WHERE id=?",
-                (job["owner"], job["attempt"], time.time(), flow_id),
+                "status='running',owner=?,attempt=?,job_id=?,updated_at=? WHERE id=?",
+                (job["owner"], job["attempt"], job["id"], time.time(), flow_id),
             )
         return self.get(policy, flow_id)
+
+    def reconcile_expired(
+        self,
+        policy: EngagementPolicy,
+        checkpoints: dict[str, Any] | None = None,
+        *,
+        limit: int = 128,
+    ) -> dict[str, int]:
+        """Fence dead producers; a private checkpoint never repairs an admission.
+
+        Callers may supply only a protected host checkpoint snapshot. Without
+        one, recovery is conservative. This does not resend requests or reset
+        consumed references, and never changes a still-leased producer.
+        """
+        if type(limit) is not int or not 1 <= limit <= 128:
+            raise ValueError("invalid_auth_reconciliation_limit")
+        counts = {"awaiting_input": 0, "uncertain": 0}
+        now = time.time()
+        with self.store.transaction() as db:
+            self.store.inventory._fence(db, policy)
+            rows = db.execute(
+                "SELECT * FROM rj_auth_flow WHERE engagement=? AND policy_revision=? "
+                "AND status='running' ORDER BY updated_at,id LIMIT ?",
+                (policy.engagement_id, policy.revision, limit),
+            ).fetchall()
+            for row in rows:
+                producer = db.execute(
+                    "SELECT execution_status,lease_until,owner,attempt,spec FROM rj_job "
+                    "WHERE id=? AND engagement=? AND capability='browser_auth_flow'",
+                    (row["job_id"], policy.engagement_id),
+                ).fetchone()
+                if row["job_id"] is None:
+                    # Legacy rows predate the additive producer-ID column.
+                    # Keep even an ambiguous live owner/attempt fenced until
+                    # expiry; migration must not interrupt a leased worker.
+                    legacy_live = db.execute(
+                        "SELECT 1 FROM rj_job WHERE engagement=? AND "
+                        "capability='browser_auth_flow' AND owner=? AND attempt=? "
+                        "AND execution_status='running' AND lease_until>? LIMIT 1",
+                        (policy.engagement_id, row["owner"], row["attempt"], now),
+                    ).fetchone()
+                    if legacy_live:
+                        continue
+                if (
+                    producer is not None
+                    and producer["execution_status"] == "running"
+                    and (producer["owner"], producer["attempt"]) == (row["owner"], row["attempt"])
+                    and (producer["lease_until"] or 0) > now
+                    and json.loads(producer["spec"]).get("options")
+                    == {"flow_id": row["id"], "expected_revision": row["revision"]}
+                ):
+                    continue
+                checkpoint = checkpoints.get(row["id"], {}) if checkpoints is not None else None
+                consistent = isinstance(checkpoint, dict) and (
+                    (
+                        not checkpoint
+                        and row["next_action"] == 0
+                        and not db.execute(
+                            "SELECT 1 FROM rj_auth_input_use WHERE flow_id=? LIMIT 1",
+                            (row["id"],),
+                        ).fetchone()
+                    )
+                    or (
+                        checkpoint.get("next_action") == row["next_action"]
+                        and (checkpoint.get("actor_id"), checkpoint.get("tenant_id"))
+                        == (row["actor"], row["tenant"])
+                        and not checkpoint.get("outcome")
+                        and not checkpoint.get("auth_evidence_ref")
+                    )
+                )
+                status = "awaiting_input" if not row["admitted"] and consistent else "uncertain"
+                db.execute(
+                    "UPDATE rj_auth_flow SET status=?,revision=revision+1,owner=NULL,"
+                    "attempt=NULL,updated_at=? WHERE id=? AND status='running'",
+                    (status, now, row["id"]),
+                )
+                if status == "uncertain":
+                    db.execute(
+                        "UPDATE rj_session_state SET status='uncertain',updated_at=? WHERE "
+                        "engagement=? AND actor=? AND tenant=? AND policy_revision=? "
+                        "AND revision=? AND status='authenticating'",
+                        (
+                            now,
+                            policy.engagement_id,
+                            row["actor"],
+                            row["tenant"],
+                            policy.revision,
+                            row["from_revision"],
+                        ),
+                    )
+                self.store._audit(
+                    db,
+                    policy.engagement_id,
+                    "auth_flow_reconciled",
+                    {
+                        "flow_id": row["id"],
+                        "job_id": row["job_id"],
+                        "state": status,
+                        "automatic_replay": False,
+                    },
+                )
+                counts[status] += 1
+        return counts
 
     def admit(
         self,
@@ -337,7 +444,8 @@ class AuthFlowRepository:
             spec = json.loads(actual[0])
             expected_revision = spec.get("options", {}).get("expected_revision")
             if (
-                spec.get("options", {}).get("flow_id") != flow_id
+                type(expected_revision) is not int
+                or spec.get("options", {}).get("flow_id") != flow_id
                 or (
                     row["status"] == "running"
                     and (row["owner"], row["attempt"]) != (job["owner"], job["attempt"])

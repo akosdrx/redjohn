@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from collections.abc import Awaitable, Callable
 from typing import TYPE_CHECKING, Any
 
@@ -90,6 +91,17 @@ def get_backend(name: str) -> SandboxBackend:
         raise ValueError(
             f"Unknown REDJOHN_RUNTIME_BACKEND: {name!r} (supported: {supported})",
         )
+    from redjohn.assessment.os_memory import (
+        MemoryLimitUnavailableError,
+        current_memory_fence,
+    )
+
+    fence = current_memory_fence()
+    if os.environ.get("REDJOHN_REQUIRE_OWNED_MEMORY") == "1" or fence is not None:
+        if fence is None:
+            raise MemoryLimitUnavailableError("os_memory_membership_not_enforced")
+        if backend is not _local_backend:
+            raise MemoryLimitUnavailableError("os_memory_backend_ownership_unverified")
     logger.debug("Selected sandbox backend: %s", name)
     return backend
 

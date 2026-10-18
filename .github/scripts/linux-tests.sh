@@ -14,16 +14,48 @@ task_python="$1"
 task_suite="$2"
 task_workspace="$(pwd -P)"
 test "$task_workspace" = "$GITHUB_WORKSPACE"
-case "$task_suite" in regression|integration|capability|soak) ;; *) exit 2 ;; esac
+case "$task_suite" in regression|integration|capability|soak|native|native-capability) ;; *) exit 2 ;; esac
 test -x "$task_python"
-if test "$task_suite" = capability; then
+if test "$task_suite" = capability || test "$task_suite" = native-capability; then
   # Profile entry happens while privileged, but all probes run after UID/GID
   # and host capabilities have been dropped, just like the real E2E suite.
+  task_capability_args=()
+  if test "$task_suite" = native-capability; then task_capability_args=(--native-only); fi
   exec aa-exec -p "${REDJOHN_CI_APPARMOR_PROFILE:?}" -- \
     /usr/bin/setpriv --reuid="$SUDO_UID" --regid="$SUDO_GID" --init-groups \
     env USER="$SUDO_USER" LOGNAME="$SUDO_USER" \
     PYTHONPATH="$task_workspace/RedJohn:$task_workspace/.github/scripts" \
-    "$task_python" .github/scripts/capabilities.py
+    "$task_python" .github/scripts/capabilities.py "${task_capability_args[@]}"
+fi
+if test "$task_suite" = native; then
+  # Reuse this job's integration launcher; the native workflow has its own
+  # unique run/attempt cgroup and never shares a full-matrix job's processes.
+  printf '%s' "$$" > "$REDJOHN_TEST_CGROUP_ROOT/launcher-integration/cgroup.procs"
+  task_native_failed=0
+  for task_component in network service preparation memory; do
+    task_selection=()
+    case "$task_component" in
+      network) task_file=RedJohn/tests/test_network_tools_live.py ;;
+      service) task_file=RedJohn/tests/test_service_tools_live.py ;;
+      preparation) task_file=RedJohn/tests/test_preparation_native.py ;;
+      memory)
+        task_file=RedJohn/tests/test_owned_memory_live.py
+        task_selection=(-k 'not test_actual_browser_sdk_mcp_and_native_worker_inherit_the_owner_hard_fence')
+        ;;
+    esac
+    if ! aa-exec -p "${REDJOHN_CI_APPARMOR_PROFILE:?}" -- \
+      /usr/bin/setpriv --reuid="$SUDO_UID" --regid="$SUDO_GID" --init-groups \
+      env USER="$SUDO_USER" LOGNAME="$SUDO_USER" \
+      PYTHONPATH="$task_workspace/RedJohn:$task_workspace/.github/scripts" \
+      "$task_python" .github/scripts/ci.py run --name "native-$task_component" -- \
+      timeout --signal=TERM --kill-after=20s 8m "$task_python" -m pytest \
+      "$task_file" "${task_selection[@]}" -q -s -p no:cacheprovider \
+      -o junit_family=xunit1 --junitxml="artifacts/native-$task_component.junit.xml" \
+      --basetemp="$RUNNER_TEMP/redjohn-native-$task_component"; then
+      task_native_failed=1
+    fi
+  done
+  exit "$task_native_failed"
 fi
 printf '%s' "$$" > "$REDJOHN_TEST_CGROUP_ROOT/launcher-$task_suite/cgroup.procs"
 task_profile=()

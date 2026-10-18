@@ -1,0 +1,1168 @@
+[
+  {
+    "id": "browser_discover",
+    "tool": "Playwright + Chromium",
+    "domains": [
+      "web"
+    ],
+    "profiles": [
+      "safe-production",
+      "active-staging",
+      "isolated-lab"
+    ],
+    "content_types": [
+      ""
+    ],
+    "resource_class": "browser",
+    "adapter_implemented": true,
+    "binary_names": [],
+    "source": "https://playwright.dev/python/",
+    "license": "Apache-2.0",
+    "status": "implemented_fixture_tested",
+    "reason": "requires_browser_extra_and_egress",
+    "cancellation": true,
+    "auth_replay": true,
+    "privilege": "unprivileged",
+    "owner_process_only": false,
+    "live_verified": false,
+    "recorded_verification_report": "redjohn-mime-restart-verification.md"
+  },
+  {
+    "id": "http_observe",
+    "tool": "RedJohn HTTP observation",
+    "domains": [
+      "web"
+    ],
+    "profiles": [
+      "safe-production",
+      "active-staging",
+      "isolated-lab"
+    ],
+    "content_types": [
+      ""
+    ],
+    "resource_class": "worker",
+    "adapter_implemented": true,
+    "binary_names": [],
+    "source": "redjohn/assessment/adapters.py",
+    "license": "project",
+    "status": "implemented_fixture_tested",
+    "reason": "explicit_readonly_seed",
+    "cancellation": true,
+    "auth_replay": false,
+    "privilege": "unprivileged",
+    "owner_process_only": true,
+    "live_verified": false,
+    "recorded_verification_report": "redjohn-verification.md"
+  },
+  {
+    "id": "headers_audit",
+    "tool": "RedJohn response header check",
+    "domains": [
+      "web"
+    ],
+    "profiles": [
+      "safe-production",
+      "active-staging",
+      "isolated-lab"
+    ],
+    "content_types": [
+      ""
+    ],
+    "resource_class": "worker",
+    "adapter_implemented": true,
+    "binary_names": [],
+    "source": "redjohn/assessment/adapters.py",
+    "license": "project",
+    "status": "implemented_fixture_tested",
+    "reason": "header_presence_is_candidate_only",
+    "cancellation": true,
+    "auth_replay": false,
+    "privilege": "unprivileged",
+    "owner_process_only": true,
+    "live_verified": false,
+    "recorded_verification_report": "redjohn-verification.md"
+  },
+  {
+    "id": "nuclei_scan",
+    "tool": "Nuclei",
+    "domains": [
+      "web"
+    ],
+    "profiles": [
+      "safe-production",
+      "active-staging",
+      "isolated-lab"
+    ],
+    "content_types": [
+      "",
+      "application/json",
+      "application/x-www-form-urlencoded",
+      "multipart/form-data"
+    ],
+    "resource_class": "scanner",
+    "adapter_implemented": true,
+    "binary_names": [
+      "nuclei"
+    ],
+    "source": "https://github.com/projectdiscovery/nuclei",
+    "license": "MIT_engine_templates_separate",
+    "status": "implemented_fixture_tested",
+    "reason": "requires_binary_and_reviewed_template_lock",
+    "cancellation": true,
+    "auth_replay": true,
+    "privilege": "unprivileged",
+    "owner_process_only": false,
+    "live_verified": false,
+    "recorded_verification_report": "redjohn-mime-restart-verification.md"
+  },
+  {
+    "id": "ffuf_discover",
+    "tool": "ffuf",
+    "domains": [
+      "web"
+    ],
+    "profiles": [
+      "active-staging",
+      "isolated-lab"
+    ],
+    "content_types": [
+      ""
+    ],
+    "resource_class": "scanner",
+    "adapter_implemented": true,
+    "binary_names": [
+      "ffuf"
+    ],
+    "source": "https://github.com/ffuf/ffuf/tree/v2.1.0",
+    "license": "MIT",
+    "status": "implemented_fixture_tested",
+    "reason": "requires_pinned_binary_and_host_approved_paths",
+    "cancellation": true,
+    "auth_replay": false,
+    "privilege": "unprivileged",
+    "owner_process_only": false,
+    "live_verified": false,
+    "recorded_verification_report": "redjohn-ffuf-verification.md"
+  },
+  {
+    "id": "httpx_probe",
+    "tool": "ProjectDiscovery httpx",
+    "domains": [
+      "web"
+    ],
+    "profiles": [
+      "safe-production",
+      "active-staging",
+      "isolated-lab"
+    ],
+    "content_types": [
+      ""
+    ],
+    "resource_class": "scanner",
+    "adapter_implemented": true,
+    "binary_names": [
+      "httpx-toolkit",
+      "pd-httpx"
+    ],
+    "source": "https://github.com/projectdiscovery/httpx/tree/v1.12.0",
+    "license": "MIT_CLI_optional_datasets_and_provider_data_separate",
+    "status": "implemented_fixture_tested",
+    "reason": "requires_pinned_binary_and_explicit_configuration",
+    "cancellation": true,
+    "auth_replay": false,
+    "privilege": "unprivileged",
+    "owner_process_only": false,
+    "live_verified": false,
+    "recorded_verification_report": "redjohn-projectdiscovery-verification.md"
+  },
+  {
+    "id": "katana_discover",
+    "tool": "Katana (standard)",
+    "domains": [
+      "web"
+    ],
+    "profiles": [
+      "safe-production",
+      "active-staging",
+      "isolated-lab"
+    ],
+    "content_types": [
+      ""
+    ],
+    "resource_class": "scanner",
+    "adapter_implemented": true,
+    "binary_names": [
+      "katana"
+    ],
+    "source": "https://github.com/projectdiscovery/katana/tree/v1.8.0",
+    "license": "MIT_CLI_optional_datasets_and_provider_data_separate",
+    "status": "implemented_fixture_tested",
+    "reason": "requires_pinned_binary_and_explicit_configuration",
+    "cancellation": true,
+    "auth_replay": false,
+    "privilege": "unprivileged",
+    "owner_process_only": false,
+    "live_verified": false,
+    "recorded_verification_report": "redjohn-projectdiscovery-verification.md"
+  },
+  {
+    "id": "vulnx_intelligence",
+    "tool": "VulnX",
+    "domains": [
+      "web"
+    ],
+    "profiles": [
+      "safe-production",
+      "active-staging",
+      "isolated-lab"
+    ],
+    "content_types": [
+      ""
+    ],
+    "resource_class": "scanner",
+    "adapter_implemented": true,
+    "binary_names": [
+      "vulnx"
+    ],
+    "source": "https://github.com/projectdiscovery/vulnx/tree/v2.0.2",
+    "license": "MIT_CLI_optional_datasets_and_provider_data_separate",
+    "status": "implemented_fixture_tested",
+    "reason": "requires_pinned_binary_and_explicit_configuration",
+    "cancellation": true,
+    "auth_replay": false,
+    "privilege": "unprivileged",
+    "owner_process_only": false,
+    "live_verified": false,
+    "recorded_verification_report": "redjohn-projectdiscovery-verification.md"
+  },
+  {
+    "id": "naabu_ports",
+    "tool": "Naabu TCP CONNECT",
+    "domains": [
+      "network"
+    ],
+    "profiles": [
+      "active-staging",
+      "isolated-lab"
+    ],
+    "content_types": [
+      ""
+    ],
+    "resource_class": "scanner",
+    "adapter_implemented": true,
+    "binary_names": [
+      "naabu"
+    ],
+    "source": "https://github.com/projectdiscovery/naabu/tree/v2.6.1",
+    "license": "MIT",
+    "status": "implemented_pending_native_e2e",
+    "reason": "requires_explicit_network_or_dns_grants_and_scoped_socks_broker",
+    "cancellation": true,
+    "auth_replay": false,
+    "privilege": "unprivileged",
+    "owner_process_only": false,
+    "live_verified": false,
+    "recorded_verification_report": "redjohn-network-broker.md"
+  },
+  {
+    "id": "dnsx_resolve",
+    "tool": "dnsx controlled TCP DNS",
+    "domains": [
+      "network"
+    ],
+    "profiles": [
+      "active-staging",
+      "isolated-lab"
+    ],
+    "content_types": [
+      ""
+    ],
+    "resource_class": "scanner",
+    "adapter_implemented": true,
+    "binary_names": [
+      "dnsx"
+    ],
+    "source": "https://github.com/projectdiscovery/dnsx/tree/v1.3.1",
+    "license": "MIT",
+    "status": "implemented_pending_native_e2e",
+    "reason": "requires_explicit_network_or_dns_grants_and_scoped_socks_broker",
+    "cancellation": true,
+    "auth_replay": false,
+    "privilege": "unprivileged",
+    "owner_process_only": false,
+    "live_verified": false,
+    "recorded_verification_report": "redjohn-network-broker.md"
+  },
+  {
+    "id": "dns_discover",
+    "tool": "Amass / Subfinder alternatives",
+    "domains": [
+      "network"
+    ],
+    "profiles": [
+      "safe-production",
+      "active-staging",
+      "isolated-lab"
+    ],
+    "content_types": [
+      ""
+    ],
+    "resource_class": "worker",
+    "adapter_implemented": false,
+    "binary_names": [],
+    "source": "https://github.com/owasp-amass/amass",
+    "license": "not_verified_not_redistributed",
+    "status": "deferred_not_required",
+    "reason": "controlled_dnsx_resolve_selected_no_duplicate_orchestrator",
+    "cancellation": false,
+    "auth_replay": false,
+    "privilege": "unprivileged",
+    "owner_process_only": false,
+    "live_verified": false,
+    "recorded_verification_report": null
+  },
+  {
+    "id": "session_refresh",
+    "tool": "RedJohn explicit session refresh",
+    "domains": [
+      "web"
+    ],
+    "profiles": [
+      "active-staging",
+      "isolated-lab"
+    ],
+    "content_types": [
+      ""
+    ],
+    "resource_class": "worker",
+    "adapter_implemented": true,
+    "binary_names": [],
+    "source": "redjohn/assessment/session_refresh.py",
+    "license": "project",
+    "status": "implemented_fixture_tested",
+    "reason": "requires_private_refresh_provider_and_vault",
+    "cancellation": true,
+    "auth_replay": true,
+    "privilege": "unprivileged",
+    "owner_process_only": true,
+    "live_verified": false,
+    "recorded_verification_report": "redjohn-authenticated-schema-oast-verification.md"
+  },
+  {
+    "id": "workflow_execute",
+    "tool": "RedJohn reviewed stateful workflow",
+    "domains": [
+      "web"
+    ],
+    "profiles": [
+      "active-staging",
+      "isolated-lab"
+    ],
+    "content_types": [
+      ""
+    ],
+    "resource_class": "worker",
+    "adapter_implemented": true,
+    "binary_names": [],
+    "source": "redjohn/assessment/workflow_execution.py",
+    "license": "project",
+    "status": "implemented_pending_live_proof",
+    "reason": "requires_explicit_workflow_configuration_and_private_vault",
+    "cancellation": true,
+    "auth_replay": true,
+    "privilege": "unprivileged",
+    "owner_process_only": true,
+    "live_verified": false,
+    "recorded_verification_report": "../RedJohn/docs/redjohn-graphql-workflows.md"
+  },
+  {
+    "id": "arjun_parameters",
+    "tool": "Arjun",
+    "domains": [
+      "web"
+    ],
+    "profiles": [
+      "active-staging",
+      "isolated-lab"
+    ],
+    "content_types": [
+      ""
+    ],
+    "resource_class": "scanner",
+    "adapter_implemented": true,
+    "binary_names": [
+      "arjun"
+    ],
+    "source": "https://github.com/s0md3v/Arjun/tree/2.2.7",
+    "license": "AGPL-3.0_LICENSE_setup_metadata_conflicts",
+    "status": "implemented_fixture_tested",
+    "reason": "requires_pinned_tool_observed_input_and_explicit_selection",
+    "cancellation": true,
+    "auth_replay": false,
+    "privilege": "unprivileged",
+    "owner_process_only": false,
+    "live_verified": false,
+    "recorded_verification_report": "redjohn-specialists-verification.md"
+  },
+  {
+    "id": "sqlmap_validate",
+    "tool": "sqlmap",
+    "domains": [
+      "web"
+    ],
+    "profiles": [
+      "active-staging",
+      "isolated-lab"
+    ],
+    "content_types": [
+      ""
+    ],
+    "resource_class": "scanner",
+    "adapter_implemented": true,
+    "binary_names": [
+      "sqlmap"
+    ],
+    "source": "https://github.com/sqlmapproject/sqlmap/tree/1.10.10",
+    "license": "GPL-2.0-or-later_with_upstream_clarifications",
+    "status": "implemented_fixture_tested",
+    "reason": "requires_pinned_tool_observed_input_and_explicit_selection",
+    "cancellation": true,
+    "auth_replay": true,
+    "privilege": "unprivileged",
+    "owner_process_only": false,
+    "live_verified": false,
+    "recorded_verification_report": "redjohn-specialists-verification.md"
+  },
+  {
+    "id": "tinja_validate",
+    "tool": "TInjA",
+    "domains": [
+      "web"
+    ],
+    "profiles": [
+      "active-staging",
+      "isolated-lab"
+    ],
+    "content_types": [
+      "",
+      "application/json",
+      "application/x-www-form-urlencoded",
+      "multipart/form-data"
+    ],
+    "resource_class": "scanner",
+    "adapter_implemented": true,
+    "binary_names": [
+      "tinja"
+    ],
+    "source": "https://github.com/Hackmanit/TInjA/tree/1.2.0",
+    "license": "Apache-2.0",
+    "status": "implemented_fixture_tested",
+    "reason": "requires_pinned_tool_observed_input_and_explicit_selection",
+    "cancellation": true,
+    "auth_replay": true,
+    "privilege": "unprivileged",
+    "owner_process_only": false,
+    "live_verified": false,
+    "recorded_verification_report": "redjohn-mime-restart-verification.md"
+  },
+  {
+    "id": "schemathesis_validate",
+    "tool": "Schemathesis",
+    "domains": [
+      "web"
+    ],
+    "profiles": [
+      "active-staging",
+      "isolated-lab"
+    ],
+    "content_types": [
+      "",
+      "application/json",
+      "application/x-www-form-urlencoded",
+      "multipart/form-data"
+    ],
+    "resource_class": "scanner",
+    "adapter_implemented": true,
+    "binary_names": [
+      "schemathesis"
+    ],
+    "source": "https://github.com/schemathesis/schemathesis/tree/v4.31.1",
+    "license": "MIT",
+    "status": "implemented_fixture_tested",
+    "reason": "requires_pinned_tool_observed_input_and_explicit_selection",
+    "cancellation": true,
+    "auth_replay": true,
+    "privilege": "unprivileged",
+    "owner_process_only": false,
+    "live_verified": false,
+    "recorded_verification_report": "redjohn-mime-restart-verification.md"
+  },
+  {
+    "id": "dalfox_validate",
+    "tool": "Dalfox",
+    "domains": [
+      "web"
+    ],
+    "profiles": [
+      "active-staging",
+      "isolated-lab"
+    ],
+    "content_types": [
+      ""
+    ],
+    "resource_class": "scanner",
+    "adapter_implemented": true,
+    "binary_names": [
+      "dalfox"
+    ],
+    "source": "https://github.com/hahwul/dalfox/tree/v3.2.4",
+    "license": "MIT",
+    "status": "implemented_fixture_tested",
+    "reason": "requires_pinned_tool_observed_input_and_explicit_selection",
+    "cancellation": true,
+    "auth_replay": false,
+    "privilege": "unprivileged",
+    "owner_process_only": false,
+    "live_verified": false,
+    "recorded_verification_report": "redjohn-specialists-verification.md"
+  },
+  {
+    "id": "oast_correlate",
+    "tool": "Interactsh protocol 1.4.1",
+    "domains": [
+      "web"
+    ],
+    "profiles": [
+      "active-staging",
+      "isolated-lab"
+    ],
+    "content_types": [
+      "",
+      "application/json",
+      "application/x-www-form-urlencoded",
+      "multipart/form-data"
+    ],
+    "resource_class": "worker",
+    "adapter_implemented": true,
+    "binary_names": [],
+    "source": "redjohn/assessment/oast.py",
+    "license": "project_protocol_MIT_reference",
+    "status": "implemented_fixture_tested",
+    "reason": "requires_owned_receiver_and_reviewed_input",
+    "cancellation": true,
+    "auth_replay": true,
+    "privilege": "unprivileged",
+    "owner_process_only": true,
+    "live_verified": false,
+    "recorded_verification_report": "redjohn-mime-restart-verification.md"
+  },
+  {
+    "id": "oast_poll",
+    "tool": "Interactsh protocol 1.4.1",
+    "domains": [
+      "web"
+    ],
+    "profiles": [
+      "active-staging",
+      "isolated-lab"
+    ],
+    "content_types": [
+      "",
+      "application/json",
+      "application/x-www-form-urlencoded",
+      "multipart/form-data"
+    ],
+    "resource_class": "worker",
+    "adapter_implemented": true,
+    "binary_names": [],
+    "source": "redjohn/assessment/oast.py",
+    "license": "project_protocol_MIT_reference",
+    "status": "implemented_fixture_tested",
+    "reason": "requires_owned_receiver_and_reviewed_input",
+    "cancellation": true,
+    "auth_replay": true,
+    "privilege": "unprivileged",
+    "owner_process_only": true,
+    "live_verified": false,
+    "recorded_verification_report": "redjohn-mime-restart-verification.md"
+  },
+  {
+    "id": "browser_xss_confirmation",
+    "tool": "RedJohn Chromium XSS confirmation",
+    "domains": [
+      "web"
+    ],
+    "profiles": [
+      "active-staging",
+      "isolated-lab"
+    ],
+    "content_types": [
+      ""
+    ],
+    "resource_class": "browser",
+    "adapter_implemented": true,
+    "binary_names": [],
+    "source": "redjohn/assessment/xss_confirmation.py",
+    "license": "project",
+    "status": "implemented_fixture_tested",
+    "reason": "requires_committed_dalfox_candidate",
+    "cancellation": true,
+    "auth_replay": false,
+    "privilege": "unprivileged",
+    "owner_process_only": false,
+    "live_verified": false,
+    "recorded_verification_report": "redjohn-specialists-verification.md"
+  },
+  {
+    "id": "browser_post_capture",
+    "tool": "RedJohn approved Chromium POST capture",
+    "domains": [
+      "web"
+    ],
+    "profiles": [
+      "active-staging",
+      "isolated-lab"
+    ],
+    "content_types": [
+      ""
+    ],
+    "resource_class": "browser",
+    "adapter_implemented": true,
+    "binary_names": [],
+    "source": "redjohn/assessment/browser_capture.py",
+    "license": "project",
+    "status": "implemented_fixture_tested",
+    "reason": "requires_private_browser_capture_rules_and_vault",
+    "cancellation": true,
+    "auth_replay": true,
+    "privilege": "unprivileged",
+    "owner_process_only": false,
+    "live_verified": false,
+    "recorded_verification_report": "redjohn-mime-restart-verification.md"
+  },
+  {
+    "id": "browser_auth_flow",
+    "tool": "RedJohn reviewed Chromium authentication workflow",
+    "domains": [
+      "web"
+    ],
+    "profiles": [
+      "active-staging",
+      "isolated-lab"
+    ],
+    "content_types": [
+      ""
+    ],
+    "resource_class": "browser",
+    "adapter_implemented": true,
+    "binary_names": [],
+    "source": "redjohn/assessment/browser_workflow_actions.py",
+    "license": "project",
+    "status": "implemented_pending_live_proof",
+    "reason": "requires_private_authentication_flow_and_one_use_inputs",
+    "cancellation": true,
+    "auth_replay": true,
+    "privilege": "unprivileged",
+    "owner_process_only": false,
+    "live_verified": false,
+    "recorded_verification_report": "../RedJohn/docs/redjohn-browser-auth-workflows.md"
+  },
+  {
+    "id": "mcp_target_read",
+    "tool": "RedJohn confined host-bound stdio target read",
+    "domains": [
+      "web"
+    ],
+    "profiles": [
+      "safe-production",
+      "active-staging",
+      "isolated-lab"
+    ],
+    "content_types": [
+      ""
+    ],
+    "resource_class": "worker",
+    "adapter_implemented": true,
+    "binary_names": [],
+    "source": "redjohn/runtime/mcp_target.py",
+    "license": "project",
+    "status": "implemented_pending_live_proof",
+    "reason": "requires_attested_stdio_and_fixed_reviewed_contract",
+    "cancellation": true,
+    "auth_replay": false,
+    "privilege": "unprivileged",
+    "owner_process_only": true,
+    "live_verified": false,
+    "recorded_verification_report": "redjohn-confined-mcp-target.md"
+  },
+  {
+    "id": "semgrep_source",
+    "tool": "Semgrep CE (native OCaml)",
+    "domains": [
+      "source"
+    ],
+    "profiles": [
+      "safe-production",
+      "active-staging",
+      "isolated-lab"
+    ],
+    "content_types": [
+      ""
+    ],
+    "resource_class": "scanner",
+    "adapter_implemented": true,
+    "binary_names": [
+      "osemgrep"
+    ],
+    "source": "https://github.com/semgrep/semgrep/tree/v1.181.0",
+    "license": "LGPL-2.1_engine_rules_separate",
+    "status": "implemented_pending_native_e2e",
+    "reason": "requires_explicit_immutable_local_manifest_and_offline_namespace",
+    "cancellation": true,
+    "auth_replay": false,
+    "privilege": "unprivileged",
+    "owner_process_only": false,
+    "live_verified": false,
+    "recorded_verification_report": "redjohn-source-scanners.md"
+  },
+  {
+    "id": "trivy_source",
+    "tool": "Trivy filesystem misconfiguration",
+    "domains": [
+      "source"
+    ],
+    "profiles": [
+      "safe-production",
+      "active-staging",
+      "isolated-lab"
+    ],
+    "content_types": [
+      ""
+    ],
+    "resource_class": "scanner",
+    "adapter_implemented": true,
+    "binary_names": [
+      "trivy"
+    ],
+    "source": "https://github.com/aquasecurity/trivy/tree/v0.76.0",
+    "license": "Apache-2.0_engine_embedded_checks_separate",
+    "status": "implemented_pending_native_e2e",
+    "reason": "requires_explicit_immutable_local_manifest_and_offline_namespace",
+    "cancellation": true,
+    "auth_replay": false,
+    "privilege": "unprivileged",
+    "owner_process_only": false,
+    "live_verified": false,
+    "recorded_verification_report": "redjohn-source-scanners.md"
+  },
+  {
+    "id": "wordpress_assess",
+    "tool": "WPScan",
+    "domains": [
+      "cms"
+    ],
+    "profiles": [
+      "safe-production",
+      "active-staging",
+      "isolated-lab"
+    ],
+    "content_types": [
+      ""
+    ],
+    "resource_class": "worker",
+    "adapter_implemented": false,
+    "binary_names": [
+      "wpscan"
+    ],
+    "source": "https://github.com/wpscanteam/wpscan",
+    "license": "not_verified_not_redistributed",
+    "status": "adapter_not_implemented",
+    "reason": "not_implemented",
+    "cancellation": false,
+    "auth_replay": false,
+    "privilege": "unprivileged",
+    "owner_process_only": false,
+    "live_verified": false,
+    "recorded_verification_report": null
+  },
+  {
+    "id": "cloud_assess",
+    "tool": "Prowler",
+    "domains": [
+      "cloud"
+    ],
+    "profiles": [
+      "safe-production",
+      "active-staging",
+      "isolated-lab"
+    ],
+    "content_types": [
+      ""
+    ],
+    "resource_class": "worker",
+    "adapter_implemented": false,
+    "binary_names": [
+      "prowler"
+    ],
+    "source": "https://github.com/prowler-cloud/prowler",
+    "license": "not_verified_not_redistributed",
+    "status": "adapter_not_implemented",
+    "reason": "not_implemented",
+    "cancellation": false,
+    "auth_replay": false,
+    "privilege": "unprivileged",
+    "owner_process_only": false,
+    "live_verified": false,
+    "recorded_verification_report": null
+  },
+  {
+    "id": "kubernetes_benchmark",
+    "tool": "kube-bench",
+    "domains": [
+      "kubernetes"
+    ],
+    "profiles": [
+      "safe-production",
+      "active-staging",
+      "isolated-lab"
+    ],
+    "content_types": [
+      ""
+    ],
+    "resource_class": "worker",
+    "adapter_implemented": false,
+    "binary_names": [
+      "kube-bench"
+    ],
+    "source": "https://github.com/aquasecurity/kube-bench",
+    "license": "not_verified_not_redistributed",
+    "status": "adapter_not_implemented",
+    "reason": "not_implemented",
+    "cancellation": false,
+    "auth_replay": false,
+    "privilege": "unprivileged",
+    "owner_process_only": false,
+    "live_verified": false,
+    "recorded_verification_report": null
+  },
+  {
+    "id": "nmap_services",
+    "tool": "Nmap observed-open service identification",
+    "domains": [
+      "network"
+    ],
+    "profiles": [
+      "active-staging",
+      "isolated-lab"
+    ],
+    "content_types": [
+      ""
+    ],
+    "resource_class": "scanner",
+    "adapter_implemented": true,
+    "binary_names": [
+      "nmap"
+    ],
+    "source": "https://github.com/nmap/nmap/tree/0ee561663c1d7d2d4e708cd414dccfd3d9df30d9",
+    "license": "NPSL-0.95_external_operator_install_distribution_not_granted",
+    "status": "implemented_pending_native_e2e",
+    "reason": "requires_recent_scoped_naabu_open_proof_and_pinned_owned_service_probes",
+    "cancellation": true,
+    "auth_replay": false,
+    "privilege": "unprivileged",
+    "owner_process_only": false,
+    "live_verified": false,
+    "recorded_verification_report": "redjohn-nmap-service-profile.md"
+  },
+  {
+    "id": "cloud_prepare",
+    "tool": "Prowler reviewed preparation",
+    "domains": [
+      "source"
+    ],
+    "profiles": [
+      "safe-production",
+      "active-staging",
+      "isolated-lab"
+    ],
+    "content_types": [
+      ""
+    ],
+    "resource_class": "worker",
+    "adapter_implemented": true,
+    "binary_names": [],
+    "source": "https://github.com/prowler-cloud/prowler/tree/5.45.0",
+    "license": "Apache-2.0",
+    "status": "implemented_preparation_only_live_audit_deferred",
+    "reason": "immutable_input_manifest_only_no_account_or_cluster_audit_authority",
+    "cancellation": true,
+    "auth_replay": false,
+    "privilege": "unprivileged",
+    "owner_process_only": true,
+    "live_verified": false,
+    "recorded_verification_report": "../RedJohn/docs/redjohn-cloud-kubernetes-preparation.md"
+  },
+  {
+    "id": "kubernetes_prepare",
+    "tool": "kube-bench reviewed preparation",
+    "domains": [
+      "source"
+    ],
+    "profiles": [
+      "safe-production",
+      "active-staging",
+      "isolated-lab"
+    ],
+    "content_types": [
+      ""
+    ],
+    "resource_class": "worker",
+    "adapter_implemented": true,
+    "binary_names": [],
+    "source": "https://github.com/aquasecurity/kube-bench/tree/v0.16.0",
+    "license": "Apache-2.0",
+    "status": "implemented_preparation_only_live_audit_deferred",
+    "reason": "immutable_input_manifest_only_no_account_or_cluster_audit_authority",
+    "cancellation": true,
+    "auth_replay": false,
+    "privilege": "unprivileged",
+    "owner_process_only": true,
+    "live_verified": false,
+    "recorded_verification_report": "../RedJohn/docs/redjohn-cloud-kubernetes-preparation.md"
+  },
+  {
+    "id": "feroxbuster",
+    "tool": "Feroxbuster",
+    "domains": [
+      "web"
+    ],
+    "profiles": [
+      "isolated-lab"
+    ],
+    "content_types": [
+      ""
+    ],
+    "resource_class": "worker",
+    "adapter_implemented": false,
+    "binary_names": [],
+    "source": "",
+    "license": "not_verified_not_redistributed",
+    "status": "deferred_not_required",
+    "reason": "optional_ffuf_alternative",
+    "cancellation": false,
+    "auth_replay": false,
+    "privilege": "unprivileged",
+    "owner_process_only": false,
+    "live_verified": false,
+    "recorded_verification_report": null
+  },
+  {
+    "id": "gobuster",
+    "tool": "Gobuster",
+    "domains": [
+      "web"
+    ],
+    "profiles": [
+      "isolated-lab"
+    ],
+    "content_types": [
+      ""
+    ],
+    "resource_class": "worker",
+    "adapter_implemented": false,
+    "binary_names": [],
+    "source": "",
+    "license": "not_verified_not_redistributed",
+    "status": "deferred_not_required",
+    "reason": "optional_ffuf_alternative",
+    "cancellation": false,
+    "auth_replay": false,
+    "privilege": "unprivileged",
+    "owner_process_only": false,
+    "live_verified": false,
+    "recorded_verification_report": null
+  },
+  {
+    "id": "rustscan",
+    "tool": "RustScan",
+    "domains": [
+      "network"
+    ],
+    "profiles": [
+      "isolated-lab"
+    ],
+    "content_types": [
+      ""
+    ],
+    "resource_class": "worker",
+    "adapter_implemented": false,
+    "binary_names": [],
+    "source": "",
+    "license": "not_verified_not_redistributed",
+    "status": "deferred_not_required",
+    "reason": "optional_naabu_alternative",
+    "cancellation": false,
+    "auth_replay": false,
+    "privilege": "unprivileged",
+    "owner_process_only": false,
+    "live_verified": false,
+    "recorded_verification_report": null
+  },
+  {
+    "id": "masscan",
+    "tool": "Masscan",
+    "domains": [
+      "network"
+    ],
+    "profiles": [
+      "isolated-lab"
+    ],
+    "content_types": [
+      ""
+    ],
+    "resource_class": "worker",
+    "adapter_implemented": false,
+    "binary_names": [],
+    "source": "",
+    "license": "not_verified_not_redistributed",
+    "status": "deferred_not_required",
+    "reason": "separate_explicit_network_package",
+    "cancellation": false,
+    "auth_replay": false,
+    "privilege": "unprivileged",
+    "owner_process_only": false,
+    "live_verified": false,
+    "recorded_verification_report": null
+  },
+  {
+    "id": "autorecon",
+    "tool": "AutoRecon",
+    "domains": [
+      "network"
+    ],
+    "profiles": [
+      "isolated-lab"
+    ],
+    "content_types": [
+      ""
+    ],
+    "resource_class": "worker",
+    "adapter_implemented": false,
+    "binary_names": [],
+    "source": "",
+    "license": "not_verified_not_redistributed",
+    "status": "deferred_not_required",
+    "reason": "no_second_embedded_orchestrator",
+    "cancellation": false,
+    "auth_replay": false,
+    "privilege": "unprivileged",
+    "owner_process_only": false,
+    "live_verified": false,
+    "recorded_verification_report": null
+  },
+  {
+    "id": "scoutsuite",
+    "tool": "ScoutSuite",
+    "domains": [
+      "cloud"
+    ],
+    "profiles": [
+      "isolated-lab"
+    ],
+    "content_types": [
+      ""
+    ],
+    "resource_class": "worker",
+    "adapter_implemented": false,
+    "binary_names": [],
+    "source": "",
+    "license": "not_verified_not_redistributed",
+    "status": "deferred_not_required",
+    "reason": "optional_prowler_alternative",
+    "cancellation": false,
+    "auth_replay": false,
+    "privilege": "unprivileged",
+    "owner_process_only": false,
+    "live_verified": false,
+    "recorded_verification_report": null
+  },
+  {
+    "id": "kubehunter",
+    "tool": "kube-hunter",
+    "domains": [
+      "kubernetes"
+    ],
+    "profiles": [
+      "isolated-lab"
+    ],
+    "content_types": [
+      ""
+    ],
+    "resource_class": "worker",
+    "adapter_implemented": false,
+    "binary_names": [],
+    "source": "",
+    "license": "not_verified_not_redistributed",
+    "status": "deferred_not_required",
+    "reason": "disabled_lab_only",
+    "cancellation": false,
+    "auth_replay": false,
+    "privilege": "unprivileged",
+    "owner_process_only": false,
+    "live_verified": false,
+    "recorded_verification_report": null
+  },
+  {
+    "id": "binary_triage",
+    "tool": "GDB / angr / pwntools",
+    "domains": [
+      "binary-lab"
+    ],
+    "profiles": [
+      "isolated-lab"
+    ],
+    "content_types": [
+      ""
+    ],
+    "resource_class": "worker",
+    "adapter_implemented": false,
+    "binary_names": [],
+    "source": "",
+    "license": "not_verified_not_redistributed",
+    "status": "deferred_not_required",
+    "reason": "no_binary_fixture_supplied",
+    "cancellation": false,
+    "auth_replay": false,
+    "privilege": "unprivileged",
+    "owner_process_only": false,
+    "live_verified": false,
+    "recorded_verification_report": null
+  },
+  {
+    "id": "commix",
+    "tool": "Commix",
+    "domains": [
+      "web"
+    ],
+    "profiles": [
+      "isolated-lab"
+    ],
+    "content_types": [
+      ""
+    ],
+    "resource_class": "worker",
+    "adapter_implemented": false,
+    "binary_names": [],
+    "source": "",
+    "license": "not_verified_not_redistributed",
+    "status": "deferred_not_required",
+    "reason": "no_disposable_command_injection_fixture",
+    "cancellation": false,
+    "auth_replay": false,
+    "privilege": "unprivileged",
+    "owner_process_only": false,
+    "live_verified": false,
+    "recorded_verification_report": null
+  }
+]

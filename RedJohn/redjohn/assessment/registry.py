@@ -367,7 +367,6 @@ CAPABILITIES = (
     *tuple(
         Capability(id=name, tool=tool, binary_names=bins, domains=domains, source=source)
         for name, tool, bins, domains, source in (
-            ("nmap_services", "Nmap", ("nmap",), ("network",), "https://nmap.org/"),
             (
                 "wordpress_assess",
                 "WPScan",
@@ -388,6 +387,47 @@ CAPABILITIES = (
                 ("kube-bench",),
                 ("kubernetes",),
                 "https://github.com/aquasecurity/kube-bench",
+            ),
+        )
+    ),
+    Capability(
+        "nmap_services",
+        "Nmap observed-open service identification",
+        domains=("network",),
+        profiles=("active-staging", "isolated-lab"),
+        resource_class="scanner",
+        adapter_implemented=True,
+        binary_names=("nmap",),
+        source="https://github.com/nmap/nmap/tree/0ee561663c1d7d2d4e708cd414dccfd3d9df30d9",
+        license="NPSL-0.95_external_operator_install_distribution_not_granted",
+        status="implemented_pending_native_e2e",
+        reason="requires_recent_scoped_naabu_open_proof_and_pinned_owned_service_probes",
+        cancellation=True,
+    ),
+    *tuple(
+        Capability(
+            capability,
+            tool,
+            domains=("source",),
+            resource_class="worker",
+            adapter_implemented=True,
+            source=source,
+            license="Apache-2.0",
+            status="implemented_preparation_only_live_audit_deferred",
+            reason="immutable_input_manifest_only_no_account_or_cluster_audit_authority",
+            cancellation=True,
+            owner_process_only=True,
+        )
+        for capability, tool, source in (
+            (
+                "cloud_prepare",
+                "Prowler reviewed preparation",
+                "https://github.com/prowler-cloud/prowler/tree/5.45.0",
+            ),
+            (
+                "kubernetes_prepare",
+                "kube-bench reviewed preparation",
+                "https://github.com/aquasecurity/kube-bench/tree/v0.16.0",
             ),
         )
     ),
@@ -450,6 +490,21 @@ def _network_configurations(
     }
 
 
+def _preparation_configurations(
+    prowler: dict[str, Any] | None, kube_bench: dict[str, Any] | None
+) -> dict[str, Any]:
+    if prowler is None and kube_bench is None:
+        return {}
+    from redjohn.assessment.preparation_tools import CAPABILITIES as PREPARATION_CAPABILITIES  # noqa: PLC0415
+    from redjohn.assessment.preparation_tools import PreparationConfig  # noqa: PLC0415 - explicit opt-in only
+
+    return {
+        PREPARATION_CAPABILITIES[name]: PreparationConfig.from_mapping(name, value)
+        for name, value in (("prowler", prowler), ("kube-bench", kube_bench))
+        if value is not None
+    }
+
+
 class CapabilityRegistry:
     def __init__(  # noqa: PLR0912, PLR0915 - explicit optional configuration gates
         self,
@@ -475,6 +530,9 @@ class CapabilityRegistry:
         trivy_config: dict[str, Any] | None = None,
         naabu_config: dict[str, Any] | None = None,
         dnsx_config: dict[str, Any] | None = None,
+        nmap_config: dict[str, Any] | None = None,
+        prowler_config: dict[str, Any] | None = None,
+        kube_bench_config: dict[str, Any] | None = None,
     ) -> None:
         """Discover local installation presence without executing optional tools.
 
@@ -493,6 +551,12 @@ class CapabilityRegistry:
         self._ffuf_config = None
         self._source_configs = _source_configurations(semgrep_config, trivy_config)
         self._network_configs = _network_configurations(naabu_config, dnsx_config)
+        self._preparation_configs = _preparation_configurations(prowler_config, kube_bench_config)
+        self._nmap_config = None
+        if nmap_config is not None:
+            from redjohn.assessment.service_tools import NmapServiceConfig  # noqa: PLC0415 - explicit optional engine only
+
+            self._nmap_config = NmapServiceConfig.from_mapping(nmap_config)
         self._specialist_configs = {}
         if any(value is not None for value in (arjun_config, sqlmap_config, dalfox_config)):
             from redjohn.assessment.specialists import CAPABILITIES as SPECIALISTS  # noqa: PLC0415
@@ -555,6 +619,7 @@ class CapabilityRegistry:
             "trivy_source": root / ".tools/trivy/0.76.0/trivy",
             "naabu_ports": root / ".tools/naabu/2.6.1/naabu",
             "dnsx_resolve": root / ".tools/dnsx/1.3.1/dnsx",
+            "nmap_services": root / ".tools/nmap/7.992/nmap",
         }
         if nuclei_lock is not None and not isinstance(nuclei_lock, dict):
             raise TypeError("invalid_nuclei_registry_lock_metadata")
@@ -580,6 +645,14 @@ class CapabilityRegistry:
         """Return configured cache/job identities, never runtime version proof."""
         if capability == "mcp_target_read" and self._mcp_target_versions is not None:
             return self._mcp_target_versions.copy()
+        if capability in self._preparation_configs:
+            preparation = self._preparation_configs[capability]
+            return {"tool_version": preparation.version, "template_version": preparation.revision}
+        if capability == "nmap_services" and self._nmap_config is not None:
+            return {
+                "tool_version": self._nmap_config.version,
+                "template_version": self._nmap_config.revision,
+            }
         if capability in self._network_configs:
             network = self._network_configs[capability]
             return {"tool_version": network.version, "template_version": network.revision}
@@ -630,7 +703,11 @@ class CapabilityRegistry:
 
     def _binary_presence(self, entry: Capability) -> tuple[str | None, str | None]:  # noqa: PLR0911 - explicit pin prevents PATH fallback
         configured = (
-            self._source_configs[entry.id].binary
+            self._preparation_configs[entry.id].binary
+            if entry.id in self._preparation_configs
+            else self._nmap_config.binary
+            if entry.id == "nmap_services" and self._nmap_config is not None
+            else self._source_configs[entry.id].binary
             if entry.id in self._source_configs
             else self._network_configs[entry.id].binary
             if entry.id in self._network_configs
@@ -724,6 +801,11 @@ class CapabilityRegistry:
                 or (
                     entry.id in {"naabu_ports", "dnsx_resolve"}
                     and entry.id not in self._network_configs
+                )
+                or (entry.id == "nmap_services" and self._nmap_config is None)
+                or (
+                    entry.id in {"cloud_prepare", "kubernetes_prepare"}
+                    and entry.id not in self._preparation_configs
                 )
             ):
                 row.update(

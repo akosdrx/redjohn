@@ -114,15 +114,21 @@ class WorkflowStep:
     effect: str = "read_only"
     expected_statuses: tuple[int, ...] = (200,)
     response_sha256: str = ""
+    graphql_contract: str = ""
 
     def __post_init__(self) -> None:
         for name in (self.name, self.from_state, self.to_state):
             bounded_name(name)
+        bounded_name(self.graphql_contract, empty=True)
         if (
             not isinstance(self.response_sha256, str)
             or (self.response_sha256 and not _SHA256.fullmatch(self.response_sha256))
             or self.effect not in {"read_only", "mutation", "cleanup"}
-            or (self.effect == "read_only" and self.method not in {"GET", "HEAD", "OPTIONS"})
+            or (
+                self.effect == "read_only"
+                and self.method not in {"GET", "HEAD", "OPTIONS"}
+                and not (self.method == "POST" and self.graphql_contract)
+            )
             or (self.effect != "read_only" and self.method != "POST")
             or not isinstance(self.url, str)
             or len(self.url) > 4096
@@ -217,6 +223,14 @@ class WorkflowDefinition:
             if step.name == name:
                 return step
         raise ValueError("workflow_step_not_defined")
+
+    def to_mapping(self) -> dict[str, Any]:
+        """Preserve persisted legacy payloads when additive fields are empty."""
+        result = asdict(self)
+        for step in result["steps"]:
+            if not step["graphql_contract"]:
+                del step["graphql_contract"]
+        return result
 
 
 def lease_seconds(value: float) -> float:

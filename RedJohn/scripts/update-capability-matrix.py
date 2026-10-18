@@ -30,6 +30,16 @@ REPORTS = {
     "schemathesis_validate": "redjohn-mime-restart-verification.md",
     "oast_correlate": "redjohn-mime-restart-verification.md",
     "oast_poll": "redjohn-mime-restart-verification.md",
+    "workflow_execute": "../RedJohn/docs/redjohn-graphql-workflows.md",
+    "browser_auth_flow": "../RedJohn/docs/redjohn-browser-auth-workflows.md",
+    "mcp_target_read": "redjohn-confined-mcp-target.md",
+    "semgrep_source": "redjohn-source-scanners.md",
+    "trivy_source": "redjohn-source-scanners.md",
+    "naabu_ports": "redjohn-network-broker.md",
+    "dnsx_resolve": "redjohn-network-broker.md",
+    "nmap_services": "redjohn-nmap-service-profile.md",
+    "cloud_prepare": "../RedJohn/docs/redjohn-cloud-kubernetes-preparation.md",
+    "kubernetes_prepare": "../RedJohn/docs/redjohn-cloud-kubernetes-preparation.md",
 }
 
 
