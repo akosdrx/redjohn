@@ -1,0 +1,14 @@
+name: RedJohn Ubuntu validation
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  select-source-branch:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - name: Require the RedJohn source branch
+        run: |
+          echo '::error::Select the codex/redjohn-ubuntu-actions source branch in Run workflow. The default branch currently contains only the repository bootstrap.'
+          exit 1
