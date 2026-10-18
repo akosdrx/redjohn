@@ -2,6 +2,7 @@
 
 import importlib.util
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -14,6 +15,12 @@ SPEC.loader.exec_module(ci)
 
 
 class EvidenceContract(unittest.TestCase):
+    def setUp(self):
+        # Keep synthetic rejection cases out of the real runner's step summary.
+        summary = patch.dict(os.environ, {"GITHUB_STEP_SUMMARY": ""})
+        summary.start()
+        self.addCleanup(summary.stop)
+
     def test_junit_preserves_failures_errors_skips_and_kinds(self):
         xml = """<testsuites><testsuite><testcase name="real"><properties>
         <property name="evidence_kind" value="real_integration"/></properties></testcase>
@@ -30,7 +37,7 @@ class EvidenceContract(unittest.TestCase):
 
     def test_missing_evidence_cannot_succeed(self):
         with tempfile.TemporaryDirectory() as folder, patch.object(ci, "OUT", Path(folder)), \
-                patch.object(ci, "identity", return_value={"commit_sha": "abc"}):
+                patch.object(ci, "identity", return_value={"commit_sha": "abc", "machine": "contract"}):
             self.assertEqual(ci.summarize(), 1)
             result = json.loads((Path(folder) / "summary.json").read_text())
             self.assertFalse(result["success"])
@@ -38,7 +45,7 @@ class EvidenceContract(unittest.TestCase):
 
     def test_valid_commands_do_not_hide_skipped_integration(self):
         with tempfile.TemporaryDirectory() as folder, patch.object(ci, "OUT", Path(folder)), \
-                patch.object(ci, "identity", return_value={"commit_sha": "abc"}):
+                patch.object(ci, "identity", return_value={"commit_sha": "abc", "machine": "contract"}):
             root = Path(folder)
             for name in ci.REQUIRED:
                 (root / (name + ".json")).write_text(json.dumps({"commit_sha": "abc", "exit_code": 0,
@@ -51,13 +58,33 @@ class EvidenceContract(unittest.TestCase):
 
     def test_commit_mismatch_cannot_succeed(self):
         with tempfile.TemporaryDirectory() as folder, patch.object(ci, "OUT", Path(folder)), \
-                patch.object(ci, "identity", return_value={"commit_sha": "abc"}):
+                patch.object(ci, "identity", return_value={"commit_sha": "abc", "machine": "contract"}):
             root = Path(folder)
             for name in ci.REQUIRED:
                 (root / (name + ".json")).write_text(json.dumps({"commit_sha": "other", "exit_code": 0,
                     "leaked_descendant_pids_before_cleanup": []}))
             self.assertEqual(ci.summarize(), 1)
             self.assertIn("failed_command:python-integration", json.loads((root / "summary.json").read_text())["blockers"])
+
+    def test_complete_contract_writes_isolated_github_summary(self):
+        with tempfile.TemporaryDirectory() as folder, patch.object(ci, "OUT", Path(folder)), \
+                patch.object(ci, "identity", return_value={"commit_sha": "abc", "machine": "contract"}):
+            root = Path(folder)
+            for name in ci.REQUIRED:
+                (root / (name + ".json")).write_text(json.dumps({"commit_sha": "abc", "exit_code": 0,
+                    "leaked_descendant_pids_before_cleanup": []}))
+            (root / "capabilities.json").write_text('{"available":true}')
+            (root / "cgroup-cleanup.json").write_text('{"removed":true,"leaked_processes":false}')
+            (root / "go-tests.log").write_text('{"Package":"fixture","Test":"TestContract","Action":"pass"}\n')
+            for name in ("regression", "integration"):
+                (root / (name + ".junit.xml")).write_text('<testsuite><testcase name="fixture"/></testsuite>')
+            with patch.dict(os.environ, {"GITHUB_STEP_SUMMARY": str(root / "summary.md")}):
+                self.assertEqual(ci.summarize(), 0)
+            self.assertIn("Complete.", (root / "summary.md").read_text())
+            self.assertTrue((root / "go.junit.xml").exists())
+            index = json.loads((root / "evidence-index.json").read_text())
+            self.assertEqual(index["commit_sha"], "abc")
+            self.assertIn("summary.json", index["files"])
 
 
 if __name__ == "__main__":

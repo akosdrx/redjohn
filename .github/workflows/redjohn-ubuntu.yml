@@ -130,7 +130,7 @@ jobs:
           python .github/scripts/ci.py run --name go-build --cwd RedJohn/redjohn/interface/tui -- timeout 10m go build -trimpath -o "$GITHUB_WORKSPACE/artifacts/build/redjohn-tui" ./cmd/redjohn-tui
       - name: Build the Python distribution using the existing packaging hook
         if: ${{ !cancelled() && steps.go.outcome == 'success' && steps.dependencies.outcome == 'success' }}
-        run: python .github/scripts/ci.py run --name python-wheel -- timeout 10m python -m pip wheel --no-deps --no-build-isolation RedJohn --wheel-dir artifacts/build
+        run: python .github/scripts/ci.py run --name python-wheel -- timeout 10m python -m pip wheel --no-deps --no-build-isolation ./RedJohn --wheel-dir artifacts/build
       - name: Cache version-pinned Chromium downloads
         if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
         uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4

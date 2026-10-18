@@ -206,6 +206,8 @@ def summarize():
             ET.SubElement(case, "failure" if row["Action"] == "fail" else "skipped")
     if go_cases:
         ET.ElementTree(suite).write(OUT / "go.junit.xml", encoding="utf-8", xml_declaration=True)
+        if result["go_tests"]["failed"] or result["go_tests"]["skipped"]:
+            result["blockers"].append("incomplete_go_tests")
     else:
         result["blockers"].append("missing_go_test_cases")
     result["success"] = not result["blockers"]
@@ -223,7 +225,8 @@ def summarize():
                 c = value["counts"]
                 report.write(f"| {name} | {c['passed']} | {c['failed']} | {c['errors']} | {c['skipped']} |\n")
             report.write("\n" + ("Complete." if result["success"] else "Incomplete: " + ", ".join(result["blockers"])) + "\n")
-    print(json.dumps({"success": result["success"], "blockers": result["blockers"]}))
+    print(json.dumps({key: result[key] for key in
+                     ("commit_sha", "machine", "success", "blockers", "junit", "go_tests")}))
     return 0 if result["success"] else 1
 
 
