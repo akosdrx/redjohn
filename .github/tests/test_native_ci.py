@@ -113,6 +113,11 @@ class NativeEvidenceContracts(unittest.TestCase):
             },
         )
         self.put("source.json", {"commit_sha": sha, "sha256": {"synthetic": "b" * 64}})
+        regression = ET.Element("testsuite", tests="1")
+        case = ET.SubElement(regression, "testcase", name="synthetic_contract", classname="synthetic")
+        props = ET.SubElement(case, "properties")
+        ET.SubElement(props, "property", name="evidence_kind", value="mock_contract")
+        ET.ElementTree(regression).write(self.out / "regression.junit.xml")
         for name, selected in native.SUITES.items():
             suite = ET.Element("testsuite", tests=str(selected["expected"]))
             for index in range(selected["expected"]):
@@ -168,8 +173,10 @@ class NativeEvidenceContracts(unittest.TestCase):
         self.assertFalse(result["full_project_validated"])
         self.assertEqual(result["out_of_scope_not_executed"], [native.EXCLUDED_BROWSER])
         self.assertEqual(
-            sum(row["counts"]["passed"] for row in result["suites"].values()), 19
+            sum(row["counts"]["passed"] for row in result["suites"].values()), 20
         )
+        self.assertEqual(result["python_regression"]["counts"]["passed"], 1)
+        self.assertIn("mock_contract", result["python_regression"]["evidence_kinds"])
         self.assertTrue((self.out / "native-evidence-index.json").exists())
 
     def test_missing_evidence_cannot_be_native_success(self):
@@ -177,6 +184,25 @@ class NativeEvidenceContracts(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertFalse(result["native_smoke_success"])
         self.assertIn("blocked_native_runner_capability", result["blockers"])
+
+    def test_missing_failed_or_skipped_regression_cannot_be_native_workflow_success(self):
+        for fault in ("missing", "failure", "error", "skipped", "suite-error"):
+            with self.subTest(fault=fault):
+                self.complete()
+                path = self.out / "regression.junit.xml"
+                if fault == "missing":
+                    path.unlink()
+                else:
+                    tree = ET.parse(path)
+                    if fault == "suite-error":
+                        tree.getroot().set("errors", "1")
+                    else:
+                        ET.SubElement(tree.getroot().find("testcase"), fault)
+                    tree.write(path)
+                code, result = self.run_summary()
+                self.assertNotEqual(code, 0)
+                self.assertFalse(result["native_smoke_success"])
+                self.assertIn("incomplete_python_regression", result["blockers"])
 
     def test_new_writable_cgroup_guard_case_cannot_be_replaced_by_another_pass(self):
         self.complete()

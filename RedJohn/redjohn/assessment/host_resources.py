@@ -150,6 +150,11 @@ class HostResourcePool:
                     "ALTER TABLE leases ADD COLUMN owner_process_only "
                     "INTEGER NOT NULL DEFAULT 0 CHECK (owner_process_only IN (0, 1))"
                 )
+            if "cleanup_unverified" not in columns:
+                db.execute(
+                    "ALTER TABLE leases ADD COLUMN cleanup_unverified "
+                    "INTEGER NOT NULL DEFAULT 0 CHECK (cleanup_unverified IN (0, 1))"
+                )
             saved = db.execute("SELECT value FROM metadata WHERE key='policy'").fetchone()
             if saved is None:
                 self.limits = limits or HostResourceLimits()
@@ -261,7 +266,8 @@ class HostResourcePool:
                 # Fenced claims still reap their group before releasing it.
                 db.execute(
                     "DELETE FROM leases WHERE owner=? AND owner_process_only=1 "
-                    "AND kind='worker' AND fence_path IS NULL AND fence_inode IS NULL",
+                    "AND kind='worker' AND fence_path IS NULL AND fence_inode IS NULL "
+                    "AND cleanup_unverified=0",
                     (owner,),
                 )
                 owned = [
@@ -272,6 +278,7 @@ class HostResourcePool:
                         and row["kind"] == "worker"
                         and row["fence_path"] is None
                         and row["fence_inode"] is None
+                        and row["cleanup_unverified"] == 0
                     )
                 ]
             fences = {(row["fence_path"], row["fence_inode"]) for row in owned}
@@ -329,6 +336,8 @@ class HostResourcePool:
             rows = self._rows(db)
             if self._lost_owners(rows):
                 raise ResourceAdmissionError("host_owner_lost_requires_recovery")
+            if any(row["cleanup_unverified"] for row in rows):
+                raise ResourceAdmissionError("host_cleanup_unverified_requires_recovery")
             counts = Counter(row["kind"] for row in rows)
             workers = sum(counts[kind] for kind in ("worker", "scanner", "browser"))
             caps = {
@@ -373,9 +382,30 @@ class HostResourcePool:
                 ),
             )
 
-    def release(self, owner: str, lease_id: str) -> None:
+    def quarantine(self, owner: str, lease_id: str) -> None:
+        """Retain an existing owned claim when its child cleanup is unverified."""
         self._check_owner(owner)
         with self._transaction() as db:
+            changed = db.execute(
+                "UPDATE leases SET cleanup_unverified=1 "
+                "WHERE id=? AND owner=? AND pid=? AND identity=?",
+                (lease_id, owner, self.pid, self.identity),
+            ).rowcount
+            if changed != 1:
+                raise ResourceAdmissionError("host_cleanup_reservation_missing")
+
+    def release(self, owner: str, lease_id: str, *, cleanup_verified: bool = False) -> None:
+        self._check_owner(owner)
+        if type(cleanup_verified) is not bool:
+            raise ValueError("invalid_cleanup_verification")
+        with self._transaction() as db:
+            row = db.execute(
+                "SELECT cleanup_unverified FROM leases "
+                "WHERE id=? AND owner=? AND pid=? AND identity=?",
+                (lease_id, owner, self.pid, self.identity),
+            ).fetchone()
+            if row is not None and row[0] and not cleanup_verified:
+                raise ResourceAdmissionError("host_cleanup_unverified_requires_recovery")
             db.execute(
                 "DELETE FROM leases WHERE id=? AND owner=? AND pid=? AND identity=?",
                 (lease_id, owner, self.pid, self.identity),
@@ -386,11 +416,13 @@ class HostResourcePool:
             self.limits = self._read_limits(db)
             rows = self._rows(db)
             lost = self._lost_owners(rows)
+            quarantined = sum(bool(row["cleanup_unverified"]) for row in rows)
             process_only = all(
                 row["owner_process_only"] == 1
                 and row["kind"] == "worker"
                 and row["fence_path"] is None
                 and row["fence_inode"] is None
+                and row["cleanup_unverified"] == 0
                 for row in rows
                 if row["owner"] in lost
             )
@@ -401,13 +433,16 @@ class HostResourcePool:
                 "reserved_bytes": sum(row["estimated_bytes"] for row in rows),
                 "owners": len({row["owner"] for row in rows}),
                 "lost_owners": len(lost),
-                "admission_blocked": bool(lost),
+                "admission_blocked": bool(lost) or bool(quarantined),
+                "cleanup_quarantined": quarantined,
                 "recovery": (
                     "requires_confirmed_owner_death"
                     if process_only
                     else "requires_verified_os_fence"
                 )
                 if lost
+                else "requires_verified_owned_cleanup"
+                if quarantined
                 else "not_required",
                 "measurement_method": "deduplicated_process_forest_summed_rss",
                 "os_hard_limit": False,

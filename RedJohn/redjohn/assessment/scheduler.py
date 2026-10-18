@@ -445,6 +445,7 @@ class Scheduler:
                 kind=entry.resource_class,
                 estimated_bytes=memory,
                 owner_process_only=owner_only,
+                cleanup_guard=getattr(adapter, "resource_cleanup_verified", None),
             )
         try:
             # Preserve established dispatch timing for adapters without a

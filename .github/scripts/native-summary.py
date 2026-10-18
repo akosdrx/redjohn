@@ -12,7 +12,7 @@ import re
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-from ci import ROOT, identity
+from ci import ROOT, identity, junit_summary
 
 OUT = ROOT / "artifacts"
 EXCLUDED_BROWSER = (
@@ -27,6 +27,7 @@ SUITES = {
     "service": {"file": "test_service_tools_live.py", "expected": 4},
     "preparation": {"file": "test_preparation_native.py", "expected": 1},
     "memory": {"file": "test_owned_memory_live.py", "expected": 6},
+    "cleanup-proof": {"file": "test_cleanup_quarantine_live.py", "expected": 1},
 }
 REQUIRED = (
     "python-install",
@@ -37,12 +38,14 @@ REQUIRED = (
     "service-scanner-install",
     "preparation-tool-install",
     "linux-setup",
+    "python-regression",
     "sandbox-setup",
     "native-capability",
     "native-network",
     "native-service",
     "native-preparation",
     "native-memory",
+    "native-cleanup-proof",
     "native-cleanup",
     "sandbox-cleanup",
 )
@@ -184,6 +187,22 @@ def summary():
                 raise ValueError("incomplete_native_suite")
         except (OSError, ValueError, TypeError, ET.ParseError):
             result["blockers"].append("incomplete_native_suite:" + name)
+    try:
+        path = OUT / "regression.junit.xml"
+        if path.stat().st_size > 8 * 1024 * 1024:
+            raise ValueError("regression_junit_size_exceeded")
+        regression = junit_summary(path)
+        result["python_regression"] = regression
+        counts = regression["counts"]
+        for suite in ET.parse(path).getroot().iter("testsuite"):
+            if any(suite.find(tag) is not None for tag in ("error", "failure")) or any(
+                int(suite.get(key, "0")) != 0 for key in ("errors", "failures", "skipped")
+            ):
+                raise ValueError("regression_suite_error")
+        if not counts["passed"] or any(counts[key] for key in ("failed", "errors", "skipped")):
+            raise ValueError("regression_incomplete")
+    except (OSError, ValueError, TypeError, ET.ParseError):
+        result["blockers"].append("incomplete_python_regression")
     try:
         selected = load("native-scope.json")
         if (

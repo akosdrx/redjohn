@@ -194,6 +194,8 @@ class ResourceLease:
     kind: str
     estimated_bytes: int
     released: bool = False
+    cleanup_quarantined: bool = False
+    _cleanup_guard: Callable[[], bool] | None = field(default=None, repr=False)
 
     def release(self) -> None:
         self.governor.release(self)
@@ -248,12 +250,19 @@ class ResourceGovernor:
                 self._pressure = "normal"
         return memory
 
+    def _check_admission(self) -> None:
+        if self._closed:
+            raise ResourceAdmissionError("resource_governor_closed")
+        if any(lease.cleanup_quarantined for lease in self._leases.values()):
+            raise ResourceAdmissionError("resource_cleanup_unverified")
+
     def acquire(
         self,
         kind: str = "worker",
         estimated_bytes: int = 0,
         *,
         owner_process_only: bool = False,
+        cleanup_guard: Callable[[], bool] | None = None,
     ) -> ResourceLease:
         if kind not in {"worker", "scanner", "browser", "page", "context"}:
             raise ValueError("unknown resource kind")
@@ -261,9 +270,10 @@ class ResourceGovernor:
             raise ValueError("estimated_bytes must be a nonnegative integer")
         if type(owner_process_only) is not bool or (owner_process_only and kind != "worker"):
             raise ValueError("owner_process_only requires an in-process worker")
+        if cleanup_guard is not None and not callable(cleanup_guard):
+            raise ValueError("cleanup_guard must be callable")
         with self._lock:
-            if self._closed:
-                raise ResourceAdmissionError("resource_governor_closed")
+            self._check_admission()
             memory = self.sample()
             counts = Counter(lease.kind for lease in self._leases.values())
             worker_count = sum(counts[k] for k in ("worker", "scanner", "browser"))
@@ -291,7 +301,9 @@ class ResourceGovernor:
             if reason:
                 self.denied += 1
                 raise ResourceAdmissionError(reason)
-            lease = ResourceLease(self, uuid.uuid4().hex, kind, estimated_bytes)
+            lease = ResourceLease(
+                self, uuid.uuid4().hex, kind, estimated_bytes, _cleanup_guard=cleanup_guard
+            )
             if self._host_pool is not None:
                 try:
                     self._host_pool.reserve(
@@ -299,7 +311,10 @@ class ResourceGovernor:
                         lease.lease_id,
                         kind,
                         estimated_bytes,
-                        owner_process_only=owner_process_only,
+                        # A guard can later expose an unresolved child. Make
+                        # that claim non-reclaimable by owner death BEFORE any
+                        # launch, even if a later quarantine write fails.
+                        owner_process_only=owner_process_only and cleanup_guard is None,
                     )
                 except ResourceAdmissionError:
                     self.denied += 1
@@ -311,10 +326,45 @@ class ResourceGovernor:
         with self._lock:
             if lease.governor is not self:
                 raise ValueError("lease belongs to another governor")
-            if not lease.released and self._host_pool is not None:
-                self._host_pool.release(self._owner_id, lease.lease_id)
+            if lease.released:
+                return
+            if lease._cleanup_guard is not None:
+                try:
+                    verified = lease._cleanup_guard() is True
+                except BaseException:  # noqa: BLE001 - even cancellation cannot prove child death
+                    verified = False
+                if not verified:
+                    # Keep this SAME reservation. A timed-out or unobservable
+                    # child must never be exchanged for a fresh capacity slot.
+                    lease.cleanup_quarantined = True
+                    if self._host_pool is not None:
+                        self._host_pool.quarantine(self._owner_id, lease.lease_id)
+                    raise ResourceAdmissionError("resource_cleanup_unverified")
+            if self._host_pool is not None:
+                self._host_pool.release(
+                    self._owner_id, lease.lease_id, cleanup_verified=lease.cleanup_quarantined
+                )
             self._leases.pop(lease.lease_id, None)
             lease.released = True
+            lease.cleanup_quarantined = False
+
+    def recover_cleanup(self) -> int:
+        """Release only retained claims whose original trusted guard now proves cleanup.
+
+        No TTL or caller-supplied boolean replaces the guard. Lost controllers
+        still require the host pool's independent OS-fence recovery procedure.
+        """
+        with self._lock:
+            recovered = 0
+            for lease in tuple(self._leases.values()):
+                if not lease.cleanup_quarantined:
+                    continue
+                try:
+                    self.release(lease)
+                except ResourceAdmissionError:
+                    continue
+                recovered += 1
+            return recovered
 
     def close(self) -> None:
         """Called after the runtime has stopped its owned jobs and browsers."""
@@ -330,6 +380,7 @@ class ResourceGovernor:
             return {
                 "pressure": self._pressure,
                 "active": dict(Counter(x.kind for x in self._leases.values())),
+                "cleanup_quarantined": sum(x.cleanup_quarantined for x in self._leases.values()),
                 "reserved_bytes": sum(x.estimated_bytes for x in self._leases.values()),
                 "peak_rss_bytes": self.peak_rss_bytes,
                 "admissions_denied": self.denied,

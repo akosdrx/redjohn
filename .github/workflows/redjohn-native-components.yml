@@ -98,6 +98,26 @@ jobs:
         if: ${{ !cancelled() && steps.engines.outcome == 'success' }}
         id: delegation
         run: python .github/scripts/ci.py run --name linux-setup -- bash .github/scripts/prepare-linux.sh
+      - name: Run Python unit, contract and mixed regressions separately from native proof
+        if: ${{ !cancelled() && steps.delegation.outcome == 'success' }}
+        id: regression
+        run: |
+          task_python="$(command -v python)"
+          task_home="$HOME"
+          sudo -E env HOME="$task_home" REDJOHN_CI_CAPABILITIES='' bash .github/scripts/linux-tests.sh "$task_python" regression
+      - name: Preserve the regression checkpoint before longer native work
+        if: ${{ always() && steps.regression.outcome != 'skipped' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: redjohn-native-regression-${{ matrix.arch }}-${{ github.sha }}-${{ github.run_attempt }}
+          path: |
+            artifacts/source.json
+            artifacts/python-regression.json
+            artifacts/python-regression.log
+            artifacts/regression.junit.xml
+            artifacts/non-applicable-regression.json
+          if-no-files-found: error
+          retention-days: 14
       - name: Install the job-owned enforcing AppArmor profile and negative controls
         if: ${{ !cancelled() && steps.delegation.outcome == 'success' }}
         id: sandbox

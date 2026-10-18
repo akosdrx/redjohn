@@ -64,6 +64,7 @@ REAL_FILES = {
     "test_service_tools_live.py",
     "test_preparation_native.py",
     "test_preparation_scheduler.py",
+    "test_cleanup_quarantine_live.py",
 }
 
 REAL_CASES = {
@@ -96,6 +97,7 @@ LOCAL_PROCESS_FILES = {
     "test_mcp_stdio_bounded_live.py",
     "test_graphql_workflow_live.py",
     "test_preparation_scheduler.py",
+    "test_cleanup_quarantine_live.py",
 }
 LOCAL_BROWSER_FILES = {"test_viewer_steering_live.py", "test_browser_auth_flow_live.py"}
 NAMESPACE_ONLY_FILES = {"test_source_tools_live.py", "test_legacy_shell_boundary_live.py",

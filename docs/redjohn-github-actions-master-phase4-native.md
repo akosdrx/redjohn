@@ -71,3 +71,9 @@ on both platforms. Corrected-helper run ZIP digests:
 
 These original artifacts and logs are preserved separately under
 `docs/measurements/master-completion-20261018/github-phase4-selection-native/`.
+# Completed authenticated peer-close correction
+
+[Native run 39157069204](https://github.com/akosdrx/redjohn/actions/runs/39157069204) completed successfully for source `61f209e0d0e9bc094316017da0de613b907aeecf`, tree `46aa7915af350d120e2ddfe9b6251cad888642a6`. Each Ubuntu 24.04 architecture executed 19 actual native component cases: network 8, service 4, preparation version-only 1 and memory 6; failures/errors/skips were all zero. SSH, HTTP, the false relay-open control and cancellation cleanup all passed. This validates the fixed authenticated reset classification with the existing nonce, exact-probe and current-job gates intact.
+
+Both artifact ZIP SHA256 digests, all 741 source identities and all 59 indexed evidence identities per architecture were independently checked. Full logs, JUnit, versions and measurements are saved under `docs/measurements/master-completion-20261018/github-phase4-reset-native/`. The native workflow explicitly reports `full_project_validated=false`, excludes the browser/SDK/MCP overlap case, and performs no live cloud or Kubernetes audit. Those remain distinct from the full Chromium matrix. Global AppArmor restrictions remained enabled and run-owned cleanup passed on both architectures.
+

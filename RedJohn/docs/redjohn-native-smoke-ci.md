@@ -15,6 +15,7 @@ The scope is exactly:
 | `test_service_tools_live.py` | 4 | Real owned Nmap service fixtures and cancellation |
 | `test_preparation_native.py` | 1 | Real copied kube-bench version-only deny-all namespace; no Kubernetes audit |
 | `test_owned_memory_live.py` | 6 | Real kernel aggregate memory, writable-cgroup denial, process cleanup and terminal inheritance |
+| `test_cleanup_quarantine_live.py` | 1 | Actual small owned Python child and shared SQLite admission retained until reap; no scanner or kernel-limit claim |
 
 The browser-containing memory case
 `RedJohn/tests/test_owned_memory_live.py::test_actual_browser_sdk_mcp_and_native_worker_inherit_the_owner_hard_fence`
@@ -45,8 +46,14 @@ failure too. Private authentication state is outside this native scope.
 descendants, missing/relaxed capability controls, wrong tool receipt hashes,
 unexpected test files, duplicate cases, any failure/error/skip or an unexpected
 case count. It also requires the actual kube-bench version-only JUnit proof and
-the exact explicit browser-case exclusion. A green smoke is evidence only for
-these 19 native cases; it proves no full regression, frontend/TUI, browser,
+the exact explicit browser-case exclusion. Python regression contracts also run
+separately under the existing unprivileged launcher, with their mock/mixed labels
+retained and a strict no-error/failure/skip gate. Their JUnit, log and source hashes
+are uploaded immediately before longer work, so diagnosis does not wait for the
+full matrix or its soak. The full workflow has the same early checkpoint.
+
+A green smoke is evidence only for
+these 20 component cases and the separately reported Python regression; it proves no frontend/TUI, browser,
 external cloud account or Kubernetes node audit result.
 
 Manual dispatch uses the correct repository:

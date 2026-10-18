@@ -32,12 +32,13 @@ if test "$task_suite" = native; then
   # unique run/attempt cgroup and never shares a full-matrix job's processes.
   printf '%s' "$$" > "$REDJOHN_TEST_CGROUP_ROOT/launcher-integration/cgroup.procs"
   task_native_failed=0
-  for task_component in network service preparation memory; do
+  for task_component in network service preparation memory cleanup-proof; do
     task_selection=()
     case "$task_component" in
       network) task_file=RedJohn/tests/test_network_tools_live.py ;;
       service) task_file=RedJohn/tests/test_service_tools_live.py ;;
       preparation) task_file=RedJohn/tests/test_preparation_native.py ;;
+      cleanup-proof) task_file=RedJohn/tests/test_cleanup_quarantine_live.py ;;
       memory)
         task_file=RedJohn/tests/test_owned_memory_live.py
         task_selection=(-k 'not test_actual_browser_sdk_mcp_and_native_worker_inherit_the_owner_hard_fence')

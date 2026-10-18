@@ -1,0 +1,11 @@
+# Cleanup retains the original resource reservation
+
+Trusted process-owning adapters may supply a synchronous `resource_cleanup_verified()` guard. The persistent scheduler attaches it to the same dispatch reservation before running the adapter. Only exact `True` permits release; false, unavailable or throwing proof retains capacity, blocks fresh local admissions and marks the existing host ledger claim as quarantined. Runtime close still rejects outstanding leases. A cleanup failure cannot publish the adapter's earlier successful result or findings.
+
+Every guarded host claim is durably classified as potentially process-owning at initial admission. Consequently, a later failed quarantine write or controller crash cannot enable the in-process-only owner-death shortcut. Quarantined claims without an independently verified OS fence remain held after owner death. Fenced lost owners use the existing inode-bound cgroup kill/reap recovery, never a heartbeat TTL. No second worker lease is acquired.
+
+`ResourceGovernor.recover_cleanup()` retries only original retained guards, releasing a claim only after its trusted owner confirms cleanup. It cannot accept a caller-provided success boolean. Host-wide policy changes remain blocked while any reservation exists; fresh clients read the durable quarantine flag. If the host ledger is unavailable, its operations fail closed.
+
+Verification is deliberately separated: `tests/test_cleanup_quarantine_contract.py` injects lifecycle/storage faults against real local SQLite, while `tests/test_cleanup_quarantine_live.py` launches a small actual owned Python child, proves cross-client admission remains blocked while it lives, then terminates and waits for it before recovering capacity. This is process/ledger evidence, not scanner detection or native kernel-limit proof. Linux hosted validation of the new shared hook remains required before release.
+
+This hook protects dispatch-time reservations. Existing adapters that prepare a separately admitted worker before dispatch retain their own ownership lifecycle. The Trivy candidate keeps its bounded preparation inside `run`, under the existing scanner reservation; it must cover pending launch delivery and repeated cancellation in its guard before public registration.
