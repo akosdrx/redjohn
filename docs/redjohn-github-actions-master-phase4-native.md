@@ -44,3 +44,30 @@ receipts, resource/cleanup data and independent verification are retained under
 `docs/measurements/master-completion-20261018/github-phase4-native/`. Generated
 evidence remains outside source publication. The failed run is retained even
 after the focused helper fix is published and checked in a subsequent run.
+
+## Completed helper-corrected run
+
+[Run 39155614617](https://github.com/akosdrx/redjohn/actions/runs/39155614617)
+at `22d787223cb5e6f6b3b860b79048697504b5d2f2` completed with **18 passed,
+1 failed, 0 skipped/errors per architecture**. The HTTP service, closed-after-open
+negative control and cancellation cases passed with the real engine. SSH was
+identified by Nmap, but the broker classified an authenticated early TCP reset
+as a policy denial. The overall native result remains failed.
+
+A real owned TCP banner/reset contract reproduced `connected=1, denied=1`
+before the transport fix. The correction distinguishes only known peer-close
+exceptions after nonce authentication and a fresh current-job fence. Missing
+nonce, incomplete/extra probes, expired/cancelled jobs, byte/connection budgets
+and policy exceptions remain denials, including concurrent reset/policy-error
+ordering. This changes transport classification, not permitted payloads or
+execution authority. Actual corrected native service proof is required from a
+subsequent hosted run; a contract pass alone is insufficient.
+
+All **741 source hashes** and **59 indexed evidence hashes** match independently
+on both platforms. Corrected-helper run ZIP digests:
+
+- x64: `32b08834d710ffa4482a105ac9b3112509d79e895e26bda81cb9997cda9a8505`
+- ARM64: `537ca85d7602db67c3773a2f2ddfbf628e1e64c970003594eb922977894b23ac`
+
+These original artifacts and logs are preserved separately under
+`docs/measurements/master-completion-20261018/github-phase4-selection-native/`.

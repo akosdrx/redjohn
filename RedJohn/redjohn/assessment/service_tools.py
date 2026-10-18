@@ -338,6 +338,8 @@ class NmapServiceAdapter:
                             "response_digests": broker.response_digests,
                             "banner_types": sorted(broker.banner_types),
                             "sent_probe_count": broker.sent_probe_count,
+                            "probe_bytes_received": broker.probe_bytes_received,
+                            "transport_errors": dict(broker.transport_errors),
                             "admission_closed": broker.closed,
                             "duration_seconds": time.monotonic() - started,
                         },

@@ -39,9 +39,13 @@ class ObservedServiceBroker(ScopedTCPBroker):
         self.banner_types: set[str] = set()
         self.response_digests: list[str] = []
         self.sent_probe_count = 0
+        self.probe_bytes_received = 0
+        # Closed authenticated transport is distinct from rejected authority or
+        # bytes. Fixed codes and finite connection admission keep this bounded.
+        self.transport_errors: dict[str, int] = {}
         self._admission_lock = asyncio.Lock()
 
-    async def _accept(  # noqa: PLR0912 - authenticated admission then bounded stream lifecycle
+    async def _accept(  # noqa: PLR0915 - one owner for nonce/admission/transfer/cleanup lifecycle
         self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
     ) -> None:
         task = asyncio.current_task()
@@ -54,11 +58,13 @@ class ObservedServiceBroker(ScopedTCPBroker):
         self.writers.add(writer)
         upstream: asyncio.StreamWriter | None = None
         transfers: list[asyncio.Task[None]] = []
+        authenticated = False
         try:
             async with asyncio.timeout(self.timeout):
                 received = await reader.readexactly(len(self.preamble))
                 if not secrets.compare_digest(received, self.preamble):
                     raise PolicyDenied("service_controller_nonce_required")
+                authenticated = True
                 async with self._admission_lock:
                     self.fence()
                     if self.attempted >= 8:
@@ -84,26 +90,69 @@ class ObservedServiceBroker(ScopedTCPBroker):
                     asyncio.create_task(self._probe(reader, upstream)),
                     asyncio.create_task(self._response(upstream_reader, writer)),
                 ]
-                done, _pending = await asyncio.wait(transfers, return_when=asyncio.FIRST_COMPLETED)
-                for finished in done:
-                    finished.result()
-        except (ValueError, RuntimeError, OSError, TimeoutError, asyncio.IncompleteReadError):
+                await self._finish_transfers(transfers)
+        except (ValueError, RuntimeError, TimeoutError, asyncio.IncompleteReadError):
+            self.denied += 1
+        except (ConnectionResetError, BrokenPipeError, ConnectionAbortedError) as exc:
+            if authenticated:
+                self._record_authenticated_close(exc)
+            else:
+                self.denied += 1
+        except OSError:
             self.denied += 1
         finally:
             for transfer in transfers:
                 transfer.cancel()
             await asyncio.gather(*transfers, return_exceptions=True)
-            streams = [stream for stream in (writer, upstream) if stream is not None]
+            await self._close_streams(writer, upstream, task)
+
+    async def _close_streams(
+        self,
+        writer: asyncio.StreamWriter,
+        upstream: asyncio.StreamWriter | None,
+        task: asyncio.Task[Any],
+    ) -> None:
+        streams = [stream for stream in (writer, upstream) if stream is not None]
+        for stream in streams:
+            stream.close()
+        try:
             for stream in streams:
-                stream.close()
-            try:
-                for stream in streams:
-                    with contextlib.suppress(OSError, TimeoutError):
-                        await asyncio.wait_for(stream.wait_closed(), 1)
-            finally:
-                for stream in streams:
-                    self.writers.discard(stream)
-                self.tasks.discard(task)
+                with contextlib.suppress(OSError, TimeoutError):
+                    await asyncio.wait_for(stream.wait_closed(), 1)
+        finally:
+            for stream in streams:
+                self.writers.discard(stream)
+            self.tasks.discard(task)
+
+    @staticmethod
+    async def _finish_transfers(transfers: list[asyncio.Task[None]]) -> None:
+        _done, pending = await asyncio.wait(transfers, return_when=asyncio.FIRST_COMPLETED)
+        for transfer in pending:
+            transfer.cancel()
+        results = await asyncio.gather(*transfers, return_exceptions=True)
+        # A reset must never mask a completed policy/byte/lifetime rejection
+        # from the opposite transfer direction, regardless of task ordering.
+        for result in results:
+            if isinstance(result, (ValueError, RuntimeError, TimeoutError)):
+                raise result
+        for result in results:
+            if isinstance(result, BaseException) and not isinstance(result, asyncio.CancelledError):
+                raise result
+
+    def _record_authenticated_close(self, exc: ConnectionError) -> None:
+        try:
+            self.fence()
+        except (ValueError, RuntimeError):
+            self.denied += 1
+        else:
+            code = (
+                "connection_reset"
+                if isinstance(exc, ConnectionResetError)
+                else "broken_pipe"
+                if isinstance(exc, BrokenPipeError)
+                else "connection_aborted"
+            )
+            self.transport_errors[code] = self.transport_errors.get(code, 0) + 1
 
     async def _probe(
         self,
@@ -111,23 +160,29 @@ class ObservedServiceBroker(ScopedTCPBroker):
         upstream: asyncio.StreamWriter,
     ) -> None:
         received = bytearray()
-        while chunk := await reader.read(len(HTTP_SERVICE_PROBE) - len(received) + 1):
-            received.extend(chunk)
-            self.fence()
-            if not HTTP_SERVICE_PROBE.startswith(received):
-                raise PolicyDenied("service_probe_payload_denied")
-            if bytes(received) == HTTP_SERVICE_PROBE:
-                self.store.consume_network_requests(self.policy)
-                self.sent_probe_count += 1
-                upstream.write(HTTP_SERVICE_PROBE)
-                await upstream.drain()
-                # One fixed read-only probe per connection, with no body,
-                # arbitrary URL, extra header or pipelined request channel.
-                if await reader.read(1):
-                    raise PolicyDenied("service_extra_probe_denied")
-                return
-        if received:
-            raise PolicyDenied("service_incomplete_probe_denied")
+        try:
+            while chunk := await reader.read(len(HTTP_SERVICE_PROBE) - len(received) + 1):
+                received.extend(chunk)
+                self.probe_bytes_received += len(chunk)
+                self.fence()
+                if not HTTP_SERVICE_PROBE.startswith(received):
+                    raise PolicyDenied("service_probe_payload_denied")
+                if bytes(received) == HTTP_SERVICE_PROBE:
+                    self.store.consume_network_requests(self.policy)
+                    self.sent_probe_count += 1
+                    upstream.write(HTTP_SERVICE_PROBE)
+                    await upstream.drain()
+                    # One fixed read-only probe per connection, with no body,
+                    # arbitrary URL, extra header or pipelined request channel.
+                    if await reader.read(1):
+                        raise PolicyDenied("service_extra_probe_denied")
+                    return
+            if received:
+                raise PolicyDenied("service_incomplete_probe_denied")
+        except OSError:
+            if received and bytes(received) != HTTP_SERVICE_PROBE:
+                raise PolicyDenied("service_incomplete_probe_denied") from None
+            raise
 
     async def _response(
         self,

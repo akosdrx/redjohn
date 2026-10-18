@@ -5,6 +5,8 @@ No synthetic engine reply is claimed as native Nmap integration evidence.
 
 import asyncio
 import hashlib
+import socket
+import struct
 from dataclasses import replace
 from types import SimpleNamespace
 
@@ -367,3 +369,167 @@ def test_native_service_selection_consumes_decoded_sqlite_spec_and_result_after_
         )
     finally:
         reopened.close()
+
+
+async def test_authenticated_tcp_reset_before_banner_is_transport_noise_then_real_banner_is_proven(
+    tmp_path,
+):
+    """Real TCP RST and upstream, reproducing native Nmap's early CONNECT close."""
+    connected, release_banner = asyncio.Event(), asyncio.Event()
+
+    async def target(reader, writer):
+        try:
+            connected.set()
+            await release_banner.wait()
+            writer.write(b"SSH-2.0-OwnedResetFixture\r\n")
+            await writer.drain()
+            await reader.read()
+        except (ConnectionError, OSError):
+            pass
+        finally:
+            await close_stream(writer)
+
+    server = await asyncio.start_server(target, "127.0.0.1", 0)
+    store, policy, surface, job = owned_job(tmp_path, server.sockets[0].getsockname()[1])
+    broker = ObservedServiceBroker(policy, store, surface, job)
+    address = await broker.start()
+    try:
+        _reader, early = await asyncio.open_connection(*address.rsplit(":", 1))
+        early.write(broker.preamble)
+        await early.drain()
+        await asyncio.wait_for(connected.wait(), 1)
+        early.get_extra_info("socket").setsockopt(
+            socket.SOL_SOCKET, socket.SO_LINGER, struct.pack("ii", 1, 0)
+        )
+        early.transport.abort()
+        release_banner.set()
+        for _ in range(100):
+            if not broker.tasks:
+                break
+            await asyncio.sleep(0.005)
+        assert not broker.tasks
+        assert broker.connected == 1 and broker.denied == 0
+        assert sum(broker.transport_errors.values()) == 1
+        reader, writer = await asyncio.open_connection(*address.rsplit(":", 1))
+        writer.write(broker.preamble)
+        await writer.drain()
+        assert (
+            await asyncio.wait_for(reader.readuntil(b"\n"), 1) == b"SSH-2.0-OwnedResetFixture\r\n"
+        )
+        await close_stream(writer)
+        await broker.close()
+        assert broker.denied == 0 and broker.response_bytes > 0 and broker.response_digests
+        assert broker.banner_types == {"ssh"}
+    finally:
+        release_banner.set()
+        await broker.close()
+        server.close()
+        await server.wait_closed()
+        store.close()
+
+
+@pytest.mark.parametrize("kind", ["partial-reset", "cancelled-reset", "unauthenticated-reset"])
+async def test_real_reset_cannot_hide_incomplete_probe_cancelled_job_or_missing_nonce(
+    tmp_path, kind
+):
+    connected = asyncio.Event()
+
+    async def target(reader, writer):
+        try:
+            connected.set()
+            await reader.read()
+        finally:
+            await close_stream(writer)
+
+    server = await asyncio.start_server(target, "127.0.0.1", 0)
+    store, policy, surface, job = owned_job(tmp_path, server.sockets[0].getsockname()[1])
+    broker = ObservedServiceBroker(policy, store, surface, job)
+    address = await broker.start()
+    try:
+        _reader, writer = await asyncio.open_connection(*address.rsplit(":", 1))
+        if kind != "unauthenticated-reset":
+            writer.write(broker.preamble)
+            await writer.drain()
+            await asyncio.wait_for(connected.wait(), 1)
+            if kind == "partial-reset":
+                writer.write(b"GET")
+                await writer.drain()
+                for _ in range(100):
+                    if broker.probe_bytes_received == 3:
+                        break
+                    await asyncio.sleep(0.005)
+                assert broker.probe_bytes_received == 3
+            else:
+                store.cancel(policy.engagement_id, job["id"])
+        writer.get_extra_info("socket").setsockopt(
+            socket.SOL_SOCKET, socket.SO_LINGER, struct.pack("ii", 1, 0)
+        )
+        writer.transport.abort()
+        for _ in range(100):
+            if broker.denied:
+                break
+            await asyncio.sleep(0.005)
+        assert broker.denied == 1 and broker.transport_errors == {}
+        assert broker.response_bytes == 0 and broker.response_digests == []
+        assert broker.sent_probe_count == 0
+        if kind == "unauthenticated-reset":
+            assert not connected.is_set() and broker.attempted == 0
+    finally:
+        await broker.close()
+        server.close()
+        await server.wait_closed()
+        store.close()
+
+
+async def test_real_exact_probe_plus_extra_byte_is_denied_and_never_forwarded(tmp_path):
+    observed, accepted, target_closed = [], asyncio.Event(), asyncio.Event()
+
+    async def target(reader, writer):
+        try:
+            observed.append(await reader.readexactly(len(HTTP_SERVICE_PROBE)))
+            accepted.set()
+            observed.append(await reader.read())
+        finally:
+            await close_stream(writer)
+            target_closed.set()
+
+    server = await asyncio.start_server(target, "127.0.0.1", 0)
+    store, policy, surface, job = owned_job(tmp_path, server.sockets[0].getsockname()[1])
+    broker = ObservedServiceBroker(policy, store, surface, job)
+    address = await broker.start()
+    reader, writer = await asyncio.open_connection(*address.rsplit(":", 1))
+    try:
+        writer.write(broker.preamble + HTTP_SERVICE_PROBE)
+        await writer.drain()
+        await asyncio.wait_for(accepted.wait(), 1)
+        writer.write(b"x")
+        await writer.drain()
+        assert await asyncio.wait_for(reader.read(), 1) == b""
+        await broker.close()
+        assert broker.denied == 1 and broker.transport_errors == {}
+        await asyncio.wait_for(target_closed.wait(), 1)
+        assert broker.sent_probe_count == 1 and observed == [HTTP_SERVICE_PROBE, b""]
+    finally:
+        await close_stream(writer)
+        await broker.close()
+        server.close()
+        await server.wait_closed()
+        store.close()
+
+
+@pytest.mark.parametrize("reverse", [False, True])
+async def test_completed_policy_error_always_wins_over_concurrent_transport_reset(reverse):
+    """Controlled task faults only; no synthetic native engine output."""
+
+    async def policy_failure():
+        raise PolicyDenied("service_extra_probe_denied")
+
+    async def transport_failure():
+        raise ConnectionResetError("owned-test-reset")
+
+    tasks = [asyncio.create_task(policy_failure()), asyncio.create_task(transport_failure())]
+    if reverse:
+        tasks.reverse()
+    with pytest.raises(PolicyDenied, match="service_extra_probe_denied"):
+        await ObservedServiceBroker._finish_transfers(tasks)
+    assert all(task.done() for task in tasks)

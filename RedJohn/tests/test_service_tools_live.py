@@ -76,6 +76,16 @@ def record_owned_native_diagnostics(assessment):
                 "truncated": result.get("truncated"),
                 "stdout": result.get("stdout", "")[:4096],
                 "stderr": result.get("stderr", "")[:8192],
+                "broker_transport": (
+                    {
+                        "connected": runner.broker.connected,
+                        "denied": runner.broker.denied,
+                        "response_bytes": runner.broker.response_bytes,
+                        "transport_errors": dict(runner.broker.transport_errors),
+                    }
+                    if runner.broker is not None
+                    else None
+                ),
             }
         )
         del events[:-4]
@@ -148,6 +158,7 @@ async def test_real_naabu_observed_open_nmap_service_and_false_relay_open_contro
                     assessment.store.evidence_get(assessment.policy.engagement_id, ref)["excerpt"]
                 )
                 assert proof["refused"] >= 1 and proof["response_bytes"] == 0
+                assert proof["transport_errors"] == {} and proof["probe_bytes_received"] == 0
                 assert not result["findings"]
             else:
                 if row["execution_status"] != "succeeded" or not result["summary"].get(
@@ -167,6 +178,17 @@ async def test_real_naabu_observed_open_nmap_service_and_false_relay_open_contro
                 payload = json.loads(evidence["excerpt"])
                 assert payload["response_bytes"] > 0 and payload["response_digests"]
                 assert payload["admission_closed"] is True and payload["denied"] == 0
+                assert set(payload["transport_errors"]) <= {
+                    "connection_reset",
+                    "broken_pipe",
+                    "connection_aborted",
+                }
+                assert sum(payload["transport_errors"].values()) <= payload["connect_attempts"]
+                assert (
+                    0
+                    <= payload["probe_bytes_received"]
+                    <= (len(HTTP_SERVICE_PROBE) + 1) * payload["connected"]
+                )
             assert assessment.store.request_usage(assessment.policy) == 0
             assert assessment.runtime.governor.snapshot()["active"] == {}
             worker_root = assessment.store.path.parent / "nmap-service-workers"
