@@ -78,11 +78,15 @@ REAL_CASES = {
     "test_real_missing_chromium_is_blocked_and_cleaned_in_isolated_process",
     "test_actual_chromium_auto_posts_are_exact_private_captures_and_default_stays_readonly",
     "test_actual_chromium_nuclei_restart_after_wall_clock_step",
+    "test_actual_nuclei_public_multipart_template_survives_refreshed_boundary",
     "test_actual_schemathesis_stops_admission_after_complete_401",
     "test_real_stdio_unknown_mutation_is_never_replayed",
     "test_real_stdio_cancellation_terminates_worker_and_releases_lease",
     "test_real_sdk_pty_keeps_lease_until_polled_completion_and_closes",
     "test_real_stdio_idle_session_keeps_memory_reservation_and_server_state",
+}
+LOCAL_NUCLEI_CASES = {
+    "test_actual_nuclei_public_multipart_template_survives_refreshed_boundary",
 }
 LOCAL_NUCLEI_FILES = {
     "test_nuclei_live.py", "test_nuclei_post_live.py", "test_nuclei_auth_live.py",
@@ -150,7 +154,7 @@ def pytest_collection_modifyitems(config, items):
                         {"cgroup_available"} if filename in KERNEL_ONLY_FILES else
                         {"namespace_available"} if filename in NAMESPACE_ONLY_FILES else
                         {"browser_available"} if filename in LOCAL_BROWSER_FILES else
-                        set() if filename in LOCAL_NUCLEI_FILES or filename in LOCAL_PROCESS_FILES or name in LOCAL_PROCESS_CASES
+                        set() if filename in LOCAL_NUCLEI_FILES or name in LOCAL_NUCLEI_CASES or filename in LOCAL_PROCESS_FILES or name in LOCAL_PROCESS_CASES
                         else {"cgroup_available"} if name in KERNEL_ONLY_CASES
                         else {"browser_available", "namespace_available"})
             missing = sorted(key for key in required if not capabilities.get(key))

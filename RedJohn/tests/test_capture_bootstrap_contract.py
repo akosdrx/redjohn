@@ -110,7 +110,9 @@ def bootstrap_case(tmp_path):
             ),
         )
         db.execute(
-            "INSERT INTO rj_auth_flow VALUES(?,?,?,?,?,?,?,?,1,'ready',0,NULL,NULL,0,?)",
+            "INSERT INTO rj_auth_flow(id,engagement,policy_revision,plan_id,run_key,"
+            "actor,tenant,from_revision,revision,status,next_action,owner,attempt,"
+            "admitted,updated_at,job_id) VALUES(?,?,?,?,?,?,?,?,1,'ready',0,NULL,NULL,0,?,?)",
             (
                 "owned-flow",
                 policy.engagement_id,
@@ -121,6 +123,7 @@ def bootstrap_case(tmp_path):
                 "tenant-a",
                 "6",
                 time.time(),
+                job_id,
             ),
         )
         db.execute(
@@ -163,6 +166,19 @@ def test_verified_private_bridge_only_adds_reviewed_get_anchors_and_is_idempoten
     assert entry["expires_at"] <= c["data"]["expires_at"]
     before = c["vault_file"].read_bytes()
     invoke(c)
+    assert c["vault_file"].read_bytes() == before
+    assert c["store"].network_request_usage(c["policy"]) == 0
+
+
+@pytest.mark.parametrize("producer_job", [None, "unrelated-producer"])
+def test_bootstrap_requires_the_ready_flows_exact_outcome_producer(bootstrap_case, producer_job):
+    c = bootstrap_case
+    c["store"].db.execute(
+        "UPDATE rj_auth_flow SET job_id=? WHERE id='owned-flow'", (producer_job,)
+    )
+    before = c["vault_file"].read_bytes()
+    with pytest.raises(BrowserCaptureDenied, match="outcome_producer_mismatch"):
+        invoke(c)
     assert c["vault_file"].read_bytes() == before
     assert c["store"].network_request_usage(c["policy"]) == 0
 

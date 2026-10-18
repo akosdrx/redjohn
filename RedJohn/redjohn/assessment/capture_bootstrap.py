@@ -38,7 +38,7 @@ def _proof(
     service.store.inventory._fence(db, policy)
     row = db.execute(
         "SELECT e.payload,e.bytes,e.kind,j.spec,j.execution_status,j.cancel_requested,"
-        "j.lease_until FROM rj_evidence e JOIN rj_job j ON e.job_id=j.id "
+        "j.lease_until,j.id AS producer_job_id FROM rj_evidence e JOIN rj_job j ON e.job_id=j.id "
         "AND e.engagement=j.engagement WHERE e.id=? AND e.engagement=? "
         "AND j.capability='browser_auth_flow'",
         (reference, policy.engagement_id),
@@ -115,6 +115,8 @@ def _proof(
         or (session["status"], session["revision"]) != ("ready", revision)
     ):
         _deny("ready_identity_required")
+    if flow["job_id"] != row["producer_job_id"]:
+        _deny("outcome_producer_mismatch")
     plan = json.loads(flow["plan_payload"])
     if (
         plan.get("identity_url"),

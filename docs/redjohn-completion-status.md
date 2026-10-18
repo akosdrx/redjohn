@@ -15,19 +15,37 @@ nem helyettesíti a teljes rendszer elfogadását. A részletes követelménykap
 ## Aktuális fejlesztési és igazolási határ
 
 A legutóbbi teljesen lezárt, sikeres Ubuntu-mátrix a
-`5cfd51d286c65558b92a6c070bcd7edd5a8b432b` source commit
-[39144694827 futása](https://github.com/akosdrx/redjohn/actions/runs/39144694827):
-platformonként 1281 Python-teszt, ebből 333 valódi integráció; 14 frontend
-(6 fetch-dublőr), 21 Go-eset és 120 valódi vegyes browser/scanner ciklus.
-Hiba és teszt-skip nincs. Ez az adott korábbi SHA bizonyítéka.
+`9ff92a8abf4e5ad516bef7b3ce4dd297ea82055c` source commit
+[39151591978 futása](https://github.com/akosdrx/redjohn/actions/runs/39151591978):
+platformonként 1171 Python-regresszió és 374 valódi integráció, 14 frontend
+(6 fetch-dublőr), 21 Go-eset, 120 valódi browser/httpx/Nuclei ciklus és legalább
+1200 másodperc vegyes terhelés. Hiba és teszt-skip nincs; 3 Darwin-eset külön
+nem alkalmazható. Mindkét platform 698 forrás- és 229 artifact-hashe ellenőrizve.
+[Pontos mérés és határ](redjohn-github-actions-master-phase3.md).
 
-A későbbi [phase 2](redjohn-github-actions-master-phase2.md) és
-[köztes hotfix](redjohn-github-actions-master-phase2-hotfix2.md) mátrixok
-mindkét platformon hibával zárultak: 1431 Python-pass és 5 hiba. A hibák
-oracle-/Semgrep-inicializálás-/Nuclei-MIME okát elkülönítettük; a javított
-`9ff92a8abf4e5ad516bef7b3ce4dd297ea82055c` jelölt
-[39151591978 futása](https://github.com/akosdrx/redjohn/actions/runs/39151591978)
-már ténylegesen fut. Folyamatban lévő futásra nem állítunk teljes sikert.
+A későbbi `61f209e0d0e9bc094316017da0de613b907aeecf` forrás külön
+[natív futása](https://github.com/akosdrx/redjohn/actions/runs/39157069204)
+lezárt siker: x64 és ARM64 oldalon 19/19 valódi komponenseset, 0 hiba/skip.
+Ebben Naabu/dnsx 8, Nmap 4, kube-bench kizárólag verzió 1 és kernelmemória 6
+szerepel. Az SSH-reset helytelen tiltási besorolása javítva; a nonce-, pontos
+probe-, scope- és job-fence védelem megmaradt. A 741 forrás- és 59 artifact-hash
+mindkét oldalon egyezik. Ez nem teljes Chromium-mátrix:
+[a pontos natív határ](redjohn-github-actions-master-phase4-native.md).
+Ugyanezen forrás [teljes futásában](https://github.com/akosdrx/redjohn/actions/runs/39157072651)
+a Python-regressziós lépés mindkét platformon hibás; a valós E2E még fut.
+Erre a forrásra nem állítunk teljes sikert.
+
+A következő feltöltött jelölt `1e38c8c9bc02d73399af5550505b9267ea55323b`:
+a takarítás igazolásáig ugyanazt a foglalást tartja meg, tartós host-quarantine
+és konzervatív owner-death recovery mellett. A forrás rögzített ellenőrzése:
+95 célzott eset, 24 külön szintetikus CI-kontraktus, teljes Ruff és strict mypy
+233 production modulon Linux/macOS oldalon sikeres. 745 publikált fájl hash/mód
+egyezése ellenőrizve. Az új natív profil 20 valódi komponensesetet és külön
+Python-regressziót követel; a regresszió eredménye korai artifactként is mentődik.
+A [natív](https://github.com/akosdrx/redjohn/actions/runs/39158070553) és
+[teljes](https://github.com/akosdrx/redjohn/actions/runs/39158074505) kör még
+nem lezárt. A helyi Git HEAD/index és privát MCP-konfiguráció változatlan;
+a hosszú regressziók GitHubon futnak, Colima megmaradt.
 
 A további jelenlegi implementáció és célzott igazolás:
 
@@ -37,9 +55,10 @@ A további jelenlegi implementáció és célzott igazolás:
   offline filesystem misconfiguration profilt valósítja meg.
 - Naabu/dnsx külön engedélyezett IP/port/resolver scope-pal, tartós kvótával és
   izolált workerrel; a javított relay CA-út után 8 valódi ARM64 eset sikeres.
-- Nmap 7.992 korlátos, saját próbaprofillal kész; 23 kontraktus sikeres,
-  4 natív eset macOS-en blokkolt. Tényleges build és engine E2E még hosted
-  ellenőrzésre vár; az előző Naabu-open bizonyíték kötelező.
+- Nmap 7.992 korlátos, saját próbaprofillal kész; mind a 4 valódi natív eset
+  sikeres x64/ARM64 oldalon (SSH/HTTP/false relay-open/cancel). A build, pontos
+  verzió/licenc/probe és az előző Naabu-open bizonyíték is ellenőrzött.
+  Ez szűk szolgáltatásmegfigyelés, nem általános NSE/product-version audit.
 - Login/logout/MFA és egyszerhasználatos inputok tartós flow-val, Chromium
   capture-rel és Nuclei-replayjel; valódi pozitív/javított esetek sikeresek.
   A megszakított MFA után létrejött ismeretlen szerveroldali session külön
@@ -55,11 +74,13 @@ A további jelenlegi implementáció és célzott igazolás:
   4 valódi izolált target-MCP eset sikeres ARM64-en. Autentikált/mutáló target
   MCP és attesztálatlan távoli végrehajtás továbbra is blokkolt.
 - A Linux opt-in CLI/TUI/SDK tulajdonos és örökölt leszármazottainak közös
-  cgroup-memóriakerete készül végső hosted igazolásra. Ez nem a host összes
+  cgroup-memóriakeretéből 6 valódi natív kontroll sikeres mindkét platformon;
+  a Chromium/SDK/MCP/native együttes eset teljes mátrixbeli igazolása még fut. Ez nem a host összes
   folyamatának univerzális korlátja: a supervisor, külső daemonok és távoli
   workerek külön határ. macOS összesített fizikai hard limit nincs igazolva.
 - Cloud/Kubernetes manifest-előkészítés külön capabilityvel kész; a natív
-  kube-benchből csak izolált verzióparancs engedett. Élő audit halasztott,
+  kube-bench izolált verzióparancsa valóban sikeres mindkét hosted architektúrán.
+  Ez nem cluster-benchmark; csak a verzióparancs engedett. Élő audit halasztott,
   Prowler teljes immutable függőségpillanatkép hiányában blokkolt.
 
 A teljes master-cél aktív. Nyitott: a legújabb forrás teljes hosted x64/ARM64
@@ -129,9 +150,11 @@ a valódi E2E-t és a tesztdublőröket; az alábbi resource-mérés történeti
 | Platform és kiadás, 17/20 | macOS ARM64 és Ubuntu ARM64 helyi tesztkörnyezet rendelkezésre áll. | Valódi Kali/AMD64 ellenőrzés, csomagolás, tiszta telepítés/upgrade és kiadási validáció. GitHub-futás csak tényleges sikeres run után igazolt; helyi reprodukáló parancs külön bizonyíték. |
 | Dokumentáció, 18–21 | A képességkatalógus most a tényleges registryből generálódik. | A következő implementációk után követelmény-, migráció-, licenc-/verzió- és kiadási dokumentumok végleges összhangja. |
 
-Az alábbi opcionális adapterek ténylegesen hiányoznak. Implementációjuk a fenti
-közös inventory/policy/resource mechanizmusokat használja majd; a szerződés vagy
-egy mock worker önmagában nem változtatja őket működő adapterré.
+Az alábbi táblázat történeti hiánylista, nem a jelenlegi registry állapota:
+a Semgrep/Trivy szűk source-, Naabu/dnsx- és Nmap-profil azóta implementált és
+fent SHA-hoz kötött bizonyítékkal szerepel. A fennmaradó szélesebb módokhoz a
+közös inventory/policy/resource mechanizmus és valódi igazolás szükséges;
+egy mock worker nem igazol működő integrációt.
 
 | Capability | Tool | Kötelező feltétel és ellenőrzés |
 |---|---|---|

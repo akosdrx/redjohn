@@ -221,6 +221,32 @@ class EvidenceContract(unittest.TestCase):
                     self.assertIn(("required_runner_capabilities", "namespace_available"), item.user_properties)
                     self.assertEqual(len(markers[item.path.name]), int(not namespace))
 
+    def test_actual_nuclei_case_in_mixed_file_is_never_a_regression_or_browser_skip(self):
+        spec = importlib.util.spec_from_file_location("evidence", Path(__file__).parents[1] / "scripts/pytest_evidence.py")
+        plugin = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(plugin)
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            path = root / "test_body_token_refresh.py"
+            path.write_text("")
+            capability = root / "capabilities.json"
+            capability.write_text(json.dumps({"browser_available": False, "namespace_available": False}))
+            name = "test_actual_nuclei_public_multipart_template_survives_refreshed_boundary"
+            for suite in ("regression", "integration"):
+                markers, deselected = [], []
+                item = SimpleNamespace(path=path, originalname=name, name=name,
+                    user_properties=[], add_marker=markers.append)
+                items = [item]
+                config = SimpleNamespace(getoption=lambda _: suite,
+                    hook=SimpleNamespace(pytest_deselected=lambda **kwargs: deselected.extend(kwargs["items"])))
+                with patch.dict(os.environ, {"REDJOHN_CI_CAPABILITIES": str(capability)}):
+                    plugin.pytest_collection_modifyitems(config, items)
+                self.assertEqual(len(items), int(suite == "integration"))
+                self.assertEqual(len(deselected), int(suite == "regression"))
+                self.assertEqual(markers, [])
+                self.assertIn(("evidence_kind", "real_integration"), item.user_properties)
+                self.assertIn(("required_runner_capabilities", ""), item.user_properties)
+
     def test_owned_memory_cases_require_kernel_capability_and_remain_nonapplicable_on_darwin(self):
         spec = importlib.util.spec_from_file_location("evidence", Path(__file__).parents[1] / "scripts/pytest_evidence.py")
         plugin = importlib.util.module_from_spec(spec)
