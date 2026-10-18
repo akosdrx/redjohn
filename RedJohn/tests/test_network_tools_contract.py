@@ -11,6 +11,7 @@ import pytest
 
 from redjohn.assessment.configuration import ConfiguredAssessment, enqueue_configured_jobs
 from redjohn.assessment.models import AdapterResult, JobSpec, Surface
+from redjohn.assessment.network_broker import ScopedTCPBroker
 from redjohn.assessment.network_tools import (
     VERSIONS,
     NetworkToolAdapter,
@@ -31,6 +32,35 @@ def binary_config(tmp_path, tool):
             "sha256": hashlib.sha256(binary.read_bytes()).hexdigest(),
         }
     }
+
+
+@pytest.mark.parametrize("tool", ["naabu", "dnsx"])
+async def test_network_prepare_obeys_existing_supervisor_ca_path_contract(
+    tmp_path, monkeypatch, tool
+):
+    """Namespace setup is synthetic; real private payload and broker lifecycle."""
+
+    async def no_namespace(_boundary):
+        return None
+
+    monkeypatch.setattr("redjohn.assessment.network_tools.LinuxEgressBoundary.start", no_namespace)
+    monkeypatch.setattr("redjohn.assessment.network_tools.LinuxEgressBoundary.attest", no_namespace)
+    config = NetworkToolConfig.from_mapping(tool, binary_config(tmp_path, tool))
+    store, policy, surface, job = owned_job(tmp_path, 9000)
+    broker = ScopedTCPBroker(policy, store, surface, job)
+    runner = NetworkToolRunner(config, tmp_path / "workers")
+    try:
+        await runner.prepare_network(broker)
+        assert runner._ca_file == runner.workspace / "proxy-ca.pem"
+        assert runner._ca_file.is_file()
+        assert (runner.workspace / "empty-ca-directory").is_dir()
+        assert broker.attempted == 0
+    finally:
+        await runner.cleanup()
+        store.close()
+    assert broker.closed and not broker.tasks
+    assert not list((tmp_path / "workers").glob("job-*"))
+    assert not list((tmp_path / "workers").glob("payload-*"))
 
 
 @pytest.mark.parametrize("tool", ["naabu", "dnsx"])

@@ -85,7 +85,7 @@ class NetworkToolRunner(PinnedToolRunner):
         )
         binary.chmod(0o500)
         self.binary = BinaryPin(binary, self.config.binary.sha256, self.config.binary.version)
-        self._ca_file = self.workspace / "empty-ca.pem"
+        self._ca_file = self.workspace / "proxy-ca.pem"
         self._ca_file.write_text("")
         (self.workspace / "empty-ca-directory").mkdir(mode=0o700)
         self.proxy_address = await broker.start()
