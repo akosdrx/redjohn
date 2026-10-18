@@ -42,7 +42,7 @@ async def test_missing_seatbelt_is_blocked_and_leaves_no_reservation(tmp_path, m
         governor=pool,
     )
     temporary = boundary.environment["TMPDIR"]
-    monkeypatch.setattr("redjohn.runtime.darwin_shell_boundary.sys.platform", "darwin")
+    monkeypatch.setattr("redjohn.runtime.darwin_shell_boundary._is_darwin", lambda: True)
     monkeypatch.setattr(
         "redjohn.runtime.darwin_shell_boundary.shutil.which", lambda *_args, **_kwargs: None
     )
