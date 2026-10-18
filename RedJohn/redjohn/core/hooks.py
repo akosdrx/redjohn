@@ -10,6 +10,7 @@ from agents.lifecycle import RunHooks
 
 from redjohn.core.agents import BudgetPolicy, coordinator_from_context
 from redjohn.report.state import get_global_report_state
+from redjohn.runtime.legacy_execution import legacy_from_context
 
 
 if TYPE_CHECKING:
@@ -208,6 +209,8 @@ class ReportUsageHooks(RunHooks[dict[str, Any]]):
             self._maybe_warn_budget(context, input_items)
         except Exception:
             logger.exception("budget/turn warning injection failed")
+        if (owner := legacy_from_context(context.context)) is not None:
+            owner.model_start(str(context.context.get("agent_id", "unknown")))
 
     def _age_old_tool_outputs(
         self,
@@ -371,6 +374,8 @@ class ReportUsageHooks(RunHooks[dict[str, Any]]):
         agent: Agent[dict[str, Any]],
         response: ModelResponse,
     ) -> None:
+        if (owner := legacy_from_context(context.context)) is not None:
+            owner.model_end(str(context.context.get("agent_id", "unknown")))
         report_state = get_global_report_state()
         if report_state is None:
             return

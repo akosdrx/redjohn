@@ -39,6 +39,7 @@ from redjohn.core.sessions import (
 )
 from redjohn.llm import request_log
 from redjohn.llm.compaction import is_context_overflow, maybe_compact
+from redjohn.runtime.legacy_execution import legacy_from_context
 
 
 if TYPE_CHECKING:
@@ -829,6 +830,8 @@ async def _run_cycle(  # noqa: PLR0912, PLR0915
                     )
             finally:
                 await coordinator.detach_stream(agent_id, stream)
+                if (owner := legacy_from_context(context)) is not None:
+                    owner.model_end(agent_id)
         except BudgetPausedError as exc:
             logger.info("agent %s paused at the scan budget limit: %s", agent_id, exc)
             if coordinator.budget_policy == "pause":
@@ -927,6 +930,11 @@ async def _run_cycle(  # noqa: PLR0912, PLR0915
             return None
         else:
             return cast("RunResultBase | None", stream)
+        finally:
+            # on_llm_end is absent when the provider/SDK fails before response
+            # completion, including a synchronous run_streamed startup failure.
+            if (owner := legacy_from_context(context)) is not None:
+                owner.model_end(agent_id)
 
 
 async def _agent_status(coordinator: AgentCoordinator, agent_id: str) -> Status | None:

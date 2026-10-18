@@ -83,9 +83,9 @@ logger = logging.getLogger(__name__)
 _SHUTDOWN_TIMEOUT = 10.0
 _MAX_ATTEMPTS = 3
 _SETTLE_DELAY = 0.05
-_SEMAPHORES: weakref.WeakKeyDictionary[asyncio.AbstractEventLoop, dict[str, asyncio.Semaphore]] = (
-    weakref.WeakKeyDictionary()
-)
+_SEMAPHORES: weakref.WeakKeyDictionary[
+    asyncio.AbstractEventLoop, weakref.WeakValueDictionary[str, asyncio.Semaphore]
+] = weakref.WeakKeyDictionary()
 _JITTER = secrets.SystemRandom()
 
 # Everything the SDK can surface for a failed call: ordinary errors plus the
@@ -104,7 +104,7 @@ def _retry_delay(attempt: int, retry_after: float | None) -> float:
 
 def _call_semaphore(name: str, limit: int) -> asyncio.Semaphore:
     loop = asyncio.get_running_loop()
-    semaphores = _SEMAPHORES.setdefault(loop, {})
+    semaphores = _SEMAPHORES.setdefault(loop, weakref.WeakValueDictionary())
     return semaphores.setdefault(name, asyncio.Semaphore(limit))
 
 
@@ -127,6 +127,8 @@ class _Outcome:
     value: Any = None
     dead: bool = False
     call_failure: FailureInfo | None = None
+    unknown_outcome: bool = False
+    capacity_exhausted: bool = False
 
 
 @dataclasses.dataclass
@@ -136,6 +138,7 @@ class _Request:
     job: Job
     future: asyncio.Future[_Outcome]
     phase: _Phase
+    idempotent: bool = False
 
 
 class SupervisedMcpSession:
@@ -292,7 +295,7 @@ class SupervisedMcpSession:
         valid for a supervised session.
         """
         loop = asyncio.get_running_loop()
-        self._queue = asyncio.Queue()
+        self._queue = asyncio.Queue(maxsize=self._config.queue_max_items if self._config else 32)
         self._ready = loop.create_future()
         self._task = asyncio.create_task(self._supervise(), name=f"mcp-session-{self._name}")
         return await self._ready
@@ -351,7 +354,11 @@ class SupervisedMcpSession:
         Raises :class:`McpConnectionUnavailableError` when the connection is dead
         and never returns a call failure.
         """
-        outcome = await self._run_job(lambda server: server.list_tools(), phase="connect")
+        outcome = await self._run_job(
+            lambda server: server.list_tools(), phase="connect", idempotent=True
+        )
+        if outcome.capacity_exhausted:
+            raise McpConnectionUnavailableError("mcp_queue_capacity_exhausted")
         if outcome.dead:
             raise McpConnectionUnavailableError(self._unavailable_message())
         if outcome.call_failure is not None:
@@ -386,7 +393,34 @@ class SupervisedMcpSession:
                 supports_images=supports_images,
             )
 
-        outcome = await self._run_job(job, phase="call")
+        outcome = await self._run_job(
+            job,
+            phase="call",
+            idempotent=bool(self._config and tool_name in self._config.idempotent_tools),
+        )
+        if outcome.capacity_exhausted:
+            from redjohn.tools.mcp.client import _errored_tool_output
+
+            return _errored_tool_output(
+                {
+                    "code": "mcp_queue_capacity_exhausted",
+                    "category": "resource",
+                    "coverage_effect": "blocked",
+                    "retryable": False,
+                }
+            )
+        if outcome.unknown_outcome:
+            from redjohn.tools.mcp.client import _errored_tool_output
+
+            return _errored_tool_output(
+                {
+                    "code": "mcp_unknown_execution_outcome",
+                    "category": "execution",
+                    "coverage_effect": "inconclusive",
+                    "retryable": False,
+                    "recovery_action": "reconcile_before_replay",
+                }
+            )
         if outcome.call_failure is not None:
             from redjohn.tools.mcp.client import _errored_tool_output
 
@@ -399,13 +433,13 @@ class SupervisedMcpSession:
 
     # -- job routing ----------------------------------------------------------
 
-    async def _run_job(self, job: Job, *, phase: _Phase) -> _Outcome:
+    async def _run_job(self, job: Job, *, phase: _Phase, idempotent: bool = False) -> _Outcome:
         """Route one job to the owning task (supervised) or run it inline (adopted)."""
         if self._supervised:
-            return await self._submit(job, phase)
-        return await self._execute(job, phase)
+            return await self._submit(job, phase, idempotent=idempotent)
+        return await self._execute(job, phase, idempotent=idempotent)
 
-    async def _submit(self, job: Job, phase: _Phase) -> _Outcome:
+    async def _submit(self, job: Job, phase: _Phase, *, idempotent: bool = False) -> _Outcome:
         """Hand a job to the supervising task and await its result as a value."""
         if self._dead or self._closing or self._task is None or self._task.done():
             return _Outcome(dead=True)
@@ -415,13 +449,30 @@ class SupervisedMcpSession:
         if self._queue is None:
             self._pending.discard(future)
             return _Outcome(dead=True)
-        await self._queue.put(_Request(job=job, future=future, phase=phase))
+        try:
+            self._queue.put_nowait(
+                _Request(job=job, future=future, phase=phase, idempotent=idempotent)
+            )
+        except asyncio.QueueFull:
+            self._pending.discard(future)
+            return _Outcome(capacity_exhausted=True)
         # The task may have ended between the guard above and the put; ``_fail_pending``
         # would then never see this future, so resolve it here.
         if self._task.done() and not future.done():
             self._pending.discard(future)
             return _Outcome(dead=True)
-        return await future
+        try:
+            return await future
+        except asyncio.CancelledError:
+            # A caller that stopped waiting must not leave a side effect running
+            # on the hidden supervisor. Retire this session, terminate its stdio
+            # process/HTTP transport, and let the registry reconnect on next use.
+            self._closing = True
+            self._task.cancel()
+            with contextlib.suppress(asyncio.CancelledError, Exception):
+                await asyncio.wait_for(asyncio.shield(self._task), _SHUTDOWN_TIMEOUT)
+            self._mark_dead(FailureInfo("transport", reason="caller cancelled"))
+            raise
 
     # -- the supervising task -------------------------------------------------
 
@@ -483,7 +534,10 @@ class SupervisedMcpSession:
                 continue
             if request is None:  # shutdown sentinel
                 return
-            outcome = await self._execute(request.job, request.phase)
+            if request.future.cancelled():
+                self._pending.discard(request.future)
+                continue
+            outcome = await self._execute(request.job, request.phase, idempotent=request.idempotent)
             if not request.future.done():
                 request.future.set_result(outcome)
             self._pending.discard(request.future)
@@ -492,7 +546,9 @@ class SupervisedMcpSession:
 
     # -- run one job with bounded classified retries --------------------------
 
-    async def _execute(self, job: Job, phase: _Phase) -> _Outcome:  # noqa: PLR0912
+    async def _execute(  # noqa: PLR0911, PLR0912 - classified protocol/transport outcomes
+        self, job: Job, phase: _Phase, *, idempotent: bool = False
+    ) -> _Outcome:
         """Run one job on a healthy session, disposing it the instant it errors.
 
         Discard-on-error, rebuild-on-next-use is the whole discipline here, and it
@@ -594,6 +650,13 @@ class SupervisedMcpSession:
 
             # Session is disposed and _server is None; _handle_failure may sleep for
             # backoff safely, and the next loop iteration rebuilds and retries.
+            if (
+                phase == "call"
+                and not idempotent
+                and failure.kind not in {"auth", "permission", "protocol"}
+            ):
+                self._last_failure = failure
+                return _Outcome(unknown_outcome=True)
             outcome = await self._handle_failure(failure, attempt, phase=phase)
             if outcome is not None:
                 return outcome

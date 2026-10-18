@@ -4,6 +4,17 @@ on:
   push:
   pull_request:
   workflow_dispatch:
+    inputs:
+      soak_cycles:
+        description: 'Minimum real mixed browser/scanner cycles (2..1000)'
+        required: true
+        default: '30'
+        type: string
+      soak_minimum_seconds:
+        description: 'Minimum active mixed workload duration (0..3600 seconds)'
+        required: true
+        default: '300'
+        type: string
 
 permissions:
   contents: read
@@ -20,7 +31,7 @@ jobs:
   ubuntu:
     name: Ubuntu 24.04 ${{ matrix.arch }} / Python ${{ matrix.python }}
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 90
+    timeout-minutes: 120
     strategy:
       fail-fast: false
       max-parallel: 2
@@ -68,6 +79,9 @@ jobs:
       REDJOHN_MIME_RESTART_MEASUREMENTS: ${{ github.workspace }}/artifacts/mime-restart.json
       REDJOHN_CI_CAPABILITIES: ${{ github.workspace }}/artifacts/capabilities.json
       REDJOHN_CI_APPARMOR_PROFILE: redjohn-ci-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.runner_arch }}
+      REDJOHN_TUI_BINARY: ${{ github.workspace }}/artifacts/build/redjohn-tui
+      REDJOHN_SOAK_CYCLES: ${{ inputs.soak_cycles || (contains(github.event.head_commit.message, '[redjohn-long-soak]') && '120') || '2' }}
+      REDJOHN_SOAK_MINIMUM_SECONDS: ${{ inputs.soak_minimum_seconds || (contains(github.event.head_commit.message, '[redjohn-long-soak]') && '1200') || '0' }}
       GOMAXPROCS: '2'
       GOTOOLCHAIN: local
     steps:
@@ -122,6 +136,7 @@ jobs:
         run: |
           python .github/scripts/ci.py run --name frontend-install --cwd RedJohn/redjohn/interface/viewer/frontend -- timeout 10m npm ci
           python .github/scripts/ci.py run --name frontend-types --cwd RedJohn/redjohn/interface/viewer/frontend -- npx --no-install tsc --noEmit
+          python .github/scripts/ci.py run --name frontend-tests --cwd RedJohn/redjohn/interface/viewer/frontend -- npm test -- --test-reporter=junit --test-reporter-destination="$GITHUB_WORKSPACE/artifacts/frontend.junit.xml"
           python .github/scripts/ci.py run --name frontend-build --cwd RedJohn/redjohn/interface/viewer/frontend -- npm run build
       - name: Vet, race-test and build the actual Go TUI
         if: ${{ !cancelled() && steps.go.outcome == 'success' && steps.python.outcome == 'success' }}
@@ -172,6 +187,12 @@ jobs:
           task_python="$(command -v python)"
           task_home="$HOME"
           sudo -E env HOME="$task_home" bash .github/scripts/linux-tests.sh "$task_python" integration
+      - name: Run mixed scheduler, browser, scanners and maximum-limit pressure
+        if: ${{ !cancelled() && steps.capability.outcome == 'success' }}
+        run: |
+          task_python="$(command -v python)"
+          task_home="$HOME"
+          sudo -E env HOME="$task_home" bash .github/scripts/linux-tests.sh "$task_python" soak
       - name: Capture and clean only this job's delegated processes
         if: always()
         run: bash .github/scripts/cleanup-linux.sh

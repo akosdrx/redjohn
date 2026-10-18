@@ -65,6 +65,16 @@ class McpConnectionConfig(BaseModel):
     active_tools: list[str] = Field(default_factory=list)
     """Small scan-relevant subset ranked ahead of the broader allowed catalog."""
 
+    idempotent_tools: list[str] = Field(default_factory=list)
+    """Operator-reviewed calls safe to retry after an unknown transport outcome.
+
+    MCP tool annotations are untrusted metadata and never grant this permission.
+    The default makes a failed call inconclusive without repeating its effects.
+    """
+
+    queue_max_items: int = Field(default=32, ge=1, le=128)
+    """Bound pending requests instead of retaining an unbounded task backlog."""
+
     notes: str | None = None
     """Free-text notes for the agent describing what this connection is and how
     to use it. When set, the note becomes the connection's purpose line in the

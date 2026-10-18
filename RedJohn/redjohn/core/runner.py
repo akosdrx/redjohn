@@ -18,6 +18,8 @@ from openai import RateLimitError
 
 from redjohn.agents.factory import build_redjohn_agent, make_child_factory
 from redjohn.agents.prompt import render_scope_prompt, render_system_prompt
+from redjohn.assessment.host_resources import HostResourcePool, default_pool_path
+from redjohn.assessment.resources import ResourceGovernor
 from redjohn.config import codex, grok, load_settings
 from redjohn.config.models import (
     RedJohnProvider,
@@ -47,6 +49,7 @@ from redjohn.core.paths import run_dir_for, runtime_state_dir
 from redjohn.core.sessions import open_agent_session
 from redjohn.report.state import get_global_report_state
 from redjohn.runtime import session_manager
+from redjohn.runtime.legacy_execution import LegacyExecution
 from redjohn.telemetry import set_scan_phase
 from redjohn.telemetry.logging import set_scan_id, setup_scan_logging
 from redjohn.tools.finish.tool import finish_scan
@@ -304,6 +307,8 @@ async def run_redjohn_scan(
     root_id: str | None = None
     sessions_to_close: list[SQLiteSession] = []
     mcp_registry: McpRegistry | None = None
+    legacy_execution: LegacyExecution | None = None
+    owns_governor = prepared_assessment is None
     sandbox_ready = False
     topology_ready = False
     try:
@@ -577,6 +582,22 @@ async def run_redjohn_scan(
         if prepared_assessment is not None:
             await prepared_assessment.start()
 
+        shared_governor = (
+            prepared_assessment.host.configured.runtime.governor
+            if prepared_assessment is not None
+            else ResourceGovernor(host_pool=HostResourcePool(default_pool_path()))
+        )
+        legacy_execution = LegacyExecution(
+            agents_db,
+            shared_governor,
+            control=prepared_assessment.host.control if prepared_assessment else None,
+            sandbox_session=bundle["session"],
+            shell_transport=(
+                prepared_assessment.host.configured.runtime.browser if prepared_assessment else None
+            ),
+        )
+        mcp_registry.bind_governor(shared_governor)
+
         context: dict[str, Any] = {
             "coordinator": coordinator,
             "sandbox_session": bundle["session"],
@@ -589,6 +610,8 @@ async def run_redjohn_scan(
             "scan_targets": build_scan_targets(scan_config),
             "max_context_images": settings.runtime.max_context_images,
             "supports_images": supports_images,
+            "legacy_execution": legacy_execution,
+            "assessment_governor": shared_governor,
         }
         if prepared_assessment is not None:
             context["assessment_service"] = prepared_assessment.host.control
@@ -715,13 +738,19 @@ async def run_redjohn_scan(
             if mcp_registry is not None:
                 with contextlib.suppress(Exception):
                     await mcp_registry.close()
-            if topology_ready and coordinator is not None:
-                with contextlib.suppress(Exception):
-                    await coordinator._maybe_snapshot()
-            if cleanup_on_exit and sandbox_ready:
-                logger.info("Tearing down sandbox session for scan %s", scan_id)
-                await session_manager.cleanup(scan_id)
-            logger.info("RedJohn scan %s done", scan_id)
+            try:
+                if legacy_execution is not None:
+                    await legacy_execution.close()
+                    if owns_governor:
+                        legacy_execution.governor.close()
+            finally:
+                if topology_ready and coordinator is not None:
+                    with contextlib.suppress(Exception):
+                        await coordinator._maybe_snapshot()
+                if cleanup_on_exit and sandbox_ready:
+                    logger.info("Tearing down sandbox session for scan %s", scan_id)
+                    await session_manager.cleanup(scan_id)
+                logger.info("RedJohn scan %s done", scan_id)
         finally:
             try:
                 if prepared_assessment is not None:

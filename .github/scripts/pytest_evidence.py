@@ -41,6 +41,12 @@ REAL_FILES = {
     "test_schema_oast_live.py",
     "test_specialists_live.py",
     "test_viewer_assessment.py",
+    "test_legacy_cache_live.py",
+    "test_legacy_shell_boundary_live.py",
+    "test_nuclei_cli_live.py",
+    "test_tui_terminal_live.py",
+    "test_viewer_steering_live.py",
+    "test_soak_limits_live.py",
 }
 
 REAL_CASES = {
@@ -55,11 +61,27 @@ REAL_CASES = {
     "test_actual_chromium_auto_posts_are_exact_private_captures_and_default_stays_readonly",
     "test_actual_chromium_nuclei_restart_after_wall_clock_step",
     "test_actual_schemathesis_stops_admission_after_complete_401",
+    "test_real_stdio_unknown_mutation_is_never_replayed",
+    "test_real_stdio_cancellation_terminates_worker_and_releases_lease",
+    "test_real_sdk_pty_keeps_lease_until_polled_completion_and_closes",
+    "test_real_stdio_idle_session_keeps_memory_reservation_and_server_state",
 }
 LOCAL_NUCLEI_FILES = {
     "test_nuclei_live.py", "test_nuclei_post_live.py", "test_nuclei_auth_live.py",
     "test_nuclei_replay_redaction_live.py",
+    "test_nuclei_cli_live.py",
 }
+LOCAL_PROCESS_FILES = {
+    "test_host_lifecycle_live.py", "test_legacy_cache_live.py",
+    "test_tui_terminal_live.py", "test_soak_limits_live.py",
+}
+LOCAL_PROCESS_CASES = {
+    "test_real_stdio_unknown_mutation_is_never_replayed",
+    "test_real_stdio_cancellation_terminates_worker_and_releases_lease",
+    "test_real_sdk_pty_keeps_lease_until_polled_completion_and_closes",
+    "test_real_stdio_idle_session_keeps_memory_reservation_and_server_state",
+}
+MOCK_CONTRACT_FILES = {"test_fixture_dns_contract.py", "test_soak_fault_contracts.py"}
 KERNEL_ONLY_CASES = {
     "test_actual_kernel_memory_max_kills_oversized_tree",
     "test_actual_orphan_is_killed_before_crashed_owner_capacity_is_reclaimed",
@@ -79,13 +101,14 @@ def pytest_collection_modifyitems(config, items):
         filename = Path(str(item.path)).name
         name = item.originalname or item.name
         real = filename in REAL_FILES or name in REAL_CASES
-        doubles = "unittest.mock" in Path(str(item.path)).read_text()
+        doubles = filename in MOCK_CONTRACT_FILES or "unittest.mock" in Path(str(item.path)).read_text()
         item.user_properties.append(
             ("evidence_kind", "real_integration" if real else
              "mock_contract" if doubles else "unit_contract_or_mixed")
         )
         if real and capabilities is not None:
-            required = (set() if filename in LOCAL_NUCLEI_FILES or filename == "test_host_lifecycle_live.py"
+            required = ({"browser_available"} if filename == "test_viewer_steering_live.py" else
+                        set() if filename in LOCAL_NUCLEI_FILES or filename in LOCAL_PROCESS_FILES or name in LOCAL_PROCESS_CASES
                         else {"cgroup_available"} if name in KERNEL_ONLY_CASES
                         else {"browser_available", "namespace_available"})
             missing = sorted(key for key in required if not capabilities.get(key))

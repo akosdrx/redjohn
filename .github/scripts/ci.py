@@ -19,6 +19,14 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "artifacts"
+FRONTEND_TRANSPORT_CASES = frozenset({
+    "read-only capability defaults closed on absent or malformed permissions",
+    "steering preserves agent and message, HTTP rejection stays failure",
+    "successful HTTP status cannot turn rejected OTP into verified auth",
+    "dropped POST transport is an explicit failure and the next action can retry",
+    "report sending encodes requested run and surfaces non-JSON failures",
+    "run loading encodes scope and does not hide a failed primary run fetch",
+})
 
 
 def write(name, value):
@@ -144,7 +152,10 @@ def junit_summary(path):
                                             ("skipped", "skipped")) if case.find(tag) is not None), "passed")
         counts[status] += 1
         props = {p.get("name"): p.get("value") for p in case.findall("properties/property")}
-        kind = props.get("evidence_kind", "unclassified")
+        # Node's built-in reporter has no custom properties. These six reviewed
+        # cases use fetch doubles, and must never be counted as real HTTP E2E.
+        frontend_double = Path(case.get("file", "")).name == "server-source.test.mjs" and case.get("name") in FRONTEND_TRANSPORT_CASES
+        kind = props.get("evidence_kind", "mock_contract" if frontend_double else "unit_contract_or_mixed")
         kinds.setdefault(kind, {key: 0 for key in counts})[status] += 1
         if status == "skipped":
             skips.append({"test": case.get("name"), "reason": case.find("skipped").get("message")})
@@ -153,8 +164,8 @@ def junit_summary(path):
 
 REQUIRED = ("python-install", "linux-dependencies", "scanner-install", "linux-setup",
             "frontend-install", "pip-check", "python-lint", "python-types", "ci-contracts", "frontend-types",
-            "frontend-build", "go-vet", "go-tests", "go-build", "python-wheel",
-            "python-regression", "python-integration", "sandbox-setup", "sandbox-cleanup")
+            "frontend-build", "frontend-tests", "go-vet", "go-tests", "go-build", "python-wheel",
+            "python-regression", "python-integration", "mixed-soak", "sandbox-setup", "sandbox-cleanup")
 
 
 def summarize():
@@ -168,7 +179,7 @@ def summarize():
         result["commands"][name] = value
         if value["commit_sha"] != result["commit_sha"] or value["exit_code"] != 0 or value["leaked_descendant_pids_before_cleanup"]:
             result["blockers"].append("failed_command:" + name)
-    for name in ("regression", "integration"):
+    for name in ("regression", "integration", "frontend"):
         path = OUT / (name + ".junit.xml")
         if not path.is_file():
             result["blockers"].append("missing_junit:" + name)
@@ -177,6 +188,15 @@ def summarize():
         result["junit"][name] = value
         if not value["counts"]["passed"] or any(value["counts"][key] for key in ("failed", "errors", "skipped")):
             result["blockers"].append("incomplete_suite:" + name)
+    soak = OUT / "mixed-soak/mixed-soak.json"
+    if not soak.is_file():
+        result["blockers"].append("missing_mixed_soak_evidence")
+    else:
+        value = json.loads(soak.read_text())
+        result["mixed_soak"] = {key: value.get(key) for key in
+            ("commit_sha", "ok", "elapsed_seconds", "requested_cycles", "checks", "error")}
+        if value.get("commit_sha") != result["commit_sha"] or value.get("ok") is not True:
+            result["blockers"].append("incomplete_mixed_soak")
     cap = OUT / "capabilities.json"
     if not cap.is_file() or not json.loads(cap.read_text()).get("available"):
         result["blockers"].append("blocked_runner_capability")
@@ -214,7 +234,7 @@ def summarize():
             ET.SubElement(case, "failure" if row["Action"] == "fail" else "skipped")
     if go_cases or go_packages:
         ET.ElementTree(suite).write(OUT / "go.junit.xml", encoding="utf-8", xml_declaration=True)
-        if result["go_tests"]["failed"] or result["go_tests"]["skipped"]:
+        if not result["go_tests"]["passed"] or result["go_tests"]["failed"] or result["go_tests"]["skipped"]:
             result["blockers"].append("incomplete_go_tests")
     else:
         result["blockers"].append("missing_go_results")

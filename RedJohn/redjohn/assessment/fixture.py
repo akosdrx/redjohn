@@ -6,6 +6,7 @@ import json
 import threading
 from collections import Counter
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from socketserver import TCPServer
 from typing import TYPE_CHECKING, Literal, Self, TypedDict
 from urllib.parse import urlsplit
 
@@ -46,6 +47,20 @@ fetch('/api/xml',{method:'POST',headers:{'Content-Type':'application/xml'},body:
 let link=document.createElement('a');link.href='/api/dynamic';link.textContent='Dynamic';
 document.body.append(link);
 </script></body></html>"""
+
+
+class _LiteralLoopbackHTTPServer(ThreadingHTTPServer):
+    """Bind the owned numeric address without initializing a global resolver.
+
+    HTTPServer.server_bind reverse-resolves its address with getfqdn, retaining
+    a process-global resolver socket on macOS. A literal-loopback fixture needs
+    neither a hostname lookup nor that lifetime outside its own server socket.
+    """
+
+    def server_bind(self) -> None:
+        TCPServer.server_bind(self)
+        self.server_name = str(self.server_address[0])
+        self.server_port = int(self.server_address[1])
 
 
 class FixtureServer:
@@ -114,7 +129,7 @@ class FixtureServer:
             def log_message(self, _format: str, *_args: object) -> None:
                 pass
 
-        self.server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        self.server = _LiteralLoopbackHTTPServer(("127.0.0.1", 0), Handler)
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
 
     @property

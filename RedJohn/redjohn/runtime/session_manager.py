@@ -11,6 +11,7 @@ import os
 import sys
 import tarfile
 import time
+import weakref
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -34,7 +35,27 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-_SESSION_LOCKS: dict[str, asyncio.Lock] = {}
+# Callers and waiters retain their lock while it is in use. Once the last
+# operation finishes, the weak registry releases it without evicting live locks
+# or accumulating one entry for every historical scan ID.
+_SESSION_LOCKS: weakref.WeakValueDictionary[str, asyncio.Lock] = weakref.WeakValueDictionary()
+_SESSION_STARTING: set[str] = set()
+_SESSION_DISCARDING: set[str] = set()
+_CLEANUP_TASKS: dict[str, asyncio.Task[None]] = {}
+_DEFAULT_MAX_SESSIONS = 64
+_CLEANUP_TIMEOUT_SECONDS = 120.0
+_PROVISION_TIMEOUT_SECONDS = 180.0
+
+
+class SessionCapacityError(RuntimeError):
+    """Admission failed; existing or provisioning sessions remain owned."""
+
+
+def _session_limit() -> int:
+    value = int(os.environ.get("REDJOHN_MAX_CACHED_SESSIONS", str(_DEFAULT_MAX_SESSIONS)))
+    if not 1 <= value <= 1024:
+        raise ValueError("REDJOHN_MAX_CACHED_SESSIONS must be between 1 and 1024")
+    return value
 
 
 # In-container Caido sidecar port (matches the image's caido-cli bind).
@@ -313,15 +334,27 @@ async def create_or_reuse(
     """Return the existing session bundle for ``scan_id`` or create a new one."""
     lock = _SESSION_LOCKS.setdefault(scan_id, asyncio.Lock())
     async with lock:
-        return await _create_or_reuse_locked(
-            scan_id,
-            image=image,
-            local_sources=local_sources,
-            extra_files=extra_files,
-            status_sink=status_sink,
-            defer=defer,
-            protected_host_paths=protected_host_paths,
-        )
+        if scan_id in _SESSION_DISCARDING:
+            raise SessionCapacityError("sandbox_cancelled_provisioning_still_owned")
+        if scan_id not in _SESSION_CACHE:
+            if (
+                len(_SESSION_CACHE) + len(_SESSION_STARTING) + len(_SESSION_DISCARDING)
+                >= _session_limit()
+            ):
+                raise SessionCapacityError("sandbox_session_capacity_exhausted")
+            _SESSION_STARTING.add(scan_id)
+        try:
+            return await _create_or_reuse_locked(
+                scan_id,
+                image=image,
+                local_sources=local_sources,
+                extra_files=extra_files,
+                status_sink=status_sink,
+                defer=defer,
+                protected_host_paths=protected_host_paths,
+            )
+        finally:
+            _SESSION_STARTING.discard(scan_id)
 
 
 async def _create_or_reuse_locked(
@@ -353,6 +386,8 @@ async def _create_or_reuse_locked(
 
     cached = _SESSION_CACHE.get(scan_id)
     if cached is not None:
+        if cached.get("_teardown_state") is not None:
+            raise RuntimeError("sandbox_cleanup_incomplete_requires_retry")
         expected = {str(path.resolve()) for path in protected_host_paths}
         if expected - set(cached.get("protected_host_paths", ())):
             raise RuntimeError("sandbox_protection_changed_requires_fresh_session")
@@ -405,7 +440,8 @@ async def _create_or_reuse_locked(
                 manifest=manifest,
                 exposed_ports=(_CONTAINER_CAIDO_PORT,),
                 bind_mounts=bind_mounts,
-            )
+            ),
+            scan_id=scan_id,
         )
         try:
             extra_file_archive = await _resolve_extra_file_archive(extra_files, local_sources)
@@ -413,7 +449,7 @@ async def _create_or_reuse_locked(
                 report("Placing workspace files")
                 await stage_extra_files(session, extra_file_archive)
         except BaseException:
-            await _discard_session(client, session)
+            await _discard_session(client, session, scan_id=scan_id)
             raise
         return client, session
 
@@ -458,10 +494,14 @@ async def _create_or_reuse_locked(
         return bundle
 
     client, session = await _bring_up()
-    host_caido_url = await _caido_url(session)
-    caido_client = CaidoBootstrapHandle(
-        asyncio.create_task(_caido(session, host_caido_url), name=f"caido-bootstrap-{scan_id}")
-    )
+    try:
+        host_caido_url = await _caido_url(session)
+        caido_client = CaidoBootstrapHandle(
+            asyncio.create_task(_caido(session, host_caido_url), name=f"caido-bootstrap-{scan_id}")
+        )
+    except BaseException:
+        await _discard_session(client, session, scan_id=scan_id)
+        raise
 
     bundle = {
         "client": client,
@@ -477,43 +517,89 @@ async def _create_or_reuse_locked(
 _DISCARD_TASKS: set[asyncio.Task[None]] = set()
 
 
-async def _create_or_discard(create: Awaitable[tuple[Any, Any]]) -> tuple[Any, Any]:
+async def _create_or_discard(
+    create: Awaitable[tuple[Any, Any]], *, scan_id: str
+) -> tuple[Any, Any]:
     pending = asyncio.ensure_future(create)
     try:
-        return await asyncio.shield(pending)
-    except asyncio.CancelledError:
-        discard = asyncio.create_task(_discard_when_created(pending))
+        async with asyncio.timeout(_PROVISION_TIMEOUT_SECONDS):
+            return await asyncio.shield(pending)
+    except (asyncio.CancelledError, TimeoutError):
+        _SESSION_DISCARDING.add(scan_id)
+        discard = asyncio.create_task(_discard_when_created(pending, scan_id=scan_id))
         _DISCARD_TASKS.add(discard)
         discard.add_done_callback(_DISCARD_TASKS.discard)
         raise
 
 
-async def _discard_when_created(create: asyncio.Future[tuple[Any, Any]]) -> None:
-    with contextlib.suppress(BaseException):
-        client, session = await create
-        await _discard_session(client, session)
-
-
-async def _discard_session(client: Any, session: Any) -> None:
-    """Best-effort teardown of a session that never made it into the cache."""
+async def _discard_when_created(create: asyncio.Future[tuple[Any, Any]], *, scan_id: str) -> None:
     try:
-        await client.delete(session)
-    except Exception:
-        logger.warning("Discarding a half-started sandbox session failed", exc_info=True)
+        with contextlib.suppress(BaseException):
+            client, session = await create
+            await _discard_session(client, session, scan_id=scan_id)
+    finally:
+        _SESSION_DISCARDING.discard(scan_id)
+
+
+async def _discard_session(client: Any, session: Any, *, scan_id: str) -> None:
+    """Retain ownership even if deleting a half-created session fails."""
+    bundle = {"client": client, "session": session, "caido_client": None}
+    try:
+        async with asyncio.timeout(_CLEANUP_TIMEOUT_SECONDS):
+            await _delete_bundle(scan_id, bundle)
+    except BaseException as error:
+        bundle.setdefault("_teardown_state", "delete_failed")
+        _SESSION_CACHE[scan_id] = bundle
+        if isinstance(error, asyncio.CancelledError):
+            raise
+        logger.warning("Half-started sandbox cleanup failed; ownership retained", exc_info=True)
 
 
 async def cleanup(scan_id: str) -> None:
-    """Tear down ``scan_id``'s container and drop its cache entry.
+    """Serialize teardown with creation and keep failed resources retryable.
 
-    Best-effort: any error during ``client.delete`` is logged and
-    swallowed. We never want a cleanup failure to prevent the next
-    scan from starting; the worst case is a stranded container that
-    Docker's normal reaping will catch on next ``docker prune``.
+    A cancelled caller does not interrupt its resource deletion. The owned task
+    has a finite deadline and remains observable until it completes. No session
+    is expired or evicted merely because it has been alive for a long time.
     """
-    bundle = _SESSION_CACHE.pop(scan_id, None)
-    if bundle is None:
-        logger.debug("cleanup(%s): no cached session", scan_id)
+    if scan_id not in _SESSION_CACHE and scan_id not in _SESSION_LOCKS:
         return
+    pending = _CLEANUP_TASKS.get(scan_id)
+    if pending is None:
+        lock = _SESSION_LOCKS.setdefault(scan_id, asyncio.Lock())
+        pending = asyncio.create_task(_cleanup_owned(scan_id, lock), name="redjohn-session-cleanup")
+        _CLEANUP_TASKS[scan_id] = pending
+
+        def finished(task: asyncio.Task[None]) -> None:
+            if _CLEANUP_TASKS.get(scan_id) is task:
+                _CLEANUP_TASKS.pop(scan_id, None)
+            if not task.cancelled():
+                task.exception()
+
+        pending.add_done_callback(finished)
+    await asyncio.shield(pending)
+
+
+async def _cleanup_owned(scan_id: str, lock: asyncio.Lock) -> None:
+    async with lock:
+        bundle = _SESSION_CACHE.get(scan_id)
+        if bundle is None:
+            return
+        try:
+            async with asyncio.timeout(_CLEANUP_TIMEOUT_SECONDS):
+                await _delete_bundle(scan_id, bundle)
+        except BaseException:
+            # A partial delete cannot be returned as a healthy reused session.
+            # Keep ownership and permit an explicit cleanup retry.
+            if bundle.get("_teardown_state") != "deleted":
+                bundle["_teardown_state"] = "delete_failed"
+            raise
+        if _SESSION_CACHE.get(scan_id) is bundle:
+            _SESSION_CACHE.pop(scan_id)
+
+
+async def _delete_bundle(scan_id: str, bundle: dict[str, Any]) -> None:
+    bundle.setdefault("_teardown_state", "deleting")
 
     caido_client = bundle.get("caido_client")
     if caido_client is not None:
@@ -523,18 +609,27 @@ async def cleanup(scan_id: str) -> None:
             logger.debug("cleanup(%s): caido_client.aclose() raised", scan_id, exc_info=True)
 
     client = bundle["client"]
-    try:
+    if bundle["_teardown_state"] != "deleted":
         await client.delete(bundle["session"])
+        bundle["_teardown_state"] = "deleted"
         logger.info("Cleaned up sandbox session for scan %s", scan_id)
-    except Exception:
-        logger.exception(
-            "cleanup(%s): client.delete raised; container may need manual reaping",
-            scan_id,
-        )
 
     docker_client = getattr(client, "docker_client", None)
     if docker_client is not None:
-        try:
-            docker_client.close()
-        except Exception:
-            logger.debug("cleanup(%s): docker_client.close() raised", scan_id, exc_info=True)
+        docker_client.close()
+
+
+def lifecycle_snapshot() -> dict[str, int]:
+    """Bounded aggregate telemetry; no scan IDs or session credentials."""
+    return {
+        "active_sessions": len(_SESSION_CACHE),
+        "provisioning": len(_SESSION_STARTING),
+        "locks": len(_SESSION_LOCKS),
+        "cleanup_tasks": len(_CLEANUP_TASKS),
+        "discard_tasks": len(_DISCARD_TASKS),
+        "discarding_sessions": len(_SESSION_DISCARDING),
+        "cleanup_failed": sum(
+            bundle.get("_teardown_state") is not None for bundle in _SESSION_CACHE.values()
+        ),
+        "max_sessions": _session_limit(),
+    }

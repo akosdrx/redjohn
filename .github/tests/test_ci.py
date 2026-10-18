@@ -78,8 +78,10 @@ class EvidenceContract(unittest.TestCase):
             (root / "cgroup-cleanup.json").write_text('{"removed":true,"leaked_processes":false}')
             (root / "apparmor-cleanup.json").write_text('{"success":true}')
             (root / "go-tests.log").write_text('{"Package":"fixture","Test":"TestContract","Action":"pass"}\n')
-            for name in ("regression", "integration"):
+            for name in ("regression", "integration", "frontend"):
                 (root / (name + ".junit.xml")).write_text('<testsuite><testcase name="fixture"/></testsuite>')
+            (root / "mixed-soak").mkdir()
+            (root / "mixed-soak/mixed-soak.json").write_text('{"commit_sha":"abc","ok":true}')
             with patch.dict(os.environ, {"GITHUB_STEP_SUMMARY": str(root / "summary.md")}):
                 self.assertEqual(ci.summarize(), 0)
             self.assertIn("Complete.", (root / "summary.md").read_text())
@@ -124,6 +126,32 @@ class EvidenceContract(unittest.TestCase):
             self.assertEqual(result["go_tests"], {"passed": 0, "failed": 0, "skipped": 0})
             self.assertEqual(result["go_test_coverage"], "no_test_functions_defined")
             self.assertNotIn("missing_go_results", result["blockers"])
+            self.assertIn("incomplete_go_tests", result["blockers"])
+
+    def test_soak_cannot_succeed_for_another_commit_or_a_failed_check(self):
+        for payload in ({"commit_sha": "other", "ok": True}, {"commit_sha": "abc", "ok": False}):
+            with tempfile.TemporaryDirectory() as folder, patch.object(ci, "OUT", Path(folder)), \
+                    patch.object(ci, "identity", return_value={"commit_sha": "abc", "machine": "contract"}):
+                root = Path(folder)
+                (root / "mixed-soak").mkdir()
+                (root / "mixed-soak/mixed-soak.json").write_text(json.dumps(payload))
+                self.assertEqual(ci.summarize(), 1)
+                self.assertIn("incomplete_mixed_soak", json.loads((root / "summary.json").read_text())["blockers"])
+
+    def test_node_junit_direct_testcase_children_are_counted(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "frontend.junit.xml"
+            path.write_text('<testsuites><testcase name="parser"/><testcase name="fetch"><failure/></testcase></testsuites>')
+            self.assertEqual(ci.junit_summary(path)["counts"], {"passed": 1, "failed": 1, "skipped": 0, "errors": 0})
+
+    def test_reviewed_node_fetch_double_stays_distinct_from_real_http(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "frontend.junit.xml"
+            name = "dropped POST transport is an explicit failure and the next action can retry"
+            path.write_text(f'<testsuites><testcase name="{name}" file="/owned/tests/server-source.test.mjs"/></testsuites>')
+            result = ci.junit_summary(path)
+            self.assertEqual(result["evidence_kinds"]["mock_contract"]["passed"], 1)
+            self.assertNotIn("real_integration", result["evidence_kinds"])
 
 
 if __name__ == "__main__":

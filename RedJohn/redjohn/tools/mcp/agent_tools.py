@@ -30,6 +30,9 @@ from typing import TYPE_CHECKING, Any
 
 from agents import RunContextWrapper, function_tool
 
+from redjohn.assessment.models import error_record
+from redjohn.assessment.resources import ResourceAdmissionError
+from redjohn.runtime.legacy_execution import legacy_from_context
 from redjohn.tools.mcp.client import _errored_tool_output
 from redjohn.tools.mcp.naming import namespaced_tool_name
 from redjohn.tools.mcp.registry import MCP_REGISTRY_CONTEXT_KEY, McpRegistry
@@ -38,6 +41,8 @@ from redjohn.tools.mcp.session import McpConnectionUnavailableError
 
 if TYPE_CHECKING:
     from mcp.types import Tool as MCPTool
+
+    from redjohn.tools.mcp.registry import McpConnectionEntry
 
 
 def _registry_from_ctx(ctx: RunContextWrapper) -> McpRegistry | None:
@@ -48,6 +53,24 @@ def _registry_from_ctx(ctx: RunContextWrapper) -> McpRegistry | None:
 
 _NO_CONNECTIONS = "No MCP connections are configured for this run."
 _MCP_DISCOVERY_WAIT_SECONDS = 30.0
+
+
+async def _catalog_for(ctx: RunContextWrapper, entry: McpConnectionEntry) -> list[Any]:
+    context = ctx.context if isinstance(ctx.context, dict) else {}
+    owner = legacy_from_context(context)
+    if owner is not None:
+        return await owner.run(
+            f"mcp-catalog:{entry.name}",
+            entry.ensure_catalog,
+            timeout=_MCP_DISCOVERY_WAIT_SECONDS,
+            cleanup=entry.close,
+        )
+    try:
+        async with asyncio.timeout(_MCP_DISCOVERY_WAIT_SECONDS):
+            return await entry.ensure_catalog()
+    except (TimeoutError, asyncio.CancelledError):
+        await entry.close()
+        raise
 
 
 def _unknown_connection(connection: str, registry: McpRegistry) -> str:
@@ -63,13 +86,13 @@ def _format_tool(tool: MCPTool) -> str:
 
 @function_tool(timeout=60)
 async def list_mcps(ctx: RunContextWrapper) -> dict[str, Any]:
-    """List available MCP connections, loading each connection's catalog on first use.
+    """List configured MCP connections without starting optional providers.
 
     Read-only. Returns one entry per connection with its ``id`` (the exact name
     you pass to the other MCP tools), ``name``, ``description``, and
-    ``tool_count`` (null while the catalog is unknown). Waits at most 30 seconds
-    for catalogs; unfinished catalogs keep loading in the background.
-    The response does not include tool schemas. Call
+    ``tool_count`` (null while the catalog is unknown). Connections remain inert
+    until a selected search/schema/call needs that provider. The response does
+    not include tool schemas. Call
     ``search_mcp_tools`` next. Then call ``get_mcp_tool_schema`` for one selected
     tool before you call ``call_mcp``. Returns an empty ``connections`` list when
     the run has no MCP connections.
@@ -77,23 +100,6 @@ async def list_mcps(ctx: RunContextWrapper) -> dict[str, Any]:
     registry = _registry_from_ctx(ctx)
     if registry is None or not registry:
         return {"connections": []}
-    pending = [
-        entry
-        for name in registry.names()
-        if (entry := registry.get(name)) is not None
-        and entry.state != "catalog_ready"
-        and (entry.session is None or not entry.session.is_dead)
-    ]
-    if pending:
-        await asyncio.wait(
-            {
-                asyncio.gather(
-                    *(entry.ensure_catalog() for entry in pending),
-                    return_exceptions=True,
-                )
-            },
-            timeout=_MCP_DISCOVERY_WAIT_SECONDS,
-        )
     dead_by_name = {status.name: status.dead for status in registry.statuses()}
     return {
         "connections": [
@@ -129,8 +135,8 @@ async def describe_mcp(ctx: RunContextWrapper, connection: str) -> str:
     if entry is None:
         return _unknown_connection(connection, registry)
     try:
-        tools = await entry.ensure_catalog()
-    except McpConnectionUnavailableError as exc:
+        tools = await _catalog_for(ctx, entry)
+    except (McpConnectionUnavailableError, ResourceAdmissionError, TimeoutError) as exc:
         return str(exc)
     if not tools:
         return f"MCP connection {connection!r} offers no tools."
@@ -189,8 +195,8 @@ async def search_mcp_tools(
     if entry is None:
         return _unknown_connection(connection, registry)
     try:
-        tools = await entry.ensure_catalog()
-    except McpConnectionUnavailableError as exc:
+        tools = await _catalog_for(ctx, entry)
+    except (McpConnectionUnavailableError, ResourceAdmissionError, TimeoutError) as exc:
         return str(exc)
     terms = [term for term in query.lower().split() if term]
     bounded_limit = min(max(limit, 1), 20)
@@ -237,8 +243,8 @@ async def get_mcp_tool_schema(
     if entry is None:
         return _unknown_connection(connection, registry)
     try:
-        tools = await entry.ensure_catalog()
-    except McpConnectionUnavailableError as exc:
+        tools = await _catalog_for(ctx, entry)
+    except (McpConnectionUnavailableError, ResourceAdmissionError, TimeoutError) as exc:
         return str(exc)
     match = next((candidate for candidate in tools if candidate.name == tool), None)
     if match is None:
@@ -299,8 +305,8 @@ async def call_mcp(
     if arguments is not None and not isinstance(arguments, dict):
         return invalid_arguments
     try:
-        available = await entry.ensure_catalog()
-    except McpConnectionUnavailableError as exc:
+        available = await _catalog_for(ctx, entry)
+    except (McpConnectionUnavailableError, ResourceAdmissionError, TimeoutError) as exc:
         return _errored_tool_output(str(exc))
     valid_names = {mcp_tool.name for mcp_tool in available}
     if tool not in valid_names:
@@ -308,12 +314,46 @@ async def call_mcp(
             f"Unknown tool {tool!r} on MCP connection {connection!r}. "
             "Call search_mcp_tools, then get_mcp_tool_schema."
         )
-    session = await entry.ensure_connected()
     context = ctx.context if isinstance(ctx.context, dict) else {}
-    return await session.dispatch(
-        tool,
-        arguments or {},
-        label=namespaced_tool_name(connection, tool),
-        result_transform=entry.result_transform,
-        supports_images=context.get("supports_images", True),
-    )
+
+    async def dispatch() -> Any:
+        session = await entry.ensure_connected()
+        return await session.dispatch(
+            tool,
+            arguments or {},
+            label=namespaced_tool_name(connection, tool),
+            result_transform=entry.result_transform,
+            supports_images=context.get("supports_images", True),
+        )
+
+    timeout = min(110, entry.config.session_timeout_seconds if entry.config else 60)
+    try:
+        owner = legacy_from_context(context)
+        if owner is not None:
+            return await owner.run(
+                f"mcp-call:{connection}:{tool}",
+                dispatch,
+                timeout=timeout,
+                cleanup=entry.close,
+                estimated_bytes=0 if entry._resource_lease is not None else 1024 * 1024,
+            )
+        async with asyncio.timeout(timeout):
+            return await dispatch()
+    except ResourceAdmissionError:
+        return _errored_tool_output(
+            error_record(
+                "mcp_resource_admission_denied", category="resource", coverage_effect="blocked"
+            )
+        )
+    except TimeoutError:
+        await entry.close()
+        return _errored_tool_output(
+            error_record(
+                "mcp_operation_timeout",
+                coverage_effect="inconclusive",
+                recovery_action="reconcile_before_replay",
+            )
+        )
+    except asyncio.CancelledError:
+        await entry.close()
+        raise

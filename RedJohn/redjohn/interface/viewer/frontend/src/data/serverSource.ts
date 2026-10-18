@@ -66,7 +66,7 @@ export function parseMcpConnectionStatus(raw: Record<string, unknown>): McpConne
     const name = typeof record.name === "string" ? record.name.trim() : "";
     if (!name) return [];
     const provider = typeof record.provider === "string" && record.provider.trim() ? record.provider.trim() : null;
-    const toolCount = typeof record.tool_count === "number" ? record.tool_count : 0;
+    const toolCount = typeof record.tool_count === "number" && Number.isSafeInteger(record.tool_count) && record.tool_count >= 0 ? record.tool_count : 0;
     const dead = record.dead === true;
     return [{ name, provider, toolCount, dead }];
   });
@@ -186,12 +186,20 @@ async function postJson(
   path: string,
   body: Record<string, unknown>
 ): Promise<{ ok: boolean; status: number; data: Record<string, unknown> }> {
-  const res = await fetch(path, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-    cache: "no-store",
-  });
+  let res: Response;
+  try {
+    res = await fetch(path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      cache: "no-store",
+    });
+  } catch {
+    // POST consumers render an explicit failure and release their pending UI
+    // state. A dropped local connection must never become success or leave
+    // auth, report sending, or live steering permanently disabled.
+    return { ok: false, status: 0, data: { error: "unavailable" } };
+  }
   let data: Record<string, unknown> = {};
   try {
     const parsed = await res.json();

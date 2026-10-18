@@ -12,7 +12,7 @@ import shutil
 import socket
 import sys
 import tempfile
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -28,6 +28,8 @@ from agents.sandbox.workspace_paths import SandboxPathGrant
 
 if TYPE_CHECKING:
     from agents.sandbox.session.sandbox_session import SandboxSession
+
+    from redjohn.runtime.legacy_shell_boundary import LegacyShellBoundary
 
 
 logger = logging.getLogger(__name__)
@@ -222,6 +224,19 @@ class RedJohnLocalSandboxSession(UnixLocalSandboxSession):
 
     caido_port: int | None = None
     caido_process: asyncio.subprocess.Process | None = None
+    redjohn_shell_boundary: LegacyShellBoundary | None = None
+
+    def bind_assessment_shell_boundary(self, boundary: LegacyShellBoundary | None) -> None:
+        self.redjohn_shell_boundary = boundary
+
+    def _confined_exec_command(
+        self, *, command_parts: list[str], workspace_root: Path, env: Mapping[str, str]
+    ) -> list[str]:
+        if self.redjohn_shell_boundary is not None:
+            return self.redjohn_shell_boundary.wrap(command_parts, cwd=workspace_root)
+        return super()._confined_exec_command(
+            command_parts=command_parts, workspace_root=workspace_root, env=env
+        )
 
     def _remap_virtual_workspace(self, path: Path | str) -> Path | str:
         raw = path.as_posix() if isinstance(path, Path) else str(path)

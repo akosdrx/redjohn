@@ -9,7 +9,7 @@ esac
 test -e /sys/fs/cgroup/cgroup.controllers
 test ! -e "$REDJOHN_TEST_CGROUP_ROOT"
 sudo mkdir "$REDJOHN_TEST_CGROUP_ROOT"
-sudo mkdir "$REDJOHN_TEST_CGROUP_ROOT/launcher-regression" "$REDJOHN_TEST_CGROUP_ROOT/launcher-integration"
+sudo mkdir "$REDJOHN_TEST_CGROUP_ROOT/launcher-regression" "$REDJOHN_TEST_CGROUP_ROOT/launcher-integration" "$REDJOHN_TEST_CGROUP_ROOT/launcher-soak"
 printf '%s' '+memory +pids' | sudo tee "$REDJOHN_TEST_CGROUP_ROOT/cgroup.subtree_control" > /dev/null
 sudo chown -R "$(id -u):$(id -g)" "$REDJOHN_TEST_CGROUP_ROOT"
 python - <<'PY'

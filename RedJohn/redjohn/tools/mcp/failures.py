@@ -11,6 +11,7 @@ from typing import Literal, cast
 import httpx
 from agents.exceptions import UserError
 from mcp.shared.exceptions import McpError
+from mcp.types import CONNECTION_CLOSED
 
 
 FailureKind = Literal[
@@ -92,7 +93,7 @@ def _from_status(
     )
 
 
-def _direct(exc: BaseException) -> FailureInfo | None:
+def _direct(exc: BaseException) -> FailureInfo | None:  # noqa: PLR0911 - protocol variants
     if isinstance(exc, httpx.HTTPStatusError):
         response = exc.response
         request = response.request
@@ -108,6 +109,10 @@ def _direct(exc: BaseException) -> FailureInfo | None:
     if isinstance(exc, httpx.TransportError):
         return FailureInfo("transport", reason="transport error")
     if isinstance(exc, McpError):
+        if exc.error.code == CONNECTION_CLOSED:
+            return FailureInfo("transport", reason="MCP connection closed")
+        if exc.error.code in {408, -32001}:
+            return FailureInfo("timeout", reason="MCP response timed out")
         return FailureInfo("protocol", reason="MCP protocol error")
     if isinstance(exc, UserError):
         match = _HTTP_ERROR_RE.search(str(exc))

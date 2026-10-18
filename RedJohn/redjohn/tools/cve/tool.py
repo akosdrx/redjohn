@@ -8,13 +8,14 @@ import json
 import logging
 import os
 import re
-import sqlite3
-import time
-from pathlib import Path
 from typing import Any
 
 import httpx
 from agents import RunContextWrapper, function_tool
+
+from redjohn.assessment.cache import CacheBusyError
+from redjohn.assessment.resources import ResourceAdmissionError, ResourceGovernor
+from redjohn.tools.cve.cache import CveCache
 
 
 logger = logging.getLogger(__name__)
@@ -235,132 +236,65 @@ def compute_ssvc_decision(
     return "Track"
 
 
-class _CveCache:
-    """SQLite + in-memory TTL cache for CVE, KEV, EPSS, and OSV lookups."""
-
-    def __init__(self, db_path: Path | None = None, default_ttl_seconds: int = 21600) -> None:
-        env_path = os.environ.get("REDJOHN_CVE_CACHE_DB", "").strip()
-        if db_path is not None:
-            self.db_path = db_path
-        elif env_path:
-            self.db_path = Path(env_path)
-        else:
-            self.db_path = Path.home() / ".redjohn" / "cve_cache.sqlite3"
-        self.default_ttl = max(60, default_ttl_seconds)
-        self._mem: dict[str, tuple[float, Any]] = {}
-        self._sqlite_ok = False
-        self._init_db()
-
-    def _init_db(self) -> None:
-        try:
-            self.db_path.parent.mkdir(parents=True, exist_ok=True)
-            with sqlite3.connect(self.db_path, timeout=5.0) as conn:
-                conn.execute("PRAGMA journal_mode=WAL")
-                conn.execute("PRAGMA busy_timeout=5000")
-                conn.execute(
-                    "CREATE TABLE IF NOT EXISTS cve_cache ("
-                    "cache_key TEXT PRIMARY KEY, "
-                    "payload_json TEXT NOT NULL, "
-                    "expires_at REAL NOT NULL)"
-                )
-                conn.commit()
-            self._sqlite_ok = True
-        except Exception:  # noqa: BLE001
-            self._sqlite_ok = False
-
-    def get(self, key: str) -> Any | None:
-        now = time.time()
-        mem_hit = self._mem.get(key)
-        if mem_hit is not None:
-            exp, val = mem_hit
-            if exp > now:
-                return val
-            self._mem.pop(key, None)
-        if not self._sqlite_ok:
-            return None
-        try:
-            with sqlite3.connect(self.db_path, timeout=5.0) as conn:
-                conn.execute("PRAGMA busy_timeout=5000")
-                row = conn.execute(
-                    "SELECT payload_json, expires_at FROM cve_cache WHERE cache_key = ?",
-                    (key,),
-                ).fetchone()
-                if not row:
-                    return None
-                payload_json, expires_at = row
-                if float(expires_at) <= now:
-                    conn.execute("DELETE FROM cve_cache WHERE cache_key = ?", (key,))
-                    conn.commit()
-                    return None
-                val = json.loads(payload_json)
-                self._mem[key] = (float(expires_at), val)
-                return val
-        except Exception:  # noqa: BLE001
-            return None
-
-    def set(self, key: str, value: Any, ttl_seconds: int | None = None) -> None:
-        ttl = ttl_seconds if ttl_seconds is not None else self.default_ttl
-        expires_at = time.time() + max(1, ttl)
-        self._mem[key] = (expires_at, value)
-        if not self._sqlite_ok:
-            return
-        try:
-            payload_json = json.dumps(value)
-            with sqlite3.connect(self.db_path, timeout=5.0) as conn:
-                conn.execute("PRAGMA busy_timeout=5000")
-                conn.execute(
-                    "INSERT OR REPLACE INTO cve_cache (cache_key, payload_json, expires_at) "
-                    "VALUES (?, ?, ?)",
-                    (key, payload_json, expires_at),
-                )
-                conn.commit()
-        except Exception:
-            logger.debug("Failed to persist CVE cache entry for %s", key, exc_info=True)
+# Keep the private constructor alias for existing integrations importing it.
+_CveCache = CveCache
+_CACHE = CveCache()
+_RESPONSE_MAX_BYTES = 4 * 1024 * 1024
 
 
-_CACHE = _CveCache()
-_KEV_MEMORY: dict[str, dict[str, Any]] | None = None
-_KEV_LOCK = asyncio.Lock()
-_KEV_NEGATIVE_TTL = 300.0
-_kev_failed_at: float | None = None
+async def _bounded_request(
+    client: httpx.AsyncClient, method: str, url: str, **kwargs: Any
+) -> httpx.Response:
+    """Bound decoded advisory bodies before parsing provider JSON."""
+    async with client.stream(method, url, **kwargs) as response:
+        payload = bytearray()
+        async for chunk in response.aiter_bytes(chunk_size=16384):
+            if len(payload) + len(chunk) > _RESPONSE_MAX_BYTES:
+                raise ValueError("advisory_response_body_limit_exceeded")
+            payload.extend(chunk)
+        headers = {
+            key: value
+            for key, value in response.headers.items()
+            if key.casefold() not in {"content-encoding", "content-length", "transfer-encoding"}
+        }
+        return httpx.Response(
+            response.status_code, headers=headers, content=bytes(payload), request=response.request
+        )
 
 
 async def _get_kev_catalog(client: httpx.AsyncClient) -> dict[str, dict[str, Any]]:
-    global _KEV_MEMORY, _kev_failed_at  # noqa: PLW0603
-    async with _KEV_LOCK:
-        if _kev_failed_at is not None and time.monotonic() - _kev_failed_at < _KEV_NEGATIVE_TTL:
-            return {}
-        if _KEV_MEMORY is not None:
-            return _KEV_MEMORY
-        cached = await asyncio.to_thread(_CACHE.get, "cisa_kev_catalog_v1")
-        if isinstance(cached, dict) and cached:
-            _KEV_MEMORY = cached
-            return _KEV_MEMORY
-        try:
-            resp = await client.get(
-                "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json",
-                timeout=8.0,
-            )
-            if resp.status_code == 200:
-                vulns = resp.json().get("vulnerabilities") or []
-                _KEV_MEMORY = {
-                    str(v["cveID"]).upper(): {
-                        "date_added": v.get("dateAdded"),
-                        "product": v.get("product"),
-                        "vendor": v.get("vendorProject"),
-                        "short_description": v.get("shortDescription"),
-                        "known_ransomware": v.get("knownRansomwareCampaignUse"),
-                    }
-                    for v in vulns
-                    if isinstance(v, dict) and v.get("cveID")
-                }
-                await asyncio.to_thread(_CACHE.set, "cisa_kev_catalog_v1", _KEV_MEMORY, 43200)
-                return _KEV_MEMORY
-        except Exception:
-            logger.debug("Could not fetch CISA KEV feed", exc_info=True)
-            _kev_failed_at = time.monotonic()
-            return {}
-        _kev_failed_at = time.monotonic()
+    async def fetch() -> dict[str, dict[str, Any]]:
+        response = await _bounded_request(
+            client,
+            "GET",
+            "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json",
+            timeout=8.0,
+        )
+        response.raise_for_status()
+        body = response.json()
+        if not isinstance(body, dict) or not isinstance(body.get("vulnerabilities"), list):
+            raise TypeError("invalid_kev_catalog")
+        retrieved_at = datetime.datetime.now(datetime.UTC).isoformat()
+        return {
+            str(value["cveID"]).upper(): {
+                "source": "CISA KEV",
+                "retrieved_at": retrieved_at,
+                "data_version": str(body.get("catalogVersion") or "unknown"),
+                "date_added": value.get("dateAdded"),
+                "product": value.get("product"),
+                "vendor": value.get("vendorProject"),
+                "short_description": value.get("shortDescription"),
+                "known_ransomware": value.get("knownRansomwareCampaignUse"),
+            }
+            for value in body["vulnerabilities"]
+            if isinstance(value, dict) and CVE_RE.match(str(value.get("cveID", "")))
+        }
+
+    try:
+        catalog, _ = await _CACHE.get_or_refresh("cisa_kev_catalog_v2", fetch, 43200)
+        return dict(catalog)
+    except (httpx.HTTPError, ValueError, TypeError, TimeoutError, CacheBusyError):
+        logger.debug("CISA KEV provider unavailable", exc_info=True)
         return {}
 
 
@@ -371,7 +305,9 @@ async def _fetch_epss_batch(
     if not valid:
         return {}
     try:
-        resp = await client.get(
+        resp = await _bounded_request(
+            client,
+            "GET",
             "https://api.first.org/data/v1/epss",
             params={"cve": ",".join(valid[:40])},
             timeout=8.0,
@@ -427,6 +363,9 @@ def _extract_nvd_cve_item(cve_obj: dict[str, Any]) -> dict[str, Any]:
     ]
     vuln_class, rec_skill, impact_w, _cost = classify_vulnerability(summary, cwes)
     return {
+        "source": "NVD CVE API v2",
+        "source_modified_at": cve_obj.get("lastModified"),
+        "retrieved_at": datetime.datetime.now(datetime.UTC).isoformat(),
         "id": cid,
         "cve_ids": [cid] if cid else [],
         "summary": summary,
@@ -482,6 +421,10 @@ def _extract_osv_item(item: dict[str, Any]) -> dict[str, Any]:
     ]
     vuln_class, rec_skill, impact_w, _cost = classify_vulnerability(summary, cwes)
     return {
+        "source": "OSV API v1",
+        "data_version": str(item.get("schema_version") or "unknown"),
+        "source_modified_at": item.get("modified"),
+        "retrieved_at": datetime.datetime.now(datetime.UTC).isoformat(),
         "id": osv_id,
         "cve_ids": cve_ids,
         "summary": summary,
@@ -548,13 +491,25 @@ def _enrich_record(
     return rec
 
 
-async def _lookup_single_cve(cve_id: str) -> dict[str, Any]:
+async def _lookup_single_cve(
+    cve_id: str, *, governor: ResourceGovernor | None = None
+) -> dict[str, Any]:
     clean = cve_id.strip().upper()
     cache_key = f"cve_lookup:{clean}"
-    cached = await asyncio.to_thread(_CACHE.get, cache_key)
-    if isinstance(cached, dict):
-        return {**cached, "cache_hit": True}
+    result, cache_hit = await _CACHE.get_or_refresh(
+        cache_key,
+        lambda: _fetch_single_cve(clean),
+        21600,
+        admit=(
+            lambda: governor.acquire("worker", _RESPONSE_MAX_BYTES * 16, owner_process_only=True)
+        )
+        if governor is not None
+        else None,
+    )
+    return {**result, "cache_hit": cache_hit}
 
+
+async def _fetch_single_cve(clean: str) -> dict[str, Any]:
     nvd_headers = {"Accept": "application/json"}
     nvd_key = os.environ.get("NVD_API_KEY", "").strip()
     if nvd_key:
@@ -563,8 +518,10 @@ async def _lookup_single_cve(cve_id: str) -> dict[str, Any]:
     osv_data: dict[str, Any] = {}
     nvd_item: dict[str, Any] = {}
     async with httpx.AsyncClient(trust_env=False, timeout=12.0) as client:
-        osv_req = client.get(f"https://api.osv.dev/v1/vulns/{clean}")
-        nvd_req = client.get(
+        osv_req = _bounded_request(client, "GET", f"https://api.osv.dev/v1/vulns/{clean}")
+        nvd_req = _bounded_request(
+            client,
+            "GET",
             "https://services.nvd.nist.gov/rest/json/cves/2.0",
             params={"cveId": clean},
             headers=nvd_headers,
@@ -576,8 +533,15 @@ async def _lookup_single_cve(cve_id: str) -> dict[str, Any]:
         )
         if isinstance(osv_resp, httpx.Response) and osv_resp.status_code == 200:
             osv_data = osv_resp.json()
+            if not isinstance(osv_data, dict) or not isinstance(osv_data.get("id"), str):
+                raise TypeError("invalid_osv_advisory")
         if isinstance(nvd_resp, httpx.Response) and nvd_resp.status_code == 200:
-            vulns = nvd_resp.json().get("vulnerabilities") or []
+            nvd_body = nvd_resp.json()
+            if not isinstance(nvd_body, dict) or not isinstance(
+                nvd_body.get("vulnerabilities"), list
+            ):
+                raise TypeError("invalid_nvd_advisory_collection")
+            vulns = nvd_body["vulnerabilities"]
             if vulns and isinstance(vulns[0], dict):
                 nvd_item = vulns[0].get("cve") or {}
         if not isinstance(kev_map, dict):
@@ -599,51 +563,67 @@ async def _lookup_single_cve(cve_id: str) -> dict[str, Any]:
         if clean not in rec["cve_ids"]:
             rec["cve_ids"].insert(0, clean)
     else:
-        rec = {
-            "id": clean,
-            "cve_ids": [clean],
-            "summary": "",
-            "cwes": [],
-            "cvss_vector": "",
-            "base_score": 0.0,
-            "vuln_class": "other",
-            "recommended_skill": "supply",
-            "affected_ranges": [],
-            "fixed_versions": [],
-            "references": [],
-            "_impact_weight": 5.0,
+        # A missing/failed advisory source is not proof of an unaffected target.
+        return {
+            "success": False,
+            "query_type": "cve_id",
+            "cve_id": clean,
+            "coverage_status": "blocked",
+            "error": "advisory_not_available",
+            "cache_hit": False,
         }
 
     enriched = _enrich_record(rec, kev_map, epss_map)
-    result = {
+    return {
         "success": True,
         "query_type": "cve_id",
         "cve": enriched,
+        "retrieved_at": datetime.datetime.now(datetime.UTC).isoformat(),
+        "data_version": "osv-v1+nvd-v2+kev-v2+epss-v1",
+        "source_status": {
+            "osv": "available" if osv_data else "unavailable",
+            "nvd": "available" if nvd_item else "unavailable",
+            "kev": "available" if kev_map else "unavailable",
+            "epss": "available" if epss_map else "unavailable",
+        },
         "cache_hit": False,
     }
-    await asyncio.to_thread(_CACHE.set, cache_key, result, 21600)
-    return result
 
 
 async def _lookup_product_or_package(
     product: str,
     version: str = "",
     ecosystem: str = "",
+    *,
+    governor: ResourceGovernor | None = None,
 ) -> dict[str, Any]:
     pkg = product.strip()
     ver = version.strip().lstrip("vV")
     eco_norm = normalize_ecosystem(ecosystem)
-    cache_key = f"pkg_lookup:{pkg.casefold()}:{ver.casefold()}:{eco_norm.casefold()}"
-    cached = await asyncio.to_thread(_CACHE.get, cache_key)
-    if isinstance(cached, dict):
-        return {**cached, "cache_hit": True}
+    # Maven/package/prerelease identifiers may be case-sensitive. JSON framing
+    # also prevents delimiter collisions between product, version and ecosystem.
+    cache_key = json.dumps(["pkg_lookup", pkg, ver, eco_norm], separators=(",", ":"))
+    result, cache_hit = await _CACHE.get_or_refresh(
+        cache_key,
+        lambda: _fetch_product_or_package(pkg, ver, eco_norm),
+        21600,
+        admit=(
+            lambda: governor.acquire("worker", _RESPONSE_MAX_BYTES * 16, owner_process_only=True)
+        )
+        if governor is not None
+        else None,
+    )
+    return {**result, "cache_hit": cache_hit}
 
+
+async def _fetch_product_or_package(pkg: str, ver: str, eco_norm: str) -> dict[str, Any]:
     default_ecos = ["Packagist", "npm", "PyPI", "Maven", "Go", "RubyGems", "crates.io", "NuGet"]
     ecosystems_to_try = [eco_norm] if eco_norm else default_ecos
 
     records: list[dict[str, Any]] = []
     seen_ids: set[str] = set()
     withdrawn_filtered = 0
+    sources_available: list[str] = []
 
     nvd_headers = {"Accept": "application/json"}
     nvd_key = os.environ.get("NVD_API_KEY", "").strip()
@@ -656,10 +636,14 @@ async def _lookup_product_or_package(
             payload: dict[str, Any] = {"package": {"name": pkg, "ecosystem": eco}}
             if ver:
                 payload["version"] = ver
-            osv_tasks.append(client.post("https://api.osv.dev/v1/query", json=payload))
+            osv_tasks.append(
+                _bounded_request(client, "POST", "https://api.osv.dev/v1/query", json=payload)
+            )
 
         nvd_kw = f"{pkg} {ver}".strip() if ver else pkg
-        nvd_task = client.get(
+        nvd_task = _bounded_request(
+            client,
+            "GET",
             "https://services.nvd.nist.gov/rest/json/cves/2.0",
             params={"keywordSearch": nvd_kw, "resultsPerPage": 20},
             headers=nvd_headers,
@@ -671,10 +655,15 @@ async def _lookup_product_or_package(
         nvd_resp = gathered[-2]
         kev_map = gathered[-1] if isinstance(gathered[-1], dict) else {}
 
-        for resp in osv_responses:
+        for eco, resp in zip(ecosystems_to_try, osv_responses, strict=True):
             if not isinstance(resp, httpx.Response) or resp.status_code != 200:
                 continue
             body = resp.json()
+            if not isinstance(body, dict):
+                raise TypeError("invalid_osv_query_response")
+            if not isinstance(body.get("vulns", []), list):
+                raise TypeError("invalid_osv_query_collection")
+            sources_available.append(f"osv:{eco}")
             for raw in body.get("vulns") or []:
                 if not isinstance(raw, dict):
                     continue
@@ -688,7 +677,13 @@ async def _lookup_product_or_package(
                 records.append(_extract_osv_item(raw))
 
         if isinstance(nvd_resp, httpx.Response) and nvd_resp.status_code == 200:
-            for item in nvd_resp.json().get("vulnerabilities") or []:
+            nvd_body = nvd_resp.json()
+            if not isinstance(nvd_body, dict) or not isinstance(
+                nvd_body.get("vulnerabilities"), list
+            ):
+                raise TypeError("invalid_nvd_query_collection")
+            sources_available.append("nvd")
+            for item in nvd_body["vulnerabilities"]:
                 if not isinstance(item, dict):
                     continue
                 cve_obj = item.get("cve") or {}
@@ -707,6 +702,16 @@ async def _lookup_product_or_package(
                     all_cves.append(cid)
         epss_map = await _fetch_epss_batch(client, all_cves[:40])
 
+    if not sources_available or (
+        not records and len(sources_available) < len(ecosystems_to_try) + 1
+    ):
+        return {
+            "success": False,
+            "query_type": "product_version",
+            "coverage_status": "blocked",
+            "error": "advisory_providers_unavailable",
+            "cache_hit": False,
+        }
     enriched_records = [_enrich_record(r, kev_map, epss_map) for r in records]
     enriched_records.sort(
         key=lambda r: (
@@ -717,7 +722,7 @@ async def _lookup_product_or_package(
         reverse=True,
     )
 
-    result = {
+    return {
         "success": True,
         "query_type": "product_version",
         "product": pkg,
@@ -727,10 +732,16 @@ async def _lookup_product_or_package(
         "withdrawn_filtered": withdrawn_filtered,
         "fast_path_rce_count": sum(1 for r in enriched_records if r.get("fast_path_rce")),
         "vulnerabilities": enriched_records[:25],
+        "retrieved_at": datetime.datetime.now(datetime.UTC).isoformat(),
+        "data_version": "osv-v1+nvd-v2+kev-v2+epss-v1",
+        "source_status": {
+            "available": sources_available,
+            "coverage_status": "partial"
+            if len(sources_available) < len(ecosystems_to_try) + 1
+            else "completed",
+        },
         "cache_hit": False,
     }
-    await asyncio.to_thread(_CACHE.set, cache_key, result, 21600)
-    return result
 
 
 async def lookup_cve_json(
@@ -738,15 +749,17 @@ async def lookup_cve_json(
     version: str = "",
     cve_id: str = "",
     ecosystem: str = "",
+    *,
+    governor: ResourceGovernor | None = None,
 ) -> str:
     """Execute CVE & exploit intelligence lookup and return a JSON string."""
     clean_cve = (cve_id or "").strip().upper()
     clean_prod = (product or "").strip()
     if clean_cve and CVE_RE.match(clean_cve):
-        res = await _lookup_single_cve(clean_cve)
+        res = await _lookup_single_cve(clean_cve, governor=governor)
         return json.dumps(res, ensure_ascii=False, default=str)
     if clean_prod and CVE_RE.match(clean_prod.upper()):
-        res = await _lookup_single_cve(clean_prod.upper())
+        res = await _lookup_single_cve(clean_prod.upper(), governor=governor)
         return json.dumps(res, ensure_ascii=False, default=str)
     if not clean_prod:
         return json.dumps(
@@ -763,6 +776,7 @@ async def lookup_cve_json(
         product=clean_prod,
         version=version or "",
         ecosystem=ecosystem or "",
+        governor=governor,
     )
     return json.dumps(res, ensure_ascii=False, default=str)
 
@@ -799,11 +813,35 @@ async def lookup_cve(
         ecosystem: Optional ecosystem hint (``"Packagist"``, ``"npm"``, ``"PyPI"``,
             ``"Maven"``, ``"Go"``, ``"RubyGems"``, ``"NuGet"``, ``"crates.io"``).
     """
-    del ctx
-    return await lookup_cve_json(
-        product=product,
-        version=version,
-        cve_id=cve_id,
-        ecosystem=ecosystem,
-    )
-
+    context = ctx.context if isinstance(ctx.context, dict) else {}
+    governor = context.get("assessment_governor")
+    try:
+        if isinstance(governor, ResourceGovernor):
+            governor.sample()
+            _CACHE.restrict_budget(
+                governor.envelope.cache_max_bytes,
+                pressure=governor.snapshot()["pressure"] != "normal",
+            )
+        return await lookup_cve_json(
+            product=product,
+            version=version,
+            cve_id=cve_id,
+            ecosystem=ecosystem,
+            governor=governor if isinstance(governor, ResourceGovernor) else None,
+        )
+    except (
+        TimeoutError,
+        CacheBusyError,
+        ResourceAdmissionError,
+        httpx.HTTPError,
+        ValueError,
+        TypeError,
+    ):
+        return json.dumps(
+            {
+                "success": False,
+                "coverage_status": "blocked",
+                "error": "advisory_refresh_unavailable",
+                "cache_hit": False,
+            }
+        )

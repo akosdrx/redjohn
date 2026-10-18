@@ -17,8 +17,12 @@ from agents.tool import CustomTool, FunctionTool, Tool
 from pydantic import ValidationError
 
 from redjohn.agents.prompt import render_system_prompt
+from redjohn.assessment.egress import EgressUnavailable
+from redjohn.assessment.models import error_record
+from redjohn.assessment.resources import ResourceAdmissionError
 from redjohn.config import load_settings
 from redjohn.config.tool_call_arguments import describe_malformed_arguments
+from redjohn.runtime.legacy_execution import legacy_from_context
 from redjohn.tools.agents_graph.tools import (
     agent_finish,
     create_agent,
@@ -460,7 +464,34 @@ def _wrap_exec_command(tool: FunctionTool) -> FunctionTool:
             _apply_shell_output_cap(parsed)
             raw_input = json.dumps(parsed)
         try:
+            owner = legacy_from_context(getattr(ctx, "context", None))
+            if owner is not None and isinstance(parsed, dict):
+                return await owner.shell(
+                    "exec_command",
+                    parsed,
+                    lambda: invoke_tool(ctx, json.dumps(parsed)),
+                )
             return await invoke_tool(ctx, raw_input)
+        except ResourceAdmissionError as exc:
+            return {
+                "success": False,
+                "error": error_record(
+                    "sdk_resource_admission_denied",
+                    category="resource",
+                    coverage_effect="blocked",
+                    cause_ref=str(exc)[:128],
+                ),
+            }
+        except EgressUnavailable as exc:
+            return {
+                "success": False,
+                "error": error_record(
+                    "sdk_egress_enforcement_unavailable",
+                    category="policy",
+                    coverage_effect="blocked",
+                    cause_ref=str(exc).partition(":")[0][:128],
+                ),
+            }
         except ValidationError as exc:
             return _format_validation_error(tool.name, exc)
         except InvalidManifestPathError as exc:
@@ -489,7 +520,34 @@ def _wrap_write_stdin(tool: FunctionTool) -> FunctionTool:
             _apply_shell_output_cap(parsed)
             raw_input = json.dumps(parsed)
         try:
+            owner = legacy_from_context(getattr(ctx, "context", None))
+            if owner is not None and isinstance(parsed, dict):
+                return await owner.shell(
+                    "write_stdin",
+                    parsed,
+                    lambda: invoke_tool(ctx, json.dumps(parsed)),
+                )
             return await invoke_tool(ctx, raw_input)
+        except ResourceAdmissionError as exc:
+            return {
+                "success": False,
+                "error": error_record(
+                    "sdk_resource_admission_denied",
+                    category="resource",
+                    coverage_effect="blocked",
+                    cause_ref=str(exc)[:128],
+                ),
+            }
+        except EgressUnavailable as exc:
+            return {
+                "success": False,
+                "error": error_record(
+                    "sdk_egress_enforcement_unavailable",
+                    category="policy",
+                    coverage_effect="blocked",
+                    cause_ref=str(exc).partition(":")[0][:128],
+                ),
+            }
         except ValidationError as exc:
             return _format_validation_error(tool.name, exc)
 

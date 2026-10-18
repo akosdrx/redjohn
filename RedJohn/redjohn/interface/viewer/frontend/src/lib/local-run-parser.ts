@@ -238,7 +238,7 @@ export function parseVulnerabilitiesJson(
     throw new RunParseError("vulnerabilities.json is not a JSON array.");
   }
   return data.map((item, i) => {
-    if (!item || typeof item !== "object") {
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
       throw new RunParseError(`vulnerabilities.json entry #${i + 1} is not an object.`);
     }
     return parseOneVulnerability(item as Record<string, unknown>, i, runId);

@@ -142,6 +142,13 @@ class BrowserEgressProxy:
             raise RuntimeError("proxy_tls_identity_not_started")
         return self._tls_identity.client_context
 
+    @property
+    def client_ca_certificate(self) -> bytes | None:
+        """Public trust material for a confined non-browser client; never keys."""
+        if self._tls_identity is None:
+            return None
+        return (self._tls_identity.directory / "chain.pem").read_bytes()
+
     async def start(self) -> None:
         if self._server is not None:
             return

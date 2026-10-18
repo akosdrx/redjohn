@@ -36,6 +36,7 @@ if TYPE_CHECKING:
 
     from agents.mcp import MCPServer
 
+    from redjohn.assessment.resources import ResourceGovernor, ResourceLease
     from redjohn.tools.mcp.client import ResultTransform
     from redjohn.tools.mcp.config import McpConnectionConfig
 
@@ -108,6 +109,9 @@ class McpConnectionEntry:
     )
     _retry_after: float = dataclasses.field(default=0.0, repr=False)
     _status_sink: Callable[[], None] | None = dataclasses.field(default=None, repr=False)
+    _governor: ResourceGovernor | None = dataclasses.field(default=None, repr=False)
+    _resource_lease: ResourceLease | None = dataclasses.field(default=None, repr=False)
+    _retired_session: SupervisedMcpSession | None = dataclasses.field(default=None, repr=False)
 
     @property
     def server(self) -> MCPServer | None:
@@ -143,6 +147,7 @@ class McpConnectionEntry:
             self._status_sink()
 
     def _on_dead(self) -> None:
+        self._retired_session = self.session
         self.session = None
         self._catalog = None
         self._catalog_task = None
@@ -180,17 +185,25 @@ class McpConnectionEntry:
                 f"MCP connection {self.name!r} has no connection configuration."
             )
         self._set_state("connecting")
+        await self._close_retired()
+        if self._governor is not None and config.transport == "stdio":
+            self._resource_lease = self._governor.acquire(
+                "context", estimated_bytes=self._governor.envelope.worker_memory_budget
+            )
         session = SupervisedMcpSession(config)
         try:
             started = await session.start()
         except BaseException:
-            with contextlib.suppress(BaseException):
-                await session.aclose()
-            self._retry_after = time.monotonic() + _RETRY_DELAY_SECONDS
-            self._set_state("unavailable")
+            self._retired_session = session
+            try:
+                await self._close_retired()
+            finally:
+                self._retry_after = time.monotonic() + _RETRY_DELAY_SECONDS
+                self._set_state("unavailable")
             raise
         if not started:
             await session.aclose()
+            self._release_resource()
             self._retry_after = time.monotonic() + _RETRY_DELAY_SECONDS
             self._set_state("unavailable")
             raise McpConnectionUnavailableError(f"MCP connection {self.name!r} could not connect.")
@@ -250,9 +263,21 @@ class McpConnectionEntry:
         self._catalog_task = None
         self._connect_task = None
         if self.session is not None:
-            with contextlib.suppress(BaseException):
-                await self.session.aclose()
+            await self.session.aclose()
         self.session = None
+        await self._close_retired()
+        self._release_resource()
+
+    def _release_resource(self) -> None:
+        if self._resource_lease is not None:
+            self._resource_lease.release()
+            self._resource_lease = None
+
+    async def _close_retired(self) -> None:
+        if self._retired_session is not None:
+            await self._retired_session.aclose()
+            self._retired_session = None
+            self._release_resource()
 
 
 @dataclasses.dataclass(frozen=True)
@@ -328,6 +353,18 @@ class McpRegistry:
         self._entries: dict[str, McpConnectionEntry] = {}
         self._status_sink: Callable[[], None] | None = None
         self._warmup_task: asyncio.Task[None] | None = None
+        self._governor: ResourceGovernor | None = None
+
+    def bind_governor(self, governor: ResourceGovernor) -> None:
+        """Host-owned injection; cannot rebind a live process to another budget."""
+        if any(
+            entry.session is not None or entry._connect_task is not None
+            for entry in self._entries.values()
+        ):
+            raise RuntimeError("mcp_governor_binding_requires_inert_registry")
+        self._governor = governor
+        for entry in self._entries.values():
+            entry._governor = governor
 
     def register(self, request: McpConnectionRequest) -> McpConnectionEntry:
         """Register an inert request without opening a network connection."""
@@ -337,6 +374,7 @@ class McpRegistry:
             purpose=request.purpose or request.config.notes,
             result_transform=request.result_transform,
             provider=request.provider,
+            _governor=self._governor,
         )
         entry.set_status_sink(self._status_sink)
         self._entries[entry.name] = entry
@@ -375,7 +413,16 @@ class McpRegistry:
             result_transform=result_transform,
             provider=provider,
             state="connected",
+            _governor=self._governor,
         )
+        if (
+            self._governor is not None
+            and entry.config is not None
+            and entry.config.transport == "stdio"
+        ):
+            entry._resource_lease = self._governor.acquire(
+                "context", estimated_bytes=self._governor.envelope.worker_memory_budget
+            )
         entry.set_status_sink(self._status_sink)
         self._entries[name] = entry
         return entry

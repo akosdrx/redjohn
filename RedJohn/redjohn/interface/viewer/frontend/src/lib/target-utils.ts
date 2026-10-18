@@ -5,31 +5,20 @@ export interface ParsedTarget {
 }
 
 export function parseTarget(target: string): ParsedTarget {
-  // GitHub URL
-  const ghMatch = target.match(
-    /(?:https?:\/\/)?(?:www\.)?github\.com\/([^\s/]+\/[^\s/]+)/
-  );
-  if (ghMatch) {
-    const slug = ghMatch[1].replace(/\.git$/, "");
-    return { display: slug, href: `https://github.com/${slug}`, provider: "github" };
-  }
-
-  // GitLab URL
-  const glMatch = target.match(
-    /(?:https?:\/\/)?(?:www\.)?gitlab\.com\/([^\s/]+\/[^\s/]+)/
-  );
-  if (glMatch) {
-    const slug = glMatch[1].replace(/\.git$/, "");
-    return { display: slug, href: `https://gitlab.com/${slug}`, provider: "gitlab" };
-  }
-
-  // Bitbucket URL
-  const bbMatch = target.match(
-    /(?:https?:\/\/)?(?:www\.)?bitbucket\.org\/([^\s/]+\/[^\s/]+)/
-  );
-  if (bbMatch) {
-    const slug = bbMatch[1].replace(/\.git$/, "");
-    return { display: slug, href: `https://bitbucket.org/${slug}`, provider: "bitbucket" };
+  // Classify the parsed hostname, never a provider-looking substring in the
+  // path, userinfo, or another domain. Keep the actual target visible.
+  try {
+    const url = new URL(/^https?:\/\//i.test(target) ? target : `https://${target}`);
+    const host = url.hostname.toLowerCase().replace(/^www\./, "");
+    const providers = { "github.com": "github", "gitlab.com": "gitlab", "bitbucket.org": "bitbucket" } as const;
+    const provider = providers[host as keyof typeof providers];
+    const parts = url.pathname.split("/").filter(Boolean);
+    if (provider && parts.length >= 2 && !url.username && !url.password) {
+      const slug = parts.slice(0, 2).join("/").replace(/\.git$/, "");
+      return { display: slug, href: `https://${host}/${slug}`, provider };
+    }
+  } catch {
+    // Local paths and instructions are valid targets without a web link.
   }
 
   // URL with protocol

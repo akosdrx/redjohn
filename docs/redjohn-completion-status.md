@@ -1,5 +1,11 @@
 # RedJohn — a teljes feladat követett állapota
 
+**2026-10-18, felhasználói pontosítás:** az élő cloud/Kubernetes-hozzáférést
+igénylő ellenőrzések későbbre halasztva; most nem kérünk és nem használunk ilyen
+hozzáférést. Az adapterek, a konfiguráció- és jogosultsághatárok, valamint a
+saját kontrollált célokkal elvégezhető tesztek továbbra is fejlesztési feladatok.
+A halasztott élő igazolás nem sikeres integráció és nem negatív vizsgálat.
+
 2026-10-18. A cél a master prompt fennmaradó részeinek megvalósítása. A feladat
 aktív; az alábbi lista a teljes megmaradó hatókört őrzi. Egy szakasz tesztje
 nem helyettesíti a teljes rendszer elfogadását. A részletes követelménykapcsolat:
@@ -110,9 +116,19 @@ Ez a régi cache közös kvótába kötésének hiányát igazolja; nem scanner-
 teljes host-heap leak bizonyíték. A nyers adat:
 `docs/measurements/host-binding/legacy-cache-before.json`.
 
-A GitHub-hozzáférést ismét ténylegesen ellenőriztem: a helyi `gh` aktív fiókja
-`itsolutionshu`, ezzel az `akosdrx/redjohn` repository nem oldható fel. CI-run és
-push nem történt; a helyi macOS/Linux ellenőrzés ettől továbbhalad.
+A GitHub-hozzáférés később a connectorral ténylegesen helyreállt: a hitelesített
+fiók `akosdrx`, a repository `akosdrx/redjohn`; admin/push/pull hozzáférés ellenőrizve.
+A helyi `gh` továbbra is `itsolutionshu`, nem módosult. A teljes Ubuntu-mátrix
+GitHub Actionsbe került. A korábbi 925 pass / 300 capability-skip után a Chromium/
+namespace-blokkolás jobhoz kötött enforcing AppArmor-profillal javítva; a globális
+userns-korlátozás bekapcsolva marad, a nem jogosult profilváltás tiltása szigorodik.
+A [teljes tényleges újramérés](https://github.com/akosdrx/redjohn/actions/runs/39139076653)
+lezárt státusza **success**: x64 és ARM64 platformon egyaránt **1225 sikeres,
+0 hibás, 0 skip**, ebből 320 valódi integráció. A Chromium–inventory–Nuclei,
+autentikált replay/session refresh, scanner-, scheduler-, kernel OOM- és cleanup-
+láncok ezen a konkrét SHA-n igazoltak: `57141b25ed32169e24d0065b4bc21a0422e83fab`.
+[Pontos SHA-k, mérések és korlátok](redjohn-github-actions-sandbox-verification.md).
+Új teljes helyi Ubuntu-regresszió nem indult; Colima megmaradt célzott hibakeresésre.
 
 A forrás megőrzési baseline-ja 1506 meglévő fájlt, 70 aktív Python teszt/support
 forrást, 11 host-managed engine-t, HEAD/origin/index és privát MCP-konfiguráció
