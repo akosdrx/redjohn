@@ -65,6 +65,7 @@ REAL_FILES = {
     "test_preparation_native.py",
     "test_preparation_scheduler.py",
     "test_cleanup_quarantine_live.py",
+    "test_lab_validation_live.py",
 }
 
 REAL_CASES = {
@@ -107,8 +108,10 @@ LOCAL_BROWSER_FILES = {"test_viewer_steering_live.py", "test_browser_auth_flow_l
 NAMESPACE_ONLY_FILES = {"test_source_tools_live.py", "test_legacy_shell_boundary_live.py",
                         "test_network_tools_live.py", "test_mcp_target_live.py",
                         "test_service_tools_live.py", "test_preparation_native.py"}
-PLATFORM_FILES = {"test_legacy_shell_darwin_live.py": "Darwin", "test_owned_memory_live.py": "Linux"}
+PLATFORM_FILES = {"test_legacy_shell_darwin_live.py": "Darwin", "test_owned_memory_live.py": "Linux",
+                  "test_lab_validation_live.py": "Linux"}
 KERNEL_ONLY_FILES = {"test_owned_memory_live.py"}
+NAMESPACE_CGROUP_FILES = {"test_lab_validation_live.py"}
 LOCAL_PROCESS_CASES = {
     "test_real_stdio_unknown_mutation_is_never_replayed",
     "test_real_stdio_cancellation_terminates_worker_and_releases_lease",
@@ -136,6 +139,13 @@ def pytest_collection_modifyitems(config, items):
         filename = Path(str(item.path)).name
         name = item.originalname or item.name
         real = filename in REAL_FILES or name in REAL_CASES
+        if filename == "test_wpscan_observe_live.py" and os.environ.get("REDJOHN_REQUIRE_WORDPRESS_OBSERVE_E2E") != "1":
+            if suite in ("all", "integration"):
+                non_applicable.append({"nodeid": item.nodeid, "required_platform": "Linux+wordpress_observe_fixture",
+                                   "actual_platform": platform.system(),
+                                   "reason": "candidate_fixture_not_installed_not_executed_not_passed"})
+            deselected.append(item)
+            continue
         if filename in PLATFORM_FILES and platform.system() != PLATFORM_FILES[filename]:
             if suite == "all" or (suite == "integration") == real:
                 non_applicable.append({"nodeid": item.nodeid, "required_platform": PLATFORM_FILES[filename],
@@ -151,6 +161,7 @@ def pytest_collection_modifyitems(config, items):
         if real and capabilities is not None:
             required = ({"cgroup_available", "browser_available", "namespace_available"}
                         if filename == "test_owned_memory_live.py" and name == "test_actual_browser_sdk_mcp_and_native_worker_inherit_the_owner_hard_fence" else
+                        {"namespace_available", "cgroup_available"} if filename in NAMESPACE_CGROUP_FILES else
                         {"cgroup_available"} if filename in KERNEL_ONLY_FILES else
                         {"namespace_available"} if filename in NAMESPACE_ONLY_FILES else
                         {"browser_available"} if filename in LOCAL_BROWSER_FILES else

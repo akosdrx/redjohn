@@ -441,11 +441,20 @@ class Scheduler:
                 # Trusted adapter's child already holds its full context lease;
                 # this dispatch accounts only for host parser/frame overhead.
                 memory = dispatch_memory
+            cleanup_guard = getattr(adapter, "resource_cleanup_verified", None)
+            if cleanup_guard is None:
+                from redjohn.assessment.pinned_tools import PinnedToolRunner  # noqa: PLC0415 - selected trusted runner only
+
+                runner = getattr(adapter, "runner", None)
+                if isinstance(runner, PinnedToolRunner):
+                    # Capture the actual owner, never a later nullable adapter
+                    # reference that could hide an unresolved launcher.
+                    cleanup_guard = runner.resource_cleanup_verified
             lease = self.governor.acquire(
                 kind=entry.resource_class,
                 estimated_bytes=memory,
                 owner_process_only=owner_only,
-                cleanup_guard=getattr(adapter, "resource_cleanup_verified", None),
+                cleanup_guard=cleanup_guard,
             )
         try:
             # Preserve established dispatch timing for adapters without a

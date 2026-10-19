@@ -7,6 +7,7 @@ import pytest
 from redjohn.assessment import host_resources
 from redjohn.assessment.host_resources import HostResourcePool
 from redjohn.assessment.models import JobSpec
+from redjohn.assessment.pinned_tools import BinaryPin, PinnedToolRunner
 from redjohn.assessment.resources import ResourceAdmissionError, ResourceGovernor
 from tests.test_assessment_scheduler import FakeWorker, make_scheduler, state  # noqa: F401
 
@@ -117,5 +118,36 @@ async def test_scheduler_never_publishes_success_after_unreaped_owned_work(state
     assert scheduler.governor.snapshot()["cleanup_quarantined"] == 1
     assert scheduler.governor.recover_cleanup() == 0
     worker.reaped = True
+    assert scheduler.governor.recover_cleanup() == 1
+    scheduler.governor.close()
+
+
+async def test_scheduler_captures_the_trusted_runner_guard_before_adapter_drops_it(state):  # noqa: F811
+    store, policy, surface = state
+
+    class SelectedRunner(PinnedToolRunner):
+        reaped = False
+
+        def resource_cleanup_verified(self):
+            return self.reaped
+
+    selected = SelectedRunner("httpx", BinaryPin(store.path, "0" * 64, "1.12.0"), store.path.parent)
+
+    class DroppingWorker(FakeWorker):
+        runner = selected
+
+        async def cleanup(self):
+            self.cleaned += 1
+            self.runner = None
+
+    worker = DroppingWorker()
+    scheduler = make_scheduler(store, policy, worker)
+    store.submit(policy, [JobSpec(surface, "test", "http_observe")])
+    await scheduler.run_batch(max_jobs=1)
+    assert worker.runner is None
+    assert store.jobs(policy.engagement_id)[0]["execution_status"] == "resource_exhausted"
+    assert store.findings(policy.engagement_id) == []
+    assert scheduler.governor.recover_cleanup() == 0
+    selected.reaped = True
     assert scheduler.governor.recover_cleanup() == 1
     scheduler.governor.close()

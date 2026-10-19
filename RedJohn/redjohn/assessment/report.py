@@ -13,6 +13,7 @@ from redjohn.assessment.registry import CapabilityRegistry
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from redjohn.assessment.lab_validation import LabValidation
     from redjohn.assessment.store import AssessmentStore
 
 
@@ -22,7 +23,17 @@ def build_report(
     *,
     metrics: dict[str, Any] | None = None,
     registry: CapabilityRegistry | None = None,
+    lab_validation: LabValidation | None = None,
 ) -> dict[str, Any]:
+    from redjohn.assessment.lab_configuration import owned_lab_status  # noqa: PLC0415
+
+    if lab_validation is not None:
+        from redjohn.assessment.lab_validation import LabValidation  # noqa: PLC0415
+
+        if type(lab_validation) is not LabValidation:
+            raise TypeError("report_typed_owned_lab_validation_required")
+        if lab_validation.store is not store or lab_validation.policy.engagement_id != engagement:
+            raise ValueError("report_exact_owned_lab_store_required")
     return public_view(
         {
             "product": "RedJohn",
@@ -35,6 +46,7 @@ def build_report(
             "capabilities": (registry or CapabilityRegistry()).health(),
             "metrics": metrics or {},
             "rce_regression": "not_reproduced_missing_fixture",
+            "owned_lab": owned_lab_status(lab_validation),
             "limitations": [
                 "Header observations and Nuclei matches remain candidate findings",
                 "Browser metadata alone is not proxy-confirmed POST capture",

@@ -247,6 +247,30 @@ class EvidenceContract(unittest.TestCase):
                 self.assertIn(("evidence_kind", "real_integration"), item.user_properties)
                 self.assertIn(("required_runner_capabilities", ""), item.user_properties)
 
+    def test_owned_lab_requires_both_namespace_and_kernel_without_a_browser(self):
+        spec = importlib.util.spec_from_file_location("evidence", Path(__file__).parents[1] / "scripts/pytest_evidence.py")
+        plugin = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(plugin)
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            path = root / "test_lab_validation_live.py"
+            path.write_text("")
+            capability = root / "capabilities.json"
+            for namespace, kernel in ((False, True), (True, False), (True, True)):
+                capability.write_text(json.dumps({"namespace_available": namespace,
+                    "cgroup_available": kernel, "browser_available": False}))
+                markers = []
+                item = SimpleNamespace(path=path, originalname="test_actual", name="test_actual",
+                    user_properties=[], add_marker=markers.append)
+                items = [item]
+                config = SimpleNamespace(getoption=lambda _: "integration",
+                    hook=SimpleNamespace(pytest_deselected=lambda **_: None))
+                with patch.dict(os.environ, {"REDJOHN_CI_CAPABILITIES": str(capability)}), patch.object(plugin.platform, "system", return_value="Linux"):
+                    plugin.pytest_collection_modifyitems(config, items)
+                self.assertEqual(items, [item])
+                self.assertIn(("required_runner_capabilities", "cgroup_available,namespace_available"), item.user_properties)
+                self.assertEqual(len(markers), int(not (namespace and kernel)))
+
     def test_owned_memory_cases_require_kernel_capability_and_remain_nonapplicable_on_darwin(self):
         spec = importlib.util.spec_from_file_location("evidence", Path(__file__).parents[1] / "scripts/pytest_evidence.py")
         plugin = importlib.util.module_from_spec(spec)

@@ -262,6 +262,17 @@ CAPABILITIES = (
             ),
         )
     ),
+    Capability(
+        "owned_lab_regression",
+        "RedJohn owned header regression",
+        profiles=("isolated-lab",),
+        resource_class="worker",
+        adapter_implemented=True,
+        cancellation=True,
+        license="project",
+        status="implemented_requires_owned_fixture_and_linux_containment",
+        reason="positive_and_distinct_fixed_source_proof_only_no_rce_claim",
+    ),
     *tuple(
         Capability(
             name,
@@ -516,6 +527,7 @@ class CapabilityRegistry:
         browser_post_capture_configured: bool = False,
         browser_auth_flow_configured: bool = False,
         workflow_execution_configured: bool = False,
+        lab_validation_configured: bool = False,
         ffuf_config: dict[str, Any] | None = None,
         httpx_config: dict[str, Any] | None = None,
         katana_config: dict[str, Any] | None = None,
@@ -548,6 +560,7 @@ class CapabilityRegistry:
         self._browser_auth_flow_configured = browser_auth_flow_configured
         self._mcp_target_versions: ExecutionVersions | None = None
         self._workflow_execution_configured = workflow_execution_configured
+        self._lab_validation_configured = lab_validation_configured
         self._ffuf_config = None
         self._source_configs = _source_configurations(semgrep_config, trivy_config)
         self._network_configs = _network_configurations(naabu_config, dnsx_config)
@@ -643,6 +656,11 @@ class CapabilityRegistry:
 
     def execution_versions(self, capability: str) -> ExecutionVersions:  # noqa: PLR0911
         """Return configured cache/job identities, never runtime version proof."""
+        if capability == "owned_lab_regression":
+            from redjohn.assessment.lab_contract import VERSION  # noqa: PLC0415
+            from redjohn.assessment.lab_worker import TEMPLATE_SHA256  # noqa: PLC0415
+
+            return {"tool_version": VERSION, "template_version": TEMPLATE_SHA256}
         if capability == "mcp_target_read" and self._mcp_target_versions is not None:
             return self._mcp_target_versions.copy()
         if capability in self._preparation_configs:
@@ -772,6 +790,11 @@ class CapabilityRegistry:
                 row.update(
                     status="blocked_configuration",
                     reason="explicit_workflow_configuration_and_private_vault_missing",
+                )
+            elif entry.id == "owned_lab_regression" and not self._lab_validation_configured:
+                row.update(
+                    status="blocked_configuration",
+                    reason="explicit_owned_lab_configuration_and_live_host_fixture_required",
                 )
             elif entry.id == "browser_auth_flow" and not self._browser_auth_flow_configured:
                 row.update(

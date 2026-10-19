@@ -215,7 +215,9 @@ class CorrelationTest(unittest.TestCase):
             lab_fixture_ref="lab1",
             validation_assertion_ref="ev-assertion",
         )
-        self.correlator.add("e", validated)
+        with self.assertRaisesRegex(ValueError, "persisted_paired_lab_proof"):
+            self.correlator.add("e", validated)
+        self.correlator.add("e", dataclasses.replace(validated, status="partially_supported"))
         self.correlator.add("e", self.edge("b", "c"))
         self.assertEqual(self.correlator.query("e", "a").chain_status, "partially_supported")
         self.assertEqual(self.correlator.query("other", "a").edges, ())

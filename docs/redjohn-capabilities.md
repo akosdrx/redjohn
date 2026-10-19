@@ -4,7 +4,7 @@ A katalógus az aktuális `assessment/registry.py` kódjából készül. A megí
 
 A `redjohn assess health` mutatja az adott gép telepítési/konfigurációs állapotát motorindítás nélkül. A JSON itt platformfüggetlen kódkatalógus; a jegyzőkönyvek történeti futásokat igazolnak, jelenlegi futást nem állítanak.
 
-28 implementált képesség, 3 hiányzó opcionális adapter és 10 tudatosan halasztott alternatíva szerepel a jelenlegi registryben. A master szerinti teljes fennmaradó munka: [követett állapot](redjohn-completion-status.md).
+29 implementált képesség, 3 hiányzó opcionális adapter és 10 tudatosan halasztott alternatíva szerepel a jelenlegi registryben. A master szerinti teljes fennmaradó munka: [követett állapot](redjohn-completion-status.md).
 
 | Capability | Tool | Adapter | Kódstátusz | Forrás / licenc | Mérési jegyzőkönyv |
 |---|---|---|---|---|---|
@@ -26,6 +26,7 @@ A `redjohn assess health` mutatja az adott gép telepítési/konfigurációs ál
 | `tinja_validate` | TInjA | igen | `implemented_fixture_tested` | [forrás](https://github.com/Hackmanit/TInjA/tree/1.2.0) / Apache-2.0 | [mérés](redjohn-mime-restart-verification.md) |
 | `schemathesis_validate` | Schemathesis | igen | `implemented_fixture_tested` | [forrás](https://github.com/schemathesis/schemathesis/tree/v4.31.1) / MIT | [mérés](redjohn-mime-restart-verification.md) |
 | `dalfox_validate` | Dalfox | igen | `implemented_fixture_tested` | [forrás](https://github.com/hahwul/dalfox/tree/v3.2.4) / MIT | [mérés](redjohn-specialists-verification.md) |
+| `owned_lab_regression` | RedJohn owned header regression | igen | `implemented_requires_owned_fixture_and_linux_containment` | RedJohn-native / project | nincs valódi integrációs igazolás |
 | `oast_correlate` | Interactsh protocol 1.4.1 | igen | `implemented_fixture_tested` | RedJohn-native / project_protocol_MIT_reference | [mérés](redjohn-mime-restart-verification.md) |
 | `oast_poll` | Interactsh protocol 1.4.1 | igen | `implemented_fixture_tested` | RedJohn-native / project_protocol_MIT_reference | [mérés](redjohn-mime-restart-verification.md) |
 | `browser_xss_confirmation` | RedJohn Chromium XSS confirmation | igen | `implemented_fixture_tested` | RedJohn-native / project | [mérés](redjohn-specialists-verification.md) |

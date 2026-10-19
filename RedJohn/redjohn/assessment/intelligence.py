@@ -23,6 +23,8 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from redjohn.assessment.cache import SmartCache
+    from redjohn.assessment.lab_validation import LabValidation
+    from redjohn.assessment.proof_bound_correlation import ProofBoundCorrelation
 
 
 _PRODUCT = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9._ -]{0,127}$")
@@ -392,9 +394,23 @@ class VulnerabilityCorrelator:
         *,
         max_edges: int = 10000,
         evidence_exists: Callable[[str, str], bool] | None = None,
+        lab_validation: LabValidation | None = None,
     ) -> None:
         if max_edges < 1:
             raise ValueError("invalid correlation edge quota")
+        self._lab_proof: ProofBoundCorrelation | None = None
+        if lab_validation is not None:
+            from pathlib import Path  # noqa: PLC0415 - runtime same-store check
+
+            from redjohn.assessment.lab_validation import LabValidation  # noqa: PLC0415
+            from redjohn.assessment.proof_bound_correlation import ProofBoundCorrelation  # noqa: PLC0415
+
+            if (
+                type(lab_validation) is not LabValidation
+                or Path(database).resolve() != lab_validation.store.path.resolve()
+            ):
+                raise ValueError("correlation_exact_lab_store_required")
+            self._lab_proof = ProofBoundCorrelation(lab_validation)
         self.db = sqlite3.connect(str(database), check_same_thread=False)
         self._lock = threading.RLock()
         self.max_edges = max_edges
@@ -418,7 +434,15 @@ class VulnerabilityCorrelator:
         except sqlite3.OperationalError:
             return False
 
+    def _authorize_lab_edge(self, engagement: str, edge: CorrelationEdge) -> None:
+        if edge.status != "validated_in_lab":
+            return
+        if self._lab_proof is None or engagement != self._lab_proof.validation.policy.engagement_id:
+            raise ValueError("correlation_persisted_paired_lab_proof_required")
+        self._lab_proof.authorize_edge(edge)
+
     def add(self, engagement: str, edge: CorrelationEdge) -> None:
+        self._authorize_lab_edge(engagement, edge)
         refs = (
             *edge.evidence_refs,
             *((edge.validation_assertion_ref,) if edge.validation_assertion_ref else ()),
@@ -501,6 +525,10 @@ class VulnerabilityCorrelator:
                             "evidence_refs": tuple(payload["evidence_refs"]),
                         }
                     )
+                    # Re-read the durable paired assertion even for historical
+                    # rows. Caller labels or a formerly valid policy cannot
+                    # turn a stale graph into a validated chain after reopen.
+                    self._authorize_lab_edge(engagement, edge)
                     edges.append(edge)
                     if edge.status != "rejected":
                         # Frontier itself is bounded, not only visited count.

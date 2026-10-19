@@ -14,6 +14,7 @@ from pathlib import Path
 import pytest
 
 from redjohn.assessment.configuration import ConfiguredAssessment, enqueue_configured_jobs
+from redjohn.assessment.network_observation import service_observations
 from redjohn.assessment.service_broker import HTTP_SERVICE_PROBE
 from redjohn.assessment.service_tools import NMAP_LICENSE_SHA256, NMAP_VERSION, PROBE_SHA256
 from tests.test_network_broker_contract import close_stream
@@ -189,6 +190,18 @@ async def test_real_naabu_observed_open_nmap_service_and_false_relay_open_contro
                     <= payload["probe_bytes_received"]
                     <= (len(HTTP_SERVICE_PROBE) + 1) * payload["connected"]
                 )
+            services = assessment.store.inventory.services(assessment.policy)
+            assert len(services) == 1 and services[0]["source"] == "observed"
+            obs = service_observations(assessment.store, assessment.policy)
+            if kind == "closed-after-open":
+                assert [item["payload"]["engine"] for item in obs] == ["naabu"]
+            else:
+                assert {item["payload"]["engine"] for item in obs} == {"naabu", "nmap"}
+                nmap_obs = next(
+                    item["payload"] for item in obs if item["payload"]["engine"] == "nmap"
+                )
+                assert nmap_obs["protocol_name"] == kind
+                assert nmap_obs["product_version_status"] == "not_determined_by_narrow_profile"
             assert assessment.store.request_usage(assessment.policy) == 0
             assert assessment.runtime.governor.snapshot()["active"] == {}
             worker_root = assessment.store.path.parent / "nmap-service-workers"

@@ -17,6 +17,7 @@ import pytest
 
 from redjohn.assessment.configuration import ConfiguredAssessment, enqueue_configured_jobs
 from redjohn.assessment.network_broker import ScopedTCPBroker, question
+from redjohn.assessment.network_observation import service_observations
 from redjohn.assessment.network_scope import endpoint
 from redjohn.assessment.network_tools import VERSIONS, NetworkToolConfig, NetworkToolRunner
 from tests.test_network_broker_contract import close_stream, owned_job
@@ -124,11 +125,18 @@ async def test_real_naabu_tcp_connect_owned_target_and_durable_restart(tmp_path,
         server.close()
         await server.wait_closed()
     try:
-        summary = await scheduled_result(assessment_config("naabu", binary, port), tmp_path / "run")
+        config = assessment_config("naabu", binary, port)
+        summary = await scheduled_result(config, tmp_path / "run")
         assert summary["observation"]["state"] == ("open" if open_port else "closed_or_unreachable")
         assert summary["connected"] == (1 if open_port else 0)
         assert summary["refused"] == (0 if open_port else 1)
         assert len(accepted) == (1 if open_port else 0)
+        async with ConfiguredAssessment(config, tmp_path / "run", caller="owner") as verify:
+            services = verify.store.inventory.services(verify.policy)
+            assert len(services) == 1
+            assert services[0]["source"] == ("observed" if open_port else "imported")
+            obs = service_observations(verify.store, verify.policy)
+            assert len(obs) == (1 if open_port else 0)
     finally:
         server.close()
         await server.wait_closed()

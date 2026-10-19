@@ -1,0 +1,169 @@
+{
+  "schema_version": 1,
+  "capability_name_proposal": "wordpress_observe",
+  "status": "blocked_missing_verified_native_runtime_and_scheduler_backend",
+  "upstream": {
+    "url": "https://github.com/wpscanteam/wpscan",
+    "version": "4.1.0",
+    "commit": "f6169f00652c07feb45f57ff2a10e38949c28d56",
+    "license": "WPScan Public Source License (dual commercial terms)",
+    "license_sha256": "72eaecf9c3497bb34fb5722eba38a4b3b0ae39235c17378547101b8329b51008",
+    "license_url": "https://raw.githubusercontent.com/wpscanteam/wpscan/f6169f00652c07feb45f57ff2a10e38949c28d56/LICENSE"
+  },
+  "source_file": "lib/wpscan/target/platform/wordpress.rb",
+  "source_sha256": "9f612c9148ff3fa3213361e5e08306f6cd7a449c8946eb88cb15adf94c7e5f88",
+  "fragments": [
+    {
+      "first_line": 14,
+      "last_line": 14,
+      "sha256": "e16e1e36a99527490354197ac6a64ef37c48599f1e9d3dee36e8b4141d2733eb"
+    },
+    {
+      "first_line": 16,
+      "last_line": 17,
+      "sha256": "6e17a934ed8fa76dbbcb7f9ee6224299cbc267308ace92bee4e8691e2f7bdafb"
+    },
+    {
+      "first_line": 51,
+      "last_line": 67,
+      "sha256": "5e69a78748bf307c6bff64b2acfdb9f7fa50e138101283e4cb2664da1d9d768e"
+    }
+  ],
+  "fragment_sha256": "db80f7cc572d58e2f27e70b0783615146ddf69d803ff60ea79feb83b2a1c330c",
+  "wrapped_component_sha256": "002dae6850a08ecfe5abc1afcb694642b9d9132fd8406193d2987be6e4ecf70b",
+  "ruby_version": "3.3.12",
+  "packages": [
+    {
+      "name": "nokogiri",
+      "version": "1.19.4",
+      "role": "runtime_native_parser",
+      "archive_url": "https://rubygems.org/gems/nokogiri-1.19.4.gem",
+      "archive_sha256": "50c951611c92bca05c51411aef45f1cbc50f2821c4802758c5c6d34696533ab5",
+      "licenses": [
+        "MIT"
+      ],
+      "actual_license_payloads": [
+        {
+          "bytes": 132619,
+          "dedicated_notice": true,
+          "path": "LICENSE-DEPENDENCIES.md",
+          "permission_notice_marker": true,
+          "sha256": "ec46d18d39ebe8c6c89b9c2cc5e9e0745ead6a80e3caf4496c8ded89c638102d"
+        },
+        {
+          "bytes": 1290,
+          "dedicated_notice": true,
+          "path": "LICENSE.md",
+          "permission_notice_marker": true,
+          "sha256": "fdc2068b104e269be2946e21d271d340dfd003f0c8f964308cba4404f75db1aa"
+        },
+        {
+          "bytes": 13752,
+          "dedicated_notice": false,
+          "path": "README.md",
+          "permission_notice_marker": false,
+          "sha256": "d119fd988c76476a2566ba316c2e069e570d38a76a61588adeecfbe506877b3a"
+        },
+        {
+          "bytes": 2428,
+          "dedicated_notice": false,
+          "path": "gumbo-parser/src/README.md",
+          "permission_notice_marker": false,
+          "sha256": "888186c40f9369a87f91a7c75e157df67809a916cb2b7a580eb5214b38f1eb44"
+        }
+      ]
+    },
+    {
+      "name": "racc",
+      "version": "1.8.1",
+      "role": "runtime_css_parser",
+      "archive_url": "https://rubygems.org/gems/racc-1.8.1.gem",
+      "archive_sha256": "4a7f6929691dbec8b5209a0b373bc2614882b55fc5d2e447a21aaa691303d62f",
+      "licenses": [
+        "Ruby",
+        "BSD-2-Clause"
+      ],
+      "actual_license_payloads": [
+        {
+          "bytes": 2427,
+          "dedicated_notice": true,
+          "path": "COPYING",
+          "permission_notice_marker": false,
+          "sha256": "967586d538a28955ec2541910cf63c5ac345fcdea94bfb1f1705a1f6eb36bcbb"
+        },
+        {
+          "bytes": 1586,
+          "dedicated_notice": false,
+          "path": "README.rdoc",
+          "permission_notice_marker": false,
+          "sha256": "cb2ccc4d41b9329a3d7240daf020098b6e1a97e1bbb4d300338dbde6ed2a9c12"
+        }
+      ]
+    },
+    {
+      "name": "mini_portile2",
+      "version": "2.8.9",
+      "role": "build_only_gumbo_recipe",
+      "archive_url": "https://rubygems.org/gems/mini_portile2-2.8.9.gem",
+      "archive_sha256": "0cd7c7f824e010c072e33f68bc02d85a00aeb6fce05bb4819c03dfd3c140c289",
+      "licenses": [
+        "MIT"
+      ],
+      "actual_license_payloads": [
+        {
+          "bytes": 1078,
+          "dedicated_notice": true,
+          "path": "LICENSE.txt",
+          "permission_notice_marker": true,
+          "sha256": "e586e65f625235f0629273170a613c2cf1c78884c69c2e9e9e72f1283d80c413"
+        },
+        {
+          "bytes": 11284,
+          "dedicated_notice": false,
+          "path": "README.md",
+          "permission_notice_marker": false,
+          "sha256": "6aa7e552bcf5b0ee4a212d315627f837b2b0c0094241b13362db890141825e87"
+        }
+      ]
+    }
+  ],
+  "require_closure_status": "source_inspected_native_loaded_features_not_verified",
+  "bootstrap_direct_requires": [
+    "json",
+    "uri",
+    "digest",
+    "nokogiri",
+    "racc/parser"
+  ],
+  "additional_ruby_core_default_requires_observed_in_parser_source": [
+    "singleton",
+    "shellwords",
+    "pathname",
+    "stringio",
+    "thread",
+    "strscan"
+  ],
+  "excluded_runtime_packages": [
+    "get_process_mem",
+    "ferrum",
+    "typhoeus",
+    "ethon",
+    "active_support",
+    "wpscan_full_cli"
+  ],
+  "build_native_libraries": {
+    "libxml2": "system package/version/hash/license receipt required; no bundled archive build",
+    "libxslt_libexslt": "system package/version/hash/license receipt required; no bundled archive build",
+    "gumbo": "pinned Nokogiri gem source; Apache-2.0 text in LICENSE-DEPENDENCIES.md; build not run"
+  },
+  "automatic_network_requests": 0,
+  "upstream_source_distributed_in_repository": false,
+  "remaining_proof": [
+    "pinned Linux Ruby install provenance",
+    "actual offline system-library build and installed file/OS library receipts",
+    "actual loaded feature closure",
+    "immutable private bundle and HTML snapshot namespace attestation",
+    "same durable scheduler policy/resource/cancel/restart binding",
+    "owned positive/fixed native parser E2E"
+  ]
+}

@@ -99,11 +99,13 @@ class NmapServiceRunner(PinnedToolRunner):
         self.config = config
         self.payload: tempfile.TemporaryDirectory[str] | None = None
         self.broker: ObservedServiceBroker | None = None
+        self._broker_cleanup_proof: ObservedServiceBroker | None = None
         self.proxy_address = ""
         self.data_root: Path | None = None
 
     async def prepare_service(self, broker: ObservedServiceBroker) -> None:
         self.broker = broker
+        self._broker_cleanup_proof = broker
         self.root.mkdir(parents=True, exist_ok=True, mode=0o700)
         self._temporary = tempfile.TemporaryDirectory(prefix="job-", dir=self.root)
         self.workspace = Path(self._temporary.name).resolve()
@@ -192,6 +194,24 @@ class NmapServiceRunner(PinnedToolRunner):
             "127.0.0.1",
         ]
 
+    def resource_cleanup_verified(self) -> bool:
+        broker = self._broker_cleanup_proof
+        return (
+            super().resource_cleanup_verified()
+            and self.broker is None
+            and self.payload is None
+            and self.data_root is None
+            and (
+                broker is None
+                or (
+                    broker.closed
+                    and broker.server is None
+                    and not broker.tasks
+                    and not broker.writers
+                )
+            )
+        )
+
     async def cleanup(self) -> None:
         try:
             await super().cleanup()
@@ -258,7 +278,9 @@ class NmapServiceAdapter:
         self.runner = NmapServiceRunner(config, store.path.parent / "nmap-service-workers")
         self.partial_evidence_refs: tuple[str, ...] = ()
 
-    async def run(self, job: dict[str, Any], surface: Surface, spec: JobSpec) -> AdapterResult:
+    async def run(  # noqa: PLR0912, PLR0915 - bounded capability and proof lifecycle
+        self, job: dict[str, Any], surface: Surface, spec: JobSpec
+    ) -> AdapterResult:
         self.partial_evidence_refs = ()
         self.policy.check_capability(
             domains=("network",), profiles=("active-staging", "isolated-lab")
@@ -281,6 +303,7 @@ class NmapServiceAdapter:
         )
         broker = ObservedServiceBroker(self.policy, self.store, surface, job)
         outcome: AdapterResult | None = None
+        collector: Any = None
         started = time.monotonic()
         stage = "prepare"
         try:
@@ -299,6 +322,16 @@ class NmapServiceAdapter:
                 with contextlib.suppress(TimeoutError):
                     await asyncio.wait_for(asyncio.shield(task), 5)
             outcome = self.normalize(raw, broker)
+            if (
+                outcome.execution_status == "succeeded"
+                and outcome.summary.get("service_observed") is True
+            ):
+                from redjohn.assessment.network_observation import (  # noqa: PLC0415
+                    NativeObservationCollector,
+                )
+
+                collector = NativeObservationCollector(self.store, self.policy, self.runner)
+                collector.capture(job, surface, spec, raw, broker)
         except EvidenceWriteError:
             raise
         except EgressUnavailable as exc:
@@ -351,6 +384,23 @@ class NmapServiceAdapter:
                         outcome.summary["evidence_refs"] = [ref]
                         if outcome.error:
                             outcome.error["partial_evidence_refs"] = [ref]
+                        elif collector is not None and collector.pending is not None:
+                            try:
+                                native_ref, seal_ref = collector.seal(job, spec, ref)
+                                outcome.summary["evidence_refs"].extend([native_ref, seal_ref])
+                            except (ValueError, RuntimeError):
+                                outcome = AdapterResult(
+                                    "failed",
+                                    "inconclusive",
+                                    summary={"evidence_refs": [ref]},
+                                    error={
+                                        **error_record(
+                                            "nmap_service_engine_or_parser_unavailable",
+                                            coverage_effect="inconclusive",
+                                        ),
+                                        "partial_evidence_refs": [ref],
+                                    },
+                                )
         assert outcome is not None
         return outcome
 

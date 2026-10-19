@@ -28,6 +28,7 @@ SUITES = {
     "preparation": {"file": "test_preparation_native.py", "expected": 1},
     "memory": {"file": "test_owned_memory_live.py", "expected": 6},
     "cleanup-proof": {"file": "test_cleanup_quarantine_live.py", "expected": 1},
+    "lab": {"file": "test_lab_validation_live.py", "expected": 4},
 }
 REQUIRED = (
     "python-install",
@@ -46,6 +47,7 @@ REQUIRED = (
     "native-preparation",
     "native-memory",
     "native-cleanup-proof",
+    "native-lab",
     "native-cleanup",
     "sandbox-cleanup",
 )

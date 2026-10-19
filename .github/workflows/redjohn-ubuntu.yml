@@ -209,10 +209,24 @@ jobs:
           sudo -E env HOME="$task_home" bash .github/scripts/linux-tests.sh "$task_python" capability
       - name: Run actual Chromium, Nuclei, scanners and Linux isolation E2E
         if: ${{ !cancelled() && steps.delegation.outcome == 'success' }}
+        id: integration
         run: |
           task_python="$(command -v python)"
           task_home="$HOME"
           sudo -E env HOME="$task_home" bash .github/scripts/linux-tests.sh "$task_python" integration
+      - name: Preserve actual integration results before the mixed soak
+        if: ${{ always() && steps.integration.outcome != 'skipped' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: redjohn-ubuntu-integration-${{ matrix.arch }}-${{ github.sha }}-${{ github.run_attempt }}
+          path: |
+            artifacts/source.json
+            artifacts/python-integration.json
+            artifacts/python-integration.log
+            artifacts/integration.junit.xml
+            artifacts/non-applicable-integration.json
+          if-no-files-found: error
+          retention-days: 14
       - name: Run mixed scheduler, browser, scanners and maximum-limit pressure
         if: ${{ !cancelled() && steps.capability.outcome == 'success' }}
         run: |

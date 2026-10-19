@@ -68,6 +68,7 @@ def validate_configuration(value: object) -> dict[str, Any]:
         "browser_auth_flow",
         "workflow_execution",
         "jobs",
+        "lab_validation",
     }:
         raise ValueError("invalid_configuration_fields")
     if not isinstance(value.get("seeds", []), list) or len(value.get("seeds", [])) > 64:
@@ -498,6 +499,7 @@ class ConfiguredAssessment:
             workflow = runtime.workflow_status()
         workflow["reconciliation_errors"] = runtime.scheduler.metrics["followup_errors"]
         metrics["continuous_replay"] = workflow
+        metrics["owned_lab"] = runtime.owned_lab_status()
         metrics["approved_policy_revision"] = self.policy.revision
         metrics["current_policy_revision"] = current.revision
         metrics["performance"] = runtime.scheduler.monitor.snapshot()
@@ -564,6 +566,8 @@ class ConfiguredAssessment:
                 nmap_config=config.get("nmap"),
                 prowler_config=config.get("prowler"),
                 kube_bench_config=config.get("kube_bench"),
+                lab_validation_config=config.get("lab_validation"),
+                os_memory_config=config.get("os_memory"),
             )
             self.policy = self._runtime.policy
             enqueue_configured_jobs(self.runtime, store, policy, config)

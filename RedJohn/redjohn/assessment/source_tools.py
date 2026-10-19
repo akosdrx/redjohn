@@ -265,6 +265,15 @@ class OfflineSourceRunner(PinnedToolRunner):
         self.denied_connections = 0
         self.snapshot_readonly_attested = False
 
+    def resource_cleanup_verified(self) -> bool:
+        return (
+            super().resource_cleanup_verified()
+            and self.snapshot is None
+            and self._snapshot_temporary is None
+            and self._deny_server is None
+            and not self._deny_tasks
+        )
+
     def _worker_argv(self, argv: list[str]) -> list[str]:
         if argv[1:] != ["__redjohn_verify_snapshot__"]:
             return argv

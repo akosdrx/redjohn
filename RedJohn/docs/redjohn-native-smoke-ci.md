@@ -16,6 +16,7 @@ The scope is exactly:
 | `test_preparation_native.py` | 1 | Real copied kube-bench version-only deny-all namespace; no Kubernetes audit |
 | `test_owned_memory_live.py` | 6 | Real kernel aggregate memory, writable-cgroup denial, process cleanup and terminal inheritance |
 | `test_cleanup_quarantine_live.py` | 1 | Actual small owned Python child and shared SQLite admission retained until reap; no scanner or kernel-limit claim |
+| `test_lab_validation_live.py` | 4 | Owned public-runtime generated header regression, positive/fixed proof, limits, timeout, oversized and cancellation controls; no original RCE claim |
 
 The browser-containing memory case
 `RedJohn/tests/test_owned_memory_live.py::test_actual_browser_sdk_mcp_and_native_worker_inherit_the_owner_hard_fence`
@@ -53,7 +54,7 @@ are uploaded immediately before longer work, so diagnosis does not wait for the
 full matrix or its soak. The full workflow has the same early checkpoint.
 
 A green smoke is evidence only for
-these 20 component cases and the separately reported Python regression; it proves no frontend/TUI, browser,
+these 24 component cases and the separately reported Python regression; it proves no frontend/TUI, browser,
 external cloud account or Kubernetes node audit result.
 
 Manual dispatch uses the correct repository:

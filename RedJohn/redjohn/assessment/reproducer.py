@@ -21,6 +21,7 @@ from urllib.parse import urlsplit
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from redjohn.assessment.lab_validation import LabValidation
     from redjohn.assessment.resources import ResourceGovernor
 
 from redjohn.assessment.models import error_record, stable_key
@@ -146,6 +147,7 @@ class SafeReproducerGenerator:
         request_admission: Callable[[int], None],
         max_plans: int = 32,
         max_observations: int = 64,
+        lab_validation: LabValidation | None = None,
     ) -> None:
         policy.authorize(caller)
         if not 1 <= max_plans <= 128 or not 2 <= max_observations <= 256:
@@ -157,6 +159,12 @@ class SafeReproducerGenerator:
         self._plans: dict[str, ReproducerPlan] = {}
         self._observations: dict[str, ReproducerObservation] = {}
         self._pending: set[str] = set()
+        self._lab_validation = lab_validation
+        if lab_validation is not None:
+            from redjohn.assessment.lab_validation import LabValidation  # noqa: PLC0415
+
+            if type(lab_validation) is not LabValidation or lab_validation.policy != policy:
+                raise ValueError("reproducer_exact_owned_lab_policy_required")
 
     def _authorize(self, request: ReproducerRequest) -> None:
         self.policy.check_capability(domains=("web",), profiles=("isolated-lab",))
@@ -355,15 +363,14 @@ class SafeReproducerGenerator:
             else before.header_value != plan.assertion.expected_fixed_value
         )
         validated = complete and observed and fixed
-        finding_status = (
-            "confirmed_weakness" if validated and plan.request.kind == "header" else "candidate"
-        )
         return {
             "plan_ref": plan.plan_ref,
-            "finding_status": finding_status,
+            "finding_status": "candidate",
+            "promotion_status": "blocked_persisted_paired_lab_proof_required",
             "execution_status": "succeeded" if complete else "failed",
             "coverage_status": "completed" if validated else "inconclusive",
             "proof_level": plan.assertion.proof_level,
+            "measurement_only": True,
             "expected": plan.assertion.expected_fixed_value,
             "observed": before.header_value,
             "control_observed": control.header_value,
@@ -381,6 +388,18 @@ class SafeReproducerGenerator:
                 "Local header validation or harmless routing fixture; no RCE or CVE impact proof"
             ),
         }
+
+    def validate_owned_pair(self, plan_ref: str, before_job: str, fixed_job: str) -> dict[str, Any]:
+        """Compatibility facade for the durable scheduler's independent proof.
+
+        Legacy observations remain useful measurements; their caller-supplied
+        deployment names never substitute for owned kernel worker evidence.
+        """
+        if self._lab_validation is None:
+            raise PolicyDenied("reproducer_persisted_paired_lab_proof_required")
+        from redjohn.assessment.proof_bound_correlation import ProofBoundCorrelation  # noqa: PLC0415
+
+        return ProofBoundCorrelation(self._lab_validation).validate(plan_ref, before_job, fixed_job)
 
     def regression_source(self, plan: ReproducerPlan) -> str:
         """Export fixed constant unittest source; no generated code is executed."""

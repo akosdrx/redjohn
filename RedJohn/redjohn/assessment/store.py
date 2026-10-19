@@ -1674,6 +1674,17 @@ class AssessmentStore:
                 and result.error is None
                 and self._commit_browser_confirmation(db, row)
             )
+            if (
+                row["capability"] in {"naabu_ports", "nmap_services"}
+                and status == "succeeded"
+                and result.error is None
+                and not row["cancel_requested"]
+            ):
+                from redjohn.assessment.network_observation import (  # noqa: PLC0415
+                    commit_service_inventory,
+                )
+
+                commit_service_inventory(self, db, row, result)
             for raw_finding in () if xss_confirmed else result.findings:
                 # Scanner matches require separate control/validation before confirmation.
                 finding = {**raw_finding, "finding_status": "candidate"}

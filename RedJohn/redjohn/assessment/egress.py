@@ -26,9 +26,16 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
+from redjohn.assessment._owned_process import OwnedProcess
+
 
 class EgressUnavailable(RuntimeError):  # noqa: N818 - public capability error name
     """The requested kernel isolation could not be established; do not run."""
+
+
+class EgressCleanupUnverified(EgressUnavailable):
+    requires_lease_retention = True
+    code = "blocked_namespace_cleanup_unverified"
 
 
 class LinuxEgressBoundary:
@@ -85,6 +92,13 @@ class LinuxEgressBoundary:
         self._tasks: set[asyncio.Task[None]] = set()
         self._writers: set[asyncio.StreamWriter] = set()
         self._peers: dict[int, str] = {}
+        # Authorization ends with the control socket; ownership ends only after
+        # observed process death. Never lose a live peer by closing its socket.
+        self._owned_peers: dict[int, str] = {}
+        self._attestation_owner = OwnedProcess()
+        self._cleanup_unverified = False
+        self._closing_server: asyncio.AbstractServer | None = None
+        self._close_task: asyncio.Task[None] | None = None
         self._attestations: deque[dict[str, Any]] = deque(maxlen=64)
         self._rejection_reasons: deque[str] = deque(maxlen=16)
         self._verified = False
@@ -227,7 +241,15 @@ class LinuxEgressBoundary:
             if operation == b"A":
                 if peer_pid in self._peers:
                     raise EgressUnavailable("egress_duplicate_attestation")  # noqa: TRY301
+                self._owned_peers = {
+                    pid: namespace
+                    for pid, namespace in self._owned_peers.items()
+                    if not self._peer_dead(pid, namespace)
+                }
+                if len(self._owned_peers) >= 128:
+                    raise EgressUnavailable("egress_owned_peer_limit")  # noqa: TRY301
                 self._peers[peer_pid] = attestation["namespaces"]["net"]
+                self._owned_peers[peer_pid] = attestation["namespaces"]["net"]
                 self._attestations.append(attestation)
                 control = True
                 writer.write(b"Y")
@@ -383,18 +405,13 @@ class LinuxEgressBoundary:
             raise EgressUnavailable("egress_boundary_not_started")
         before = len(self._attestations)
         command = self._command([sys.executable, "-I", "-S", "-c", "print('redjohn-egress-ready')"])
-        process = await asyncio.create_subprocess_exec(
-            *command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
-        )
         try:
-            stdout, stderr = await asyncio.wait_for(process.communicate(), 15)
+            stdout, stderr, code = await self._attestation_owner.run(command, timeout=15)
         except BaseException:
-            with contextlib.suppress(ProcessLookupError):
-                process.kill()
-            await process.wait()
+            await OwnedProcess.join(asyncio.create_task(self.terminate_owned_workers()))
             raise
         if (
-            process.returncode != 0
+            code != 0
             or stdout.strip() != b"redjohn-egress-ready"
             or len(self._attestations) <= before
         ):
@@ -454,6 +471,42 @@ class LinuxEgressBoundary:
             return False
 
     @staticmethod
+    def _peer_dead(pid: int, namespace: str) -> bool:
+        try:
+            current = str((Path("/proc") / str(pid) / "ns/net").readlink())
+        except FileNotFoundError:
+            try:
+                os.kill(pid, 0)
+            except ProcessLookupError:
+                return True
+            except PermissionError:
+                return False
+            return False
+        except OSError:
+            return False
+        return current != namespace
+
+    def worker_cleanup_verified(self) -> bool:
+        return (
+            self._attestation_owner.resource_cleanup_verified()
+            and not self._cleanup_unverified
+            and all(self._peer_dead(pid, namespace) for pid, namespace in self._owned_peers.items())
+        )
+
+    def resource_cleanup_verified(self) -> bool:
+        return (
+            self.worker_cleanup_verified()
+            and self._server is None
+            and self._closing_server is None
+            and not self._tasks
+            and not self._writers
+            and not self._owned_peers
+            and self._assets is None
+            and not self._wrappers
+            and (self._close_task is None or self._close_task.done())
+        )
+
+    @staticmethod
     def _descends_from(pid: int, root_pid: int) -> bool:
         visited: set[int] = set()
         for _level in range(64):
@@ -485,6 +538,21 @@ class LinuxEgressBoundary:
             if self._same_namespace(pid, namespace):
                 with contextlib.suppress(ProcessLookupError):
                     os.kill(pid, signal.SIGKILL)
+        for _attempt in range(20):
+            if all(self._peer_dead(pid, namespace) for pid, namespace in peers.items()):
+                self._cleanup_unverified = False
+                return
+            await asyncio.sleep(0.05)
+        self._cleanup_unverified = True
+        raise EgressCleanupUnverified("namespace_peer_death_unverified")
+
+    async def terminate_owned_workers(self) -> None:
+        await self._attestation_owner.stop()
+        peers = dict(self._owned_peers)
+        await self._terminate_peers(peers)
+        for pid, namespace in peers.items():
+            if self._owned_peers.get(pid) == namespace:
+                self._owned_peers.pop(pid, None)
 
     async def terminate_workers(self, root_pid: int) -> None:
         """Stop attested helpers descending from one tracked host launcher PID.
@@ -497,29 +565,37 @@ class LinuxEgressBoundary:
             raise ValueError("invalid_egress_launcher_pid")
         peers = {
             pid: namespace
-            for pid, namespace in tuple(self._peers.items())
+            for pid, namespace in tuple(self._owned_peers.items())
             if self._descends_from(pid, root_pid)
         }
         await self._terminate_peers(peers)
 
-    async def close(self) -> None:
+    async def _close_owned(self) -> None:
+        await self.terminate_owned_workers()
         self._verified = False
-        owned_peers = dict(self._peers)
-        server, self._server = self._server, None
+        server = self._server or self._closing_server
+        self._closing_server, self._server = server, None
         if server is not None:
             server.close()
         for writer in tuple(self._writers):
             writer.close()
         for task in tuple(self._tasks):
-            task.cancel()
-        if self._tasks:
-            await asyncio.gather(*tuple(self._tasks), return_exceptions=True)
+            if not task.cancelling():
+                task.cancel()
         # Python 3.12+ also waits for accepted connections. Close their
         # transports before awaiting the listener, or a live worker's control
         # socket would deadlock shutdown until the worker finished naturally.
-        if server is not None:
-            await server.wait_closed()
-        await self._terminate_peers(owned_peers)
+        try:
+            async with asyncio.timeout(5):
+                if self._tasks:
+                    await asyncio.gather(*tuple(self._tasks), return_exceptions=True)
+                if server is not None:
+                    await server.wait_closed()
+        except TimeoutError:
+            self._cleanup_unverified = True
+            raise EgressCleanupUnverified("namespace_listener_cleanup_unverified") from None
+        self._closing_server = None
+        await self.terminate_owned_workers()
         self._peers.clear()
         for path in self._wrappers:
             path.unlink(missing_ok=True)
@@ -528,3 +604,8 @@ class LinuxEgressBoundary:
             self._assets.cleanup()
             self._assets = None
         self._socket_path = self._helper_path = None
+
+    async def close(self) -> None:
+        if self._close_task is None or self._close_task.done():
+            self._close_task = asyncio.create_task(self._close_owned())
+        await OwnedProcess.join(self._close_task)

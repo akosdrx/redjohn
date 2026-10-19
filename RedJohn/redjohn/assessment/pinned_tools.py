@@ -7,12 +7,9 @@ not an agent-facing command runner: callers construct a fixed typed argv.
 from __future__ import annotations
 
 import asyncio
-import contextlib
 import hashlib
 import json
-import os
 import re
-import signal
 import ssl
 import sys
 import tempfile
@@ -21,7 +18,17 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from redjohn.assessment._owned_process import (
+    OwnedProcess,
+)
+from redjohn.assessment._owned_process import (
+    OwnedProcessCleanupUnverified as PinnedToolCleanupUnverified,
+)
 from redjohn.assessment.egress import EgressUnavailable, LinuxEgressBoundary
+from redjohn.assessment.resources import ResourceAdmissionError
+
+
+__all__ = ["BinaryPin", "PinnedToolCleanupUnverified", "PinnedToolRunner"]
 
 
 if TYPE_CHECKING:
@@ -67,7 +74,11 @@ class PinnedToolRunner:
         self.tool, self.binary, self.root = tool, binary, root
         self.workspace: Path | None = None
         self.boundary: LinuxEgressBoundary | None = None
-        self.process: asyncio.subprocess.Process | None = None
+        self._process_owner = OwnedProcess()
+        self._cancel_lock = asyncio.Lock()
+        self._execute_lock = asyncio.Lock()
+        self._cleanup_task: asyncio.Task[None] | None = None
+        self._cleanup_unverified = False
         self._temporary: tempfile.TemporaryDirectory[str] | None = None
         self._token = ""
         self._ca_file: Path | None = None
@@ -106,28 +117,58 @@ class PinnedToolRunner:
         elif policy.egress_mode != "local-fixture" or policy.profile != "isolated-lab":
             raise EgressUnavailable("pinned_tool_kernel_egress_required")
 
+    @property
+    def process(self) -> asyncio.subprocess.Process | None:
+        return self._process_owner.process
+
+    def resource_cleanup_verified(self) -> bool:
+        return (
+            self._process_owner.resource_cleanup_verified()
+            and not self._execute_lock.locked()
+            and not self._cleanup_unverified
+            and self.boundary is None
+            and self.workspace is None
+            and self._temporary is None
+            and (self._cleanup_task is None or self._cleanup_task.done())
+        )
+
+    async def _cancel_owned(self) -> None:
+        async with self._cancel_lock:
+            if self.boundary is not None:
+                try:
+                    await self.boundary.terminate_owned_workers()
+                finally:
+                    await self._process_owner.stop()
+                if not self.boundary.worker_cleanup_verified():
+                    self._cleanup_unverified = True
+                    self._process_owner.quarantine("pinned_namespace_peer_cleanup_unverified")
+            else:
+                await self._process_owner.stop()
+                # A forced kill cannot prove that this supervisor's separately
+                # grouped local child died. Never signal a stale marker PID.
+                if self._process_owner.proof.get("forced_kill"):
+                    self._cleanup_unverified = True
+                    self._process_owner.quarantine("pinned_local_child_cleanup_unverified")
+                if (
+                    self.workspace is not None
+                    and (self.workspace / ".redjohn-hunt" / (self._token + ".child")).exists()
+                ):
+                    self._cleanup_unverified = True
+                    self._process_owner.quarantine("pinned_local_child_marker_unreconciled")
+            self._cleanup_unverified = False
+
     async def cancel(self) -> None:
-        process = self.process
-        if process is None:
-            return
-        with contextlib.suppress(ProcessLookupError):
-            os.killpg(process.pid, signal.SIGTERM)
-        try:
-            await asyncio.wait_for(process.wait(), 2)
-        except TimeoutError:
-            with contextlib.suppress(ProcessLookupError):
-                os.killpg(process.pid, signal.SIGKILL)
-            await process.wait()
-        if self.boundary is not None:
-            await self.boundary.terminate_workers(process.pid)
-        elif self.workspace is not None:
-            marker = self.workspace / ".redjohn-hunt" / (self._token + ".child")
-            if marker.is_file():
-                with contextlib.suppress(OSError, ValueError):
-                    os.killpg(int(marker.read_text()), signal.SIGKILL)
-        self.process = None
+        await OwnedProcess.join(asyncio.create_task(self._cancel_owned()))
 
     async def execute(
+        self, argv: list[str], timeout: float, *, api_url: str | None = None
+    ) -> dict[str, Any]:
+        if self._execute_lock.locked():
+            raise ResourceAdmissionError("pinned_tool_runner_already_running")
+        async with self._execute_lock:
+            return await self._execute(argv, timeout, api_url=api_url)
+
+    async def _execute(
         self, argv: list[str], timeout: float, *, api_url: str | None = None
     ) -> dict[str, Any]:
         if self.workspace is None or self._ca_file is None or argv[0] != str(self.binary.path):
@@ -172,10 +213,11 @@ class PinnedToolRunner:
         command = [sys.executable, "-I", "-S", "-c", source, json.dumps(config)]
         if self.boundary is not None:
             command = self.boundary.wrap_argv(command, cwd=self.workspace)
-        spawn = asyncio.create_task(
-            asyncio.create_subprocess_exec(
-                *command,
+        try:
+            stdout, _stderr, _code = await self._process_owner.run(
+                command,
                 cwd=self.workspace,
+                timeout=timeout + 5,
                 env={
                     "PATH": "/usr/bin:/bin",
                     "HOME": str(self.workspace),
@@ -184,45 +226,15 @@ class PinnedToolRunner:
                     "SSL_CERT_FILE": str(self._ca_file),
                     "SSL_CERT_DIR": str(self.workspace / "empty-ca-directory"),
                 },
-                stdin=asyncio.subprocess.DEVNULL,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-                start_new_session=True,
+                stdout_limit=OUTPUT_LIMIT * 12 + 8192,
+                stderr_limit=OUTPUT_LIMIT * 12 + 8192,
             )
-        )
-        try:
-            self.process = await asyncio.shield(spawn)
-        except asyncio.CancelledError:
-            self.process = await spawn
-            await asyncio.shield(self.cancel())
-            raise
-
-        async def drain(stream: asyncio.StreamReader | None) -> bytes:
-            assert stream is not None
-            data = bytearray()
-            while chunk := await stream.read(8192):
-                if len(data) + len(chunk) > OUTPUT_LIMIT * 12 + 8192:
-                    raise ValueError("pinned_tool_supervisor_output_limit")
-                data.extend(chunk)
-            return bytes(data)
-
-        tasks = [
-            asyncio.create_task(drain(stream))
-            for stream in (self.process.stdout, self.process.stderr)
-        ]
-        try:
-            async with asyncio.timeout(timeout + 5):
-                stdout, _stderr = await asyncio.gather(*tasks)
-                await self.process.wait()
             raw = json.loads(stdout)
             if not isinstance(raw, dict):
                 raise TypeError("pinned_tool_supervisor_schema_error")
             return raw
         finally:
-            for task in tasks:
-                task.cancel()
-            await asyncio.gather(*tasks, return_exceptions=True)
-            await asyncio.shield(self.cancel())
+            await self.cancel()
 
     async def healthcheck(self) -> dict[str, str]:
         if self.tool in {"arjun", "sqlmap", "dalfox", "tinja", "schemathesis"}:
@@ -258,7 +270,7 @@ class PinnedToolRunner:
             raise ValueError(f"{self.tool}_binary_or_version_mismatch")
         return {"tool_version": self.binary.version, "binary_sha256": self.binary.sha256}
 
-    async def cleanup(self) -> None:
+    async def _cleanup_owned(self) -> None:
         await self.cancel()
         if self.boundary is not None:
             await self.boundary.close()
@@ -267,3 +279,9 @@ class PinnedToolRunner:
             self._temporary.cleanup()
             self._temporary = None
         self.workspace = None
+        self._ca_file = None
+
+    async def cleanup(self) -> None:
+        if self._cleanup_task is None or self._cleanup_task.done():
+            self._cleanup_task = asyncio.create_task(self._cleanup_owned())
+        await OwnedProcess.join(self._cleanup_task)

@@ -528,6 +528,32 @@
     "recorded_verification_report": "redjohn-specialists-verification.md"
   },
   {
+    "id": "owned_lab_regression",
+    "tool": "RedJohn owned header regression",
+    "domains": [
+      "web"
+    ],
+    "profiles": [
+      "isolated-lab"
+    ],
+    "content_types": [
+      ""
+    ],
+    "resource_class": "worker",
+    "adapter_implemented": true,
+    "binary_names": [],
+    "source": "",
+    "license": "project",
+    "status": "implemented_requires_owned_fixture_and_linux_containment",
+    "reason": "positive_and_distinct_fixed_source_proof_only_no_rce_claim",
+    "cancellation": true,
+    "auth_replay": false,
+    "privilege": "unprivileged",
+    "owner_process_only": false,
+    "live_verified": false,
+    "recorded_verification_report": null
+  },
+  {
     "id": "oast_correlate",
     "tool": "Interactsh protocol 1.4.1",
     "domains": [

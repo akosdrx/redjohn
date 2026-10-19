@@ -93,7 +93,8 @@ async def test_real_header_positive_fixed_control_and_static_regression_export(t
             plan, phase="fixed_control", deployment_ref="fixture-fixed-2"
         )
         result = generator.validate_pair(plan, before.observation_ref, fixed.observation_ref)
-        assert result["finding_status"] == "confirmed_weakness"
+        assert result["finding_status"] == "candidate"
+        assert result["promotion_status"] == "blocked_persisted_paired_lab_proof_required"
         assert result["observed"] is None and result["control_observed"] == "nosniff"
         assert result["coverage_status"] == "completed" and result["control_status"] == "fixed"
         assert result["original_rce_status"] == "not_reproduced_missing_fixture"
@@ -111,7 +112,7 @@ async def test_real_header_positive_fixed_control_and_static_regression_export(t
             "duration_seconds": round(time.monotonic() - started, 6),
             "http_requests": fixture.counts["/"],
             "request_charges": 3,
-            "confirmed_weakness": 1,
+            "confirmed_weakness": 0,
             "confirmed_impact": 0,
             "model_calls": 0,
             "generated_code_executions": 0,

@@ -64,11 +64,13 @@ class NetworkToolRunner(PinnedToolRunner):
         super().__init__(config.tool, config.binary, root)
         self.config = config
         self.broker: ScopedTCPBroker | None = None
+        self._broker_cleanup_proof: ScopedTCPBroker | None = None
         self.proxy_address = ""
         self.payload: tempfile.TemporaryDirectory[str] | None = None
 
     async def prepare_network(self, broker: ScopedTCPBroker) -> None:
         self.broker = broker
+        self._broker_cleanup_proof = broker
         self.root.mkdir(parents=True, exist_ok=True, mode=0o700)
         self._temporary = tempfile.TemporaryDirectory(prefix="job-", dir=self.root)
         self.workspace = Path(self._temporary.name).resolve()
@@ -169,6 +171,23 @@ class NetworkToolRunner(PinnedToolRunner):
             "-duc",
         ]
 
+    def resource_cleanup_verified(self) -> bool:
+        broker = self._broker_cleanup_proof
+        return (
+            super().resource_cleanup_verified()
+            and self.broker is None
+            and self.payload is None
+            and (
+                broker is None
+                or (
+                    broker.closed
+                    and broker.server is None
+                    and not broker.tasks
+                    and not broker.writers
+                )
+            )
+        )
+
     async def cleanup(self) -> None:
         try:
             await super().cleanup()
@@ -193,7 +212,9 @@ class NetworkToolAdapter:
         )
         self.partial_evidence_refs: tuple[str, ...] = ()
 
-    async def run(self, job: dict[str, Any], surface: Surface, spec: JobSpec) -> AdapterResult:
+    async def run(  # noqa: PLR0912, PLR0915 - bounded capability and proof lifecycle
+        self, job: dict[str, Any], surface: Surface, spec: JobSpec
+    ) -> AdapterResult:
         self.partial_evidence_refs = ()
         self.policy.check_capability(
             domains=("network",), profiles=("active-staging", "isolated-lab")
@@ -218,6 +239,7 @@ class NetworkToolAdapter:
         stage = "prepare"
         start = time.monotonic()
         outcome: AdapterResult | None = None
+        collector: Any = None
         try:
             if not self.config.binary.path.is_file():
                 return AdapterResult(
@@ -237,6 +259,13 @@ class NetworkToolAdapter:
                 with contextlib.suppress(TimeoutError):
                     await asyncio.wait_for(asyncio.shield(task), 3)
             outcome = self.normalize(job, surface, raw, broker, time.monotonic() - start)
+            if self.config.tool == "naabu" and outcome.execution_status == "succeeded":
+                from redjohn.assessment.network_observation import (  # noqa: PLC0415
+                    NativeObservationCollector,
+                )
+
+                collector = NativeObservationCollector(self.store, self.policy, self.runner)
+                collector.capture(job, surface, spec, raw, broker)
         except EvidenceWriteError:
             raise
         except EgressUnavailable as exc:
@@ -265,6 +294,23 @@ class NetworkToolAdapter:
                         outcome.summary.setdefault("evidence_refs", []).append(ref)
                         if outcome.error:
                             outcome.error["partial_evidence_refs"] = [ref]
+                        elif collector is not None and collector.pending is not None:
+                            try:
+                                native_ref, seal_ref = collector.seal(job, spec, ref)
+                                outcome.summary["evidence_refs"].extend([native_ref, seal_ref])
+                            except (ValueError, RuntimeError):
+                                outcome = AdapterResult(
+                                    "failed",
+                                    "inconclusive",
+                                    summary={"evidence_refs": [ref]},
+                                    error={
+                                        **error_record(
+                                            "network_engine_or_broker_unavailable",
+                                            coverage_effect="inconclusive",
+                                        ),
+                                        "partial_evidence_refs": [ref],
+                                    },
+                                )
         assert outcome is not None
         return outcome
 

@@ -1,0 +1,124 @@
+{
+  "format": "redjohn-trivy-sbom-implementation-provenance-v1",
+  "reviewed_at": "2026-10-18",
+  "engine": {
+    "version": "0.76.0",
+    "commit": "531360e5d2a88e732373f1614ba99a38738538b8",
+    "source": "https://github.com/aquasecurity/trivy/tree/531360e5d2a88e732373f1614ba99a38738538b8",
+    "license": "Apache-2.0",
+    "license_url": "https://raw.githubusercontent.com/aquasecurity/trivy/531360e5d2a88e732373f1614ba99a38738538b8/LICENSE",
+    "license_sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+    "release_archive_pins": "scripts/source-scanner-pins.json",
+    "replaces_existing_engine_installation": false
+  },
+  "database_library": {
+    "commit": "cbebf2ecd6df42d36463844a45e689afee51c70f",
+    "source": "https://github.com/aquasecurity/trivy-db/tree/cbebf2ecd6df42d36463844a45e689afee51c70f",
+    "schema_version": 2,
+    "license": "Apache-2.0",
+    "license_url": "https://raw.githubusercontent.com/aquasecurity/trivy-db/cbebf2ecd6df42d36463844a45e689afee51c70f/LICENSE",
+    "license_sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+    "notice_url": "https://raw.githubusercontent.com/aquasecurity/trivy-db/cbebf2ecd6df42d36463844a45e689afee51c70f/NOTICE",
+    "notice_sha256": "33886b726b32f94ae3ac2d1adf4f5bfb3911f774807b271d27256e4fdc2f77f3"
+  },
+  "reviewed_sources": {
+    "sbom_command": {
+      "url": "https://raw.githubusercontent.com/aquasecurity/trivy/531360e5d2a88e732373f1614ba99a38738538b8/pkg/commands/app.go",
+      "sha256": "0e070cde12d536f4aa6757eabcf306a1f35402658b92632b19e1134a5d0869f4",
+      "relevant_contract": "NewSBOMCommand permits vuln/license and disables --parallel; this adapter selects vuln only"
+    },
+    "database_initialization": {
+      "url": "https://raw.githubusercontent.com/aquasecurity/trivy/531360e5d2a88e732373f1614ba99a38738538b8/pkg/db/db.go",
+      "sha256": "41aa153ea3668450714a97288acc3c7a82d8ec7985fb3570ecb33c700109b9f5",
+      "relevant_contract": "Read-only database open; skip-db-update still requires exact schema but does not enforce freshness"
+    },
+    "cyclonedx_application_grouping": {
+      "url": "https://raw.githubusercontent.com/aquasecurity/trivy/531360e5d2a88e732373f1614ba99a38738538b8/pkg/sbom/io/decode.go",
+      "sha256": "eca014b805eecadf7bcf06c3dcd016c0b036e0b655e421e8c4a469b5845bc732",
+      "relevant_contract": "Simple library PURLs become orphan language packages grouped by p.LangType()"
+    },
+    "purl_language_mapping": {
+      "url": "https://raw.githubusercontent.com/aquasecurity/trivy/531360e5d2a88e732373f1614ba99a38738538b8/pkg/purl/purl.go",
+      "sha256": "eb27f53fcc411faab91b8ffff69d85145bfae2623816dd38088d9d06ab36f6a7",
+      "relevant_contract": "PyPI PURL maps to PythonPkg; npm PURL maps to NodePkg"
+    },
+    "language_result_types": {
+      "url": "https://raw.githubusercontent.com/aquasecurity/trivy/531360e5d2a88e732373f1614ba99a38738538b8/pkg/fanal/types/const.go",
+      "sha256": "2c34570f613e3dece770d743a49e2f0aff856f0c61a9c080d29d862f6a2b6c8f",
+      "relevant_contract": "PythonPkg is python-pkg; NodePkg is node-pkg; lockfile pip/npm types are not this constrained SBOM mode"
+    }
+  },
+  "advisory_snapshot": {
+    "provided_or_downloaded": false,
+    "automatic_download": false,
+    "publisher_provenance_verified": false,
+    "license_scope": "Engine/database-builder licenses do not establish rights for all advisory datasets. Every selected data source requires separate operator-reviewed, content-pinned local terms."
+  },
+  "native_execution_performed_during_preparation": false,
+  "upstream_source_copied_into_redjohn": false,
+  "public_registry_metadata_review": {
+    "observed_at": "2026-10-18T18:46:51Z",
+    "reference": "ghcr.io/aquasecurity/trivy-db@sha256:2b8946896faa75f514aec564d623a73e4832f2f93c7cb908abc7bfd63a99f377",
+    "manifest_bytes": 616,
+    "manifest_digest_verified": true,
+    "manifest_schema_version": 2,
+    "artifact_type": "application/vnd.aquasec.trivy.config.v1+json",
+    "layer_digest": "sha256:a18a7c39f2688c7891fc85564cfb09d19d4b50c2e6c14f1df09cb29cbcf37101",
+    "layer_bytes": 134968710,
+    "layer_media_type": "application/vnd.aquasec.trivy.db.layer.v1.tar+gzip",
+    "created_annotation": "2026-10-18T18:39:41Z",
+    "layer_downloaded": false,
+    "internal_metadata_schema_verified": false,
+    "database_freshness_verified": false,
+    "advisory_presence_verified": false,
+    "publisher_signature_verified": false,
+    "builder_revision_bound_by_manifest": false,
+    "license_or_publisher_attestation_inferred_from_namespace": false
+  },
+  "reviewed_advisory_source": {
+    "repository": "https://github.com/github/advisory-database",
+    "revision": "c18aa0e82ff81450c9a57bdf5050f6a9d8193125",
+    "license": "CC-BY-4.0",
+    "license_url": "https://raw.githubusercontent.com/github/advisory-database/c18aa0e82ff81450c9a57bdf5050f6a9d8193125/LICENSE.md",
+    "license_bytes": 18656,
+    "license_sha256": "9e5f1b3c610b9c2da5c313bf81d577a7d1acec686bdb0384edefa6df0f90cd94",
+    "trivy_data_source_id": "ghsa",
+    "covers_all_database_feeds": false,
+    "fixtures": [
+      {
+        "ecosystem": "pypi",
+        "name": "requests",
+        "positive_version": "2.20.0",
+        "fixed_version": "2.31.0",
+        "cve": "CVE-2023-32681",
+        "advisory": "GHSA-j8r2-6x86-q33q",
+        "url": "https://raw.githubusercontent.com/github/advisory-database/c18aa0e82ff81450c9a57bdf5050f6a9d8193125/advisories/github-reviewed/2023/05/GHSA-j8r2-6x86-q33q/GHSA-j8r2-6x86-q33q.json",
+        "bytes": 5346,
+        "sha256": "2ec79fe91b41e6b681da97c1edc7db44a6a47a77e81e6d5386109c4743bf0c66",
+        "native_match_executed": false
+      },
+      {
+        "ecosystem": "npm",
+        "name": "semver",
+        "positive_version": "7.5.1",
+        "fixed_version": "7.5.2",
+        "cve": "CVE-2022-25883",
+        "advisory": "GHSA-c2qf-rxjj-qqgw",
+        "url": "https://raw.githubusercontent.com/github/advisory-database/c18aa0e82ff81450c9a57bdf5050f6a9d8193125/advisories/github-reviewed/2023/06/GHSA-c2qf-rxjj-qqgw/GHSA-c2qf-rxjj-qqgw.json",
+        "bytes": 3691,
+        "sha256": "955a08aac8ac34aada62d20397b3c331c9a03473d37a5ffcf7a6a7e79b728f37",
+        "native_match_executed": false
+      }
+    ]
+  },
+  "copier_integration": {
+    "owned_process": true,
+    "operator_input_io_in_supervised_process": true,
+    "pending_delivery_in_absolute_deadline": true,
+    "nonce_bound_cleanup_in_supervised_process": true,
+    "controller_opens_original_operator_files": false,
+    "arbitrary_kernel_io_claimed_interruptible": false,
+    "scheduler_lease_retention_wired": false,
+    "registered": false
+  }
+}

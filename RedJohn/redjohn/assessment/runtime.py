@@ -31,6 +31,9 @@ if TYPE_CHECKING:
     from redjohn.assessment.browser_tls import BrowserTLSConfig
     from redjohn.assessment.browser_workflow import ContinuousBrowserWorkflow
     from redjohn.assessment.contracts import ScannerSession
+    from redjohn.assessment.intelligence import VulnerabilityCorrelator
+    from redjohn.assessment.lab_contract import LabPlan, OwnedFixtureBinding, Phase
+    from redjohn.assessment.lab_validation import LabValidation, LabValidationAdapter
     from redjohn.assessment.oast import OASTAdapter
     from redjohn.assessment.policy import EngagementPolicy
     from redjohn.assessment.session_refresh import SessionRefreshService
@@ -74,8 +77,20 @@ class AssessmentRuntime:
         prowler_config: dict[str, Any] | None = None,
         kube_bench_config: dict[str, Any] | None = None,
         browser_auth_flow_config: dict[str, Any] | None = None,
+        lab_validation_config: dict[str, Any] | None = None,
+        os_memory_config: dict[str, Any] | None = None,
     ) -> None:
         policy.authorize(caller)
+        lab_memory = None
+        if lab_validation_config is not None:
+            from redjohn.assessment.lab_configuration import validate_lab_configuration  # noqa: PLC0415
+
+            lab_memory = validate_lab_configuration(
+                lab_validation_config,
+                os_memory_config,
+                (envelope or ResourceEnvelope()).total_memory_budget,
+                policy,
+            )
         nmap_service_config = None
         if nmap_config is not None:
             from redjohn.assessment.service_tools import NmapServiceConfig  # noqa: PLC0415
@@ -150,6 +165,7 @@ class AssessmentRuntime:
             nmap_config=nmap_config,
             prowler_config=prowler_config,
             kube_bench_config=kube_bench_config,
+            lab_validation_configured=lab_memory is not None,
         )
         self.technology = TechnologyDetector(store.path)
 
@@ -208,6 +224,27 @@ class AssessmentRuntime:
                 session_recovery_enabled=session_recovery_enabled,
             ),
         }
+        self.lab_validation: LabValidation | None = None
+        self.lab_correlator: VulnerabilityCorrelator | None = None
+        self.lab_adapter: LabValidationAdapter | None = None
+        if lab_memory is not None:
+            from redjohn.assessment.intelligence import VulnerabilityCorrelator  # noqa: PLC0415
+            from redjohn.assessment.lab_validation import LabValidation, LabValidationAdapter  # noqa: PLC0415
+            from redjohn.assessment.lab_worker import LabWorker  # noqa: PLC0415
+
+            self.lab_validation = LabValidation(store, policy, caller=caller)
+            self.lab_correlator = VulnerabilityCorrelator(
+                store.path, lab_validation=self.lab_validation
+            )
+            self.lab_adapter = LabValidationAdapter(
+                self.lab_validation,
+                LabWorker(
+                    store.path.parent / "owned-lab-workers",
+                    memory_config=lab_memory,
+                    owner_budget=self.governor.envelope.total_memory_budget,
+                ),
+            )
+            adapters["owned_lab_regression"] = self.lab_adapter
         if self.post_capture is not None:
             adapters["browser_post_capture"] = BrowserInventoryAdapter(
                 self.browser,
@@ -521,14 +558,54 @@ class AssessmentRuntime:
             **self.store.followup_status(self.policy),
         }
 
+    def bind_owned_lab_fixture(self, binding: OwnedFixtureBinding) -> str:
+        if self.lab_validation is None:
+            raise ValueError("owned_lab_not_configured")
+        return self.lab_validation.bind_fixture(binding)
+
+    def create_owned_lab_plan(
+        self, candidate_ref: str, surface_id: str, fixture_key: str
+    ) -> LabPlan:
+        if self.lab_validation is None:
+            raise ValueError("owned_lab_not_configured")
+        return self.lab_validation.create(candidate_ref, surface_id, fixture_key)
+
+    def submit_owned_lab(
+        self, plan_ref: str, phase: Phase, fixture_key: str, *, retest_revision: str = ""
+    ) -> str:
+        if self.lab_validation is None:
+            raise ValueError("owned_lab_not_configured")
+        return self.lab_validation.submit(
+            plan_ref, phase, fixture_key, retest_revision=retest_revision
+        )
+
+    def validate_owned_lab(self, plan_ref: str, before_job: str, fixed_job: str) -> dict[str, Any]:
+        if self.lab_validation is None or self.lab_correlator is None:
+            raise ValueError("owned_lab_not_configured")
+        from redjohn.assessment.proof_bound_correlation import ProofBoundCorrelation  # noqa: PLC0415
+
+        proof = ProofBoundCorrelation(self.lab_validation)
+        assertion = proof.validate(plan_ref, before_job, fixed_job)
+        self.lab_correlator.add(self.policy.engagement_id, proof.edge(assertion["assertion_ref"]))
+        return assertion
+
+    def owned_lab_status(self) -> dict[str, Any]:
+        from redjohn.assessment.lab_configuration import owned_lab_status  # noqa: PLC0415
+
+        return owned_lab_status(self.lab_validation)
+
     async def close(self) -> None:
         # A failing optional component cannot skip the other owners' cleanup.
         # Keep the existing close order and preserve chained cleanup failures.
         async with AsyncExitStack() as cleanup:
             cleanup.callback(self.governor.close)
             cleanup.callback(self.technology.close)
+            if self.lab_correlator is not None:
+                cleanup.callback(self.lab_correlator.close)
             cleanup.callback(self.control.close)
             cleanup.push_async_callback(self.browser.close)
+            if self.lab_adapter is not None:
+                cleanup.push_async_callback(self.lab_adapter.cleanup)
             if self.oast is not None:
                 cleanup.push_async_callback(self.oast.close)
 
