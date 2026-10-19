@@ -92,7 +92,7 @@ async def run(root: Path, memory_config, scenario):  # noqa: PLR0912, PLR0915 - 
                             break
                         await asyncio.sleep(0.01)
                 await before.wait_requests(2)
-                await coordinator.cancel(before_job)
+                await coordinator.cancel()
                 await task
             else:
                 await coordinator.run_batch(max_jobs=1)
