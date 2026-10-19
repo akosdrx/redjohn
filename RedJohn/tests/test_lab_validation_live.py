@@ -71,10 +71,12 @@ async def test_actual_owned_header_regression_namespace_limits_restart_and_contr
             *command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
         )
         stdout, stderr = await asyncio.wait_for(process.communicate(), 55)
-        assert process.returncode == 0, (
-            stdout.decode(errors="replace"),
-            stderr.decode(errors="replace"),
-        )
+        if process.returncode != 0:
+            pytest.fail(
+                f"stdout:\n{stdout.decode(errors='replace')}\n"
+                f"stderr:\n{stderr.decode(errors='replace')}",
+                pytrace=False,
+            )
         result = json.loads((tmp_path / "run/result.json").read_text())
         hard = json.loads(receipt.read_text())
         assert hard["process_cleanup_verified"] is True

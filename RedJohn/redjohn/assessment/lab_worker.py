@@ -188,10 +188,23 @@ class LabWorker:
             admit()
             sent = True
 
+        observed_header: str | None = None
+
+        def inspect_response(
+            url: str, _status: int, fields: tuple[tuple[str, str], ...]
+        ) -> None:
+            nonlocal observed_header
+            if url != plan.url:
+                raise PolicyDenied("lab_transport_context_mismatch")
+            values = [value for name, value in fields if name == HEADER]
+            if len(values) > 1 or (values and len(values[0].encode()) > 128):
+                raise LabDenied("lab_header_budget")
+            observed_header = values[0] if values else None
+
         def complete(url: str, method: str, status: int, headers: dict[str, str]) -> None:
             if url != plan.url or method != "GET" or len(transport) >= 1:
                 raise PolicyDenied("lab_transport_context_mismatch")
-            value = headers.get(HEADER)
+            value = headers.get(HEADER, observed_header)
             if value is not None and len(value.encode()) > 128:
                 raise LabDenied("lab_header_budget")
             transport.append(
@@ -212,6 +225,7 @@ class LabWorker:
             max_wire_bytes=131072,
             rewrite_url=rewrite,
             request_admission=admission,
+            response_policy=inspect_response,
             on_complete=complete,
         )
         try:
@@ -227,7 +241,7 @@ class LabWorker:
                 self.proxy.url,
                 workspace,
                 read_only_paths=(payload,),
-                max_connections=1,
+                max_connections=4,
                 max_stream_bytes=131072,
                 timeout_seconds=min(timeout, 10),
             )
