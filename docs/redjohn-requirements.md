@@ -1,19 +1,23 @@
 # Követelménykövetés — master prompt 2.0
 
-**2026-10-18, aktuális ellenőrzési határ:** a korábbi, ténylegesen lezárt Ubuntu
-x64/ARM64 Actions-kör SHA-ja `57141b25ed32169e24d0065b4bc21a0422e83fab`
-(1225 pass/platform, 320 valódi integráció/platform, 0 fail/skip).
-Az új cache/session, közös SDK/MCP/Shell-életciklus, felületi tesztek és vegyes
-terhelés külön, `5cfd51d286c65558b92a6c070bcd7edd5a8b432b` forráson futnak:
-[aktuális Actions](https://github.com/akosdrx/redjohn/actions/runs/39144694827).
-Az elindított futás még nem sikeres eredmény. A táblák régebbi mérési soraiban
-szereplő hozzáférési/tesztállapotok történeti baseline-ok; a követett teljes
-feladat a completion ledgerben marad nyitott. A felhasználó az élő cloud/Kubernetes
-hozzáférést igénylő igazolást későbbre halasztotta; ez nem live siker.
+**2026-10-19, lezárt ellenőrzési határ:** a véglegesített és mindkét architektúrán
+(`Ubuntu 24.04 x64 / Python 3.13.16` és `Ubuntu 24.04 arm64 / Python 3.12.3`)
+sikeresen lezárt Ubuntu Actions-kör SHA-ja `fd7c0d41df9204e57d8136194336bee2e2378a93`
+(tree `1cda168ca12323c4c078e221e6a2e51e87a6c8ec`):
+- [Teljes Ubuntu-validáció (Run 39241380765)](https://github.com/akosdrx/redjohn/actions/runs/39241380765):
+  platformonként **1548 Python-regresszió**, **443 valódi integráció**, **14 frontend**,
+  **21 Go TUI teszt**, **120 ciklus / >1200s vegyes terhelés (`mixed_soak`)**, **0 fail/error/skip**,
+  789 forrás- és 295 bizonyítékfájl-hash egyezéssel.
+- [Natív komponens smoke (Run 39241380785)](https://github.com/akosdrx/redjohn/actions/runs/39241380785):
+  platformonként **1548 Python-regresszió** és **24/24 valódi natív komponenseset**
+  (`cleanup-proof`: 1, `lab`: 4, `memory`: 6, `network`: 8, `preparation`: 1, `service`: 4),
+  **0 fail/error/skip**, 789 forrás- és 73 bizonyítékfájl-hash egyezéssel.
 
-A teljes hátralévő feladat és annak elfogadási kapui egy helyen:
-[RedJohn completion ledger](redjohn-completion-status.md). A kódkatalógus
-generált, és nem téveszti össze a hiányzó konfigurációt a hiányzó adapterrel.
+A táblák régebbi mérési soraiban szereplő hozzáférési/tesztállapotok történeti baseline-ok;
+a véglegesített állapot összefoglalója: [RedJohn completion ledger](redjohn-completion-status.md).
+A felhasználó az élő cloud/Kubernetes hozzáférést igénylő igazolást későbbre halasztotta;
+ez nem live siker. A kódkatalógus generált, és nem téveszti össze a hiányzó konfigurációt
+a hiányzó adapterrel.
 
 Állapotok jelentése: live = tényleges helyi executable/Chromium és saját HTTP(S)
 szerver; fixture/unit = determinista unit/kontraktusteszt, szükség szerint explicit

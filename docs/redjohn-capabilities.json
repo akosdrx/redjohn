@@ -783,6 +783,62 @@
     "recorded_verification_report": "redjohn-source-scanners.md"
   },
   {
+    "id": "trivy_sbom",
+    "tool": "Trivy offline CycloneDX advisory matching",
+    "domains": [
+      "source"
+    ],
+    "profiles": [
+      "safe-production",
+      "active-staging",
+      "isolated-lab"
+    ],
+    "content_types": [
+      ""
+    ],
+    "resource_class": "scanner",
+    "adapter_implemented": true,
+    "binary_names": [],
+    "source": "https://github.com/aquasecurity/trivy/tree/v0.76.0",
+    "license": "Apache-2.0_engine_separate_explicit_advisory_terms",
+    "status": "implemented_requires_native_evidence",
+    "reason": "requires_approved_sbom_and_content_pinned_fresh_offline_database",
+    "cancellation": true,
+    "auth_replay": false,
+    "privilege": "unprivileged",
+    "owner_process_only": false,
+    "live_verified": false,
+    "recorded_verification_report": "redjohn-artifact-runtime.md"
+  },
+  {
+    "id": "wordpress_observe",
+    "tool": "WPScan external offline HTML observation",
+    "domains": [
+      "source"
+    ],
+    "profiles": [
+      "safe-production",
+      "active-staging",
+      "isolated-lab"
+    ],
+    "content_types": [
+      ""
+    ],
+    "resource_class": "scanner",
+    "adapter_implemented": true,
+    "binary_names": [],
+    "source": "https://github.com/wpscanteam/wpscan/tree/f6169f00652c07feb45f57ff2a10e38949c28d56",
+    "license": "WPScan_custom_external_operator_component_own_systems_only",
+    "status": "implemented_requires_native_evidence",
+    "reason": "requires_approved_html_and_external_pinned_ruby_component_no_vulnerability_database",
+    "cancellation": true,
+    "auth_replay": false,
+    "privilege": "unprivileged",
+    "owner_process_only": false,
+    "live_verified": false,
+    "recorded_verification_report": "redjohn-artifact-runtime.md"
+  },
+  {
     "id": "wordpress_assess",
     "tool": "WPScan",
     "domains": [

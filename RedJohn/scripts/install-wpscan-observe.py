@@ -71,7 +71,7 @@ class OfficialRedirects(urllib.request.HTTPRedirectHandler):
 
 def fetch(cache: Path, name: str, url: str, expected: str, maximum: int) -> Path:
     path = cache / name
-    if path.exists():
+    if path.exists() or path.is_symlink():
         if path.is_symlink() or not path.is_file() or path.stat().st_size > maximum:
             raise ValueError("wordpress_archive_cache_type_or_size")
         data = path.read_bytes()

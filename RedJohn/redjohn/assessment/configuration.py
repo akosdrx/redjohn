@@ -57,6 +57,8 @@ def validate_configuration(value: object) -> dict[str, Any]:
         "semgrep",
         "trivy",
         "source_jobs",
+        "trivy_sbom",
+        "wordpress_observe",
         "naabu",
         "dnsx",
         "network_jobs",
@@ -405,10 +407,27 @@ def _configured_source_jobs(
         if (
             not isinstance(item, dict)
             or set(item) - {"capability", "timeout_seconds", "retest_revision"}
-            or item.get("capability") not in {"semgrep_source", "trivy_source"}
+            or item.get("capability")
+            not in {"semgrep_source", "trivy_source", "trivy_sbom", "wordpress_observe"}
         ):
             raise ValueError("invalid_source_job")
         capability = item["capability"]
+        if capability in {"trivy_sbom", "wordpress_observe"}:
+            from redjohn.assessment.artifact_tools import configured_artifact_job  # noqa: PLC0415 - explicit selection only
+
+            specs.append(
+                configured_artifact_job(
+                    capability,
+                    config.get(capability),
+                    policy,
+                    store,
+                    timeout_seconds=item.get(
+                        "timeout_seconds", 30 if capability == "wordpress_observe" else 60
+                    ),
+                    retest_revision=item.get("retest_revision", ""),
+                )
+            )
+            continue
         tool = capability.removesuffix("_source")
         document = config.get(tool)
         if not isinstance(document, dict):
@@ -559,6 +578,8 @@ class ConfiguredAssessment:
                 interactsh_config=config.get("interactsh"),
                 semgrep_config=config.get("semgrep"),
                 trivy_config=config.get("trivy"),
+                trivy_sbom_config=config.get("trivy_sbom"),
+                wordpress_observe_config=config.get("wordpress_observe"),
                 workflow_execution_config=config.get("workflow_execution"),
                 browser_auth_flow_config=config.get("browser_auth_flow"),
                 naabu_config=config.get("naabu"),

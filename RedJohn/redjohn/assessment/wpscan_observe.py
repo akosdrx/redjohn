@@ -1,6 +1,6 @@
 """Explicit offline HTML observations using one reviewed external WPScan method.
 
-This optional adapter is deliberately not registered by the default runtime.
+This optional adapter is composed only by explicit public runtime configuration.
 Only a host-approved immutable HTML source artifact grants execution. A page URL
 is provenance metadata and never supplies HTTP authority or causes a request.
 """

@@ -35,6 +35,8 @@ REPORTS = {
     "mcp_target_read": "redjohn-confined-mcp-target.md",
     "semgrep_source": "redjohn-source-scanners.md",
     "trivy_source": "redjohn-source-scanners.md",
+    "trivy_sbom": "redjohn-artifact-runtime.md",
+    "wordpress_observe": "redjohn-artifact-runtime.md",
     "naabu_ports": "redjohn-network-broker.md",
     "dnsx_resolve": "redjohn-network-broker.md",
     "nmap_services": "redjohn-nmap-service-profile.md",

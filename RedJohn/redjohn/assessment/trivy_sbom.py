@@ -200,6 +200,8 @@ class TrivySBOMConfig:
         )
         if self.artifact_sha256 not in policy.allowed_source_artifacts:
             raise PolicyDenied("trivy_sbom_artifact_not_explicitly_approved")
+        if self.database.origin == "controlled_ghsa_fixture" and policy.profile != "isolated-lab":
+            raise PolicyDenied("trivy_controlled_fixture_requires_isolated_lab")
         self.database.validate()
 
 
@@ -596,7 +598,8 @@ class TrivySBOMAdapter:
             "finding_count": len(findings),
             "requests": 0,
             "publisher_provenance_verified": False,
-            "database_origin": "operator_supplied_content_pins",
+            "database_origin": self.config.database.origin,
+            "official_aggregate_database": False,
             "package_installation_verified": False,
             "image_or_source_tree_scan": False,
             "database_revision": self.config.database.revision,

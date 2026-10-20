@@ -70,6 +70,8 @@ class AssessmentRuntime:
         interactsh_config: dict[str, Any] | None = None,
         semgrep_config: dict[str, Any] | None = None,
         trivy_config: dict[str, Any] | None = None,
+        trivy_sbom_config: dict[str, Any] | None = None,
+        wordpress_observe_config: dict[str, Any] | None = None,
         workflow_execution_config: dict[str, Any] | None = None,
         naabu_config: dict[str, Any] | None = None,
         dnsx_config: dict[str, Any] | None = None,
@@ -158,6 +160,8 @@ class AssessmentRuntime:
             interactsh_config=interactsh_config,
             semgrep_config=semgrep_config,
             trivy_config=trivy_config,
+            trivy_sbom_config=trivy_sbom_config,
+            wordpress_observe_config=wordpress_observe_config,
             workflow_execution_configured=bool(workflow_execution_config and auth_vault_file),
             browser_auth_flow_configured=auth_flow_config is not None,
             naabu_config=naabu_config,
@@ -294,6 +298,18 @@ class AssessmentRuntime:
                     adapters[NETWORK_TOOLS[name]] = NetworkToolAdapter(
                         NetworkToolConfig.from_mapping(name, document), policy, store
                     )
+        if trivy_sbom_config is not None:
+            from redjohn.assessment.trivy_sbom import TrivySBOMAdapter, TrivySBOMConfig  # noqa: PLC0415
+
+            adapters["trivy_sbom"] = TrivySBOMAdapter(
+                TrivySBOMConfig.from_mapping(trivy_sbom_config), policy, store
+            )
+        if wordpress_observe_config is not None:
+            from redjohn.assessment.wpscan_observe import WPScanObserveAdapter, WPScanObserveConfig  # noqa: PLC0415
+
+            adapters["wordpress_observe"] = WPScanObserveAdapter(
+                WPScanObserveConfig.from_mapping(wordpress_observe_config), policy, store
+            )
         if semgrep_config is not None or trivy_config is not None:
             from redjohn.assessment.source_tools import CAPABILITIES as SOURCE_TOOLS  # noqa: PLC0415
             from redjohn.assessment.source_tools import SourceToolAdapter, SourceToolConfig  # noqa: PLC0415

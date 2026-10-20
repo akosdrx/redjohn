@@ -56,6 +56,8 @@ jobs:
       REDJOHN_REQUIRE_SCHEMA_OAST_E2E: '1'
       REDJOHN_REQUIRE_OS_MEMORY: '1'
       REDJOHN_REQUIRE_SOURCE_SCANNER_E2E: '1'
+      REDJOHN_REQUIRE_ARTIFACT_E2E: '1'
+      REDJOHN_REQUIRE_WORDPRESS_OBSERVE_E2E: '1'
       REDJOHN_REQUIRE_NETWORK_SCANNER_E2E: '1'
       REDJOHN_REQUIRE_SERVICE_SCANNER_E2E: '1'
       REDJOHN_REQUIRE_PREPARATION_E2E: '1'
@@ -166,12 +168,15 @@ jobs:
         if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
         id: engines
         run: |
-          python .github/scripts/ci.py run --name linux-dependencies -- timeout 10m bash -c 'sudo apt-get update && sudo apt-get install -y bubblewrap iproute2 apparmor-utils libpcap0.8t64 build-essential pkg-config flex bison && python -m playwright install --with-deps chromium'
+          python .github/scripts/ci.py run --name linux-dependencies -- timeout 10m bash -c 'sudo apt-get update && sudo apt-get install -y bubblewrap iproute2 apparmor-utils libpcap0.8t64 build-essential pkg-config flex bison libxml2-dev libxslt1-dev zlib1g-dev && python -m playwright install --with-deps chromium'
           python .github/scripts/ci.py run --name scanner-install -- timeout 20m bash .github/scripts/install-scanners.sh
           python .github/scripts/ci.py run --name source-scanner-install -- timeout 15m bash .github/scripts/install-source-scanners.sh
           python .github/scripts/ci.py run --name network-scanner-install -- timeout 10m bash .github/scripts/install-network-scanners.sh
           python .github/scripts/ci.py run --name service-scanner-install -- timeout 20m bash .github/scripts/install-service-scanners.sh
           python .github/scripts/ci.py run --name preparation-tool-install -- timeout 5m bash .github/scripts/install-preparation-tools.sh
+      - name: Build the pinned two-advisory licensed SBOM fixture database
+        if: ${{ !cancelled() && steps.engines.outcome == 'success' && steps.go.outcome == 'success' }}
+        run: python .github/scripts/ci.py run --name artifact-database-install -- timeout 10m python .github/scripts/install-sbom-database.py
       - name: Delegate the owned cgroup and restore verified provenance fixtures
         if: ${{ !cancelled() && steps.engines.outcome == 'success' }}
         id: delegation
@@ -200,6 +205,12 @@ jobs:
         if: ${{ !cancelled() && steps.delegation.outcome == 'success' }}
         id: sandbox
         run: python .github/scripts/ci.py run --name sandbox-setup -- python .github/scripts/sandbox.py prepare
+      - name: Build the external offline WordPress runtime inside the owned profile
+        if: ${{ !cancelled() && steps.sandbox.outcome == 'success' }}
+        run: |
+          task_python="$(command -v python)"
+          task_home="$HOME"
+          sudo -E env HOME="$task_home" bash .github/scripts/linux-tests.sh "$task_python" artifact-install
       - name: Attest namespace and memory boundaries without disabling protection
         if: ${{ !cancelled() && steps.sandbox.outcome == 'success' }}
         id: capability

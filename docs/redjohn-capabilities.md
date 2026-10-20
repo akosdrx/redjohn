@@ -4,7 +4,7 @@ A katalógus az aktuális `assessment/registry.py` kódjából készül. A megí
 
 A `redjohn assess health` mutatja az adott gép telepítési/konfigurációs állapotát motorindítás nélkül. A JSON itt platformfüggetlen kódkatalógus; a jegyzőkönyvek történeti futásokat igazolnak, jelenlegi futást nem állítanak.
 
-29 implementált képesség, 3 hiányzó opcionális adapter és 10 tudatosan halasztott alternatíva szerepel a jelenlegi registryben. A master szerinti teljes fennmaradó munka: [követett állapot](redjohn-completion-status.md).
+31 implementált képesség, 3 hiányzó opcionális adapter és 10 tudatosan halasztott alternatíva szerepel a jelenlegi registryben. A master szerinti teljes fennmaradó munka: [követett állapot](redjohn-completion-status.md).
 
 | Capability | Tool | Adapter | Kódstátusz | Forrás / licenc | Mérési jegyzőkönyv |
 |---|---|---|---|---|---|
@@ -35,6 +35,8 @@ A `redjohn assess health` mutatja az adott gép telepítési/konfigurációs ál
 | `mcp_target_read` | RedJohn confined host-bound stdio target read | igen | `implemented_pending_live_proof` | RedJohn-native / project | [mérés](redjohn-confined-mcp-target.md) |
 | `semgrep_source` | Semgrep CE (native OCaml) | igen | `implemented_pending_native_e2e` | [forrás](https://github.com/semgrep/semgrep/tree/v1.181.0) / LGPL-2.1_engine_rules_separate | [mérés](redjohn-source-scanners.md) |
 | `trivy_source` | Trivy filesystem misconfiguration | igen | `implemented_pending_native_e2e` | [forrás](https://github.com/aquasecurity/trivy/tree/v0.76.0) / Apache-2.0_engine_embedded_checks_separate | [mérés](redjohn-source-scanners.md) |
+| `trivy_sbom` | Trivy offline CycloneDX advisory matching | igen | `implemented_requires_native_evidence` | [forrás](https://github.com/aquasecurity/trivy/tree/v0.76.0) / Apache-2.0_engine_separate_explicit_advisory_terms | [mérés](redjohn-artifact-runtime.md) |
+| `wordpress_observe` | WPScan external offline HTML observation | igen | `implemented_requires_native_evidence` | [forrás](https://github.com/wpscanteam/wpscan/tree/f6169f00652c07feb45f57ff2a10e38949c28d56) / WPScan_custom_external_operator_component_own_systems_only | [mérés](redjohn-artifact-runtime.md) |
 | `wordpress_assess` | WPScan | nincs | `adapter_not_implemented` | [forrás](https://github.com/wpscanteam/wpscan) / not_verified_not_redistributed | nincs valódi integrációs igazolás |
 | `cloud_assess` | Prowler | nincs | `adapter_not_implemented` | [forrás](https://github.com/prowler-cloud/prowler) / not_verified_not_redistributed | nincs valódi integrációs igazolás |
 | `kubernetes_benchmark` | kube-bench | nincs | `adapter_not_implemented` | [forrás](https://github.com/aquasecurity/kube-bench) / not_verified_not_redistributed | nincs valódi integrációs igazolás |

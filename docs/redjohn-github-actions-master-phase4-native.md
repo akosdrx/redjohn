@@ -77,3 +77,13 @@ These original artifacts and logs are preserved separately under
 
 Both artifact ZIP SHA256 digests, all 741 source identities and all 59 indexed evidence identities per architecture were independently checked. Full logs, JUnit, versions and measurements are saved under `docs/measurements/master-completion-20261018/github-phase4-reset-native/`. The native workflow explicitly reports `full_project_validated=false`, excludes the browser/SDK/MCP overlap case, and performs no live cloud or Kubernetes audit. Those remain distinct from the full Chromium matrix. Global AppArmor restrictions remained enabled and run-owned cleanup passed on both architectures.
 
+# Completed 24-case native smoke and full Ubuntu validation (2026-10-19)
+
+[Native run 39241380785](https://github.com/akosdrx/redjohn/actions/runs/39241380785) and [Full Ubuntu validation run 39241380765](https://github.com/akosdrx/redjohn/actions/runs/39241380765) completed with **success** on both `Ubuntu 24.04 x64 / Python 3.13.16` and `Ubuntu 24.04 arm64 / Python 3.12.3` for source `fd7c0d41df9204e57d8136194336bee2e2378a93` (tree `1cda168ca12323c4c078e221e6a2e51e87a6c8ec`):
+
+| Workflow | Platform | Python regression | Native / Integration | Soak | Failures / Skips |
+| --- | --- | --- | --- | --- | --- |
+| Native smoke (`39241380785`) | x64 & ARM64 | 1548 passed | 24 passed (`network`: 8, `service`: 4, `preparation`: 1, `memory`: 6, `cleanup-proof`: 1, `lab`: 4) | N/A | 0 failed, 0 errors, 0 skipped |
+| Ubuntu validation (`39241380765`) | x64 & ARM64 | 1548 passed | 443 passed (`real_integration`), 14 frontend, 21 Go | 120 cycles (`x64`: 1206.78s, `ARM64`: 1206.21s) | 0 failed, 0 errors, 0 skipped |
+
+All **789 tracked source SHA256 hashes**, **73 native smoke evidence hashes**, and **295 full Ubuntu validation evidence hashes** per architecture are verified and archived under `docs/measurements/master-completion-20261019/`.

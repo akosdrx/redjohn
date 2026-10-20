@@ -1,7 +1,6 @@
 """Actual offline Ruby/Nokogiri/WPScan-component -> shared scheduler -> SQLite.
 
-The capability is explicitly host-bound only in this candidate test. Default
-product registration remains separate. No live WordPress/version/vulnerability
+The actual public runtime/configuration selects the capability lazily. No live WordPress/version/vulnerability
 assessment is claimed from an immutable owned HTML fixture.
 """
 
@@ -15,13 +14,13 @@ from pathlib import Path
 import pytest
 
 from redjohn.assessment.policy import EngagementPolicy
-from redjohn.assessment.registry import Capability, CapabilityRegistry
-from redjohn.assessment.resources import ResourceEnvelope, ResourceGovernor
-from redjohn.assessment.scheduler import Scheduler
+from redjohn.assessment.configuration import enqueue_configured_jobs
+from redjohn.assessment.runtime import AssessmentRuntime
+from tests.owned_artifact_execution import supervise_owned_test
+from redjohn.assessment.resources import ResourceEnvelope
 from redjohn.assessment.store import AssessmentStore
 from redjohn.assessment.wpscan_observe import (
     CAPABILITY,
-    WPScanObserveAdapter,
     WPScanObserveConfig,
     wordpress_observe_job,
 )
@@ -68,26 +67,28 @@ def installed_config(page, body):
 
 
 def bound_scheduler(store, policy, config):
-    registry = CapabilityRegistry()
-    assert registry.get(CAPABILITY) is None, "candidate must not silently register itself"
-    registry._capabilities[CAPABILITY] = Capability(
-        CAPABILITY,
-        "WPScan external passive component",
-        domains=("source",),
-        profiles=("isolated-lab",),
-        resource_class="scanner",
-        adapter_implemented=True,
-        license="external_operator_public_source_component",
-        cancellation=True,
+    runtime = AssessmentRuntime(
+        store,
+        policy,
+        caller="operator",
+        envelope=ResourceEnvelope(total_memory_budget=2 * 1024**3, max_workers=1),
+        wordpress_observe_config=config.to_mapping(),
     )
-    governor = ResourceGovernor(ResourceEnvelope(total_memory_budget=2 * 1024**3, max_workers=1))
-    adapter = WPScanObserveAdapter(config, policy, store)
-    scheduler = Scheduler(store, policy, governor, registry, {CAPABILITY: adapter})
-    return scheduler, governor, adapter
+    enqueue_configured_jobs(
+        runtime,
+        store,
+        policy,
+        {"wordpress_observe": config.to_mapping(), "source_jobs": [{"capability": CAPABILITY}]},
+    )
+    return runtime.scheduler, runtime.governor, runtime.scheduler.adapters[CAPABILITY], runtime
 
 
 @pytest.mark.parametrize("kind", ["positive", "generic", "external-dtd"])
-async def test_real_offline_component_observation_and_durable_restart(tmp_path, monkeypatch, kind):
+async def test_real_offline_component_observation_and_durable_restart(
+    tmp_path, monkeypatch, kind, request
+):
+    if await supervise_owned_test(request, tmp_path):
+        return
     body = (
         b'<html><meta name="generator" content="WordPress 6.4.3"></html>'
         if kind == "positive"
@@ -123,13 +124,13 @@ async def test_real_offline_component_observation_and_durable_restart(tmp_path, 
         )
         spec = wordpress_observe_job(config, policy, store)
         job_id = store.submit(policy, [spec])[0]
-        scheduler, governor, adapter = bound_scheduler(store, policy, config)
+        scheduler, governor, adapter, runtime = bound_scheduler(store, policy, config)
         actual_execute, events = WPScanObservationRunner.execute, []
 
         async def recorded(runner, argv, timeout):
             # The actual native call occurs under the same selected worker
             # lease; no second private pool or fixture bypass starts it.
-            assert governor.snapshot()["active"] == {"worker": 1}
+            assert governor.snapshot()["active"] == {"scanner": 1}
             result = await actual_execute(runner, argv, timeout)
             events.append(
                 {
@@ -157,12 +158,13 @@ async def test_real_offline_component_observation_and_durable_restart(tmp_path, 
         assert governor.snapshot()["active"] == {} and adapter.runner is None
         assert not list((tmp_path / "wordpress-observation-workers").glob("job-*"))
         assert not list((tmp_path / "wordpress-observation-workers").glob("snapshot-*"))
+        await runtime.close()
         store.close()
         reopened = AssessmentStore(tmp_path / "state.db")
         assert reopened.submit(policy, [wordpress_observe_job(config, policy, reopened)]) == [
             job_id
         ]
-        second, second_governor, _ = bound_scheduler(reopened, policy, config)
+        second, second_governor, _, second_runtime = bound_scheduler(reopened, policy, config)
         assert await second.run_batch(max_jobs=1) == []
         assert second_governor.snapshot()["active"] == {}
         assert reopened.jobs(policy.engagement_id)[0]["attempt"] == 1
@@ -172,13 +174,18 @@ async def test_real_offline_component_observation_and_durable_restart(tmp_path, 
             ).fetchone()[0]
             == 1
         )
+        await second_runtime.close()
         reopened.close()
     finally:
         server.close()
         await server.wait_closed()
 
 
-async def test_real_native_health_then_durable_cancel_prevents_observation(tmp_path, monkeypatch):
+async def test_real_native_health_then_durable_cancel_prevents_observation(
+    tmp_path, monkeypatch, request
+):
+    if await supervise_owned_test(request, tmp_path):
+        return
     config = installed_config(tmp_path / "owned.html", b"<html>owned</html>")
     store = AssessmentStore(tmp_path / "state.db")
     policy = store.register(
@@ -193,7 +200,7 @@ async def test_real_native_health_then_durable_cancel_prevents_observation(tmp_p
     )
     spec = wordpress_observe_job(config, policy, store)
     job_id = store.submit(policy, [spec])[0]
-    scheduler, governor, adapter = bound_scheduler(store, policy, config)
+    scheduler, governor, adapter, runtime = bound_scheduler(store, policy, config)
     actual_execute, native_health = WPScanObservationRunner.execute, []
 
     async def cancel_after_actual_health(runner, argv, timeout):
@@ -217,4 +224,5 @@ async def test_real_native_health_then_durable_cancel_prevents_observation(tmp_p
     assert governor.snapshot()["active"] == {} and adapter.runner is None
     assert not list((tmp_path / "wordpress-observation-workers").glob("job-*"))
     assert not list((tmp_path / "wordpress-observation-workers").glob("snapshot-*"))
+    await runtime.close()
     store.close()

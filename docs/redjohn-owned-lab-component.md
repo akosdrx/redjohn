@@ -162,14 +162,24 @@ REDJOHN_OS_MEMORY_MEASUREMENTS=/ABSOLUTE/PRIVATE/measurements \
   --junitxml=/ABSOLUTE/PRIVATE/lab-live.junit.xml
 ```
 
-These native cases are **prepared, not locally executed or live-verified** in
-this slice. GitHub Actions must run them against the next frozen commit on both
-Ubuntu architectures before their native result can be called successful.
+All four native cases (`positive`, `slow`, `oversized`, `cancel`) in `test_lab_validation_live.py`
+have been **executed and verified green on both `Ubuntu 24.04 x64` and `Ubuntu 24.04 ARM64`**
+at frozen commit `fd7c0d41df9204e57d8136194336bee2e2378a93` (tree `1cda168ca12323c4c078e221e6a2e51e87a6c8ec`)
+in both [Native smoke run 39241380785](https://github.com/akosdrx/redjohn/actions/runs/39241380785)
+(`4/4 passed`, `0 failed`, `0 skipped` in the `lab` suite) and
+[Full Ubuntu validation run 39241380765](https://github.com/akosdrx/redjohn/actions/runs/39241380765)
+(`443/443 passed` across the complete real integration suite). Two live transport/authority
+details were hardened for this proof:
+1. `LabWorker.execute` provisions `LinuxEgressBoundary(..., max_connections=4)` so the
+   isolated `_egress_worker.py` can maintain its persistent `b"A"` attestation socket while
+   opening `b"S"` HTTP stream relays, and attaches `response_policy=inspect_response` to
+   `BrowserEgressProxy` so raw `X-Content-Type-Options` headers are captured before
+   `on_complete` records transport proof.
+2. In `tests/owned_lab_driver.py`, the `cancel` scenario invokes `await coordinator.cancel()`
+   on the campaign coordinator after cancelling the active job task, ensuring reopened
+   validation authority is blocked by the campaign kill-switch as required.
 
-The runtime/configuration/registry/report hooks and legacy promotion closure are
-implemented. The four actual cases still need completed hosted x64/ARM64 runs
-against the next frozen commit before native success is established. There is
-no automatic lab deployment from CLI JSON and no arbitrary source-execution
+There is no automatic lab deployment from CLI JSON and no arbitrary source-execution
 entry point. A host owner must manage each exact fixture deployment. Automatic
 canonical finding promotion, authenticated fixtures and additional mechanisms
 remain outside this restricted header capability.

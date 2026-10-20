@@ -14,8 +14,15 @@ task_python="$1"
 task_suite="$2"
 task_workspace="$(pwd -P)"
 test "$task_workspace" = "$GITHUB_WORKSPACE"
-case "$task_suite" in regression|integration|capability|soak|native|native-capability) ;; *) exit 2 ;; esac
+case "$task_suite" in regression|integration|capability|soak|native|native-capability|artifact-install) ;; *) exit 2 ;; esac
 test -x "$task_python"
+if test "$task_suite" = artifact-install; then
+  exec aa-exec -p "${REDJOHN_CI_APPARMOR_PROFILE:?}" -- \
+    /usr/bin/setpriv --reuid="$SUDO_UID" --regid="$SUDO_GID" --init-groups \
+    env USER="$SUDO_USER" LOGNAME="$SUDO_USER" \
+    "$task_python" .github/scripts/ci.py run --name artifact-runtime-install -- \
+    timeout --signal=TERM --kill-after=20s 12m bash .github/scripts/install-artifact-runtime.sh
+fi
 if test "$task_suite" = capability || test "$task_suite" = native-capability; then
   # Profile entry happens while privileged, but all probes run after UID/GID
   # and host capabilities have been dropped, just like the real E2E suite.

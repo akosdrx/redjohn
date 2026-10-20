@@ -51,6 +51,8 @@ REAL_FILES = {
     "test_soak_limits_live.py",
     "test_mcp_authorization_live.py",
     "test_source_tools_live.py",
+    "test_trivy_sbom_live.py",
+    "test_wpscan_observe_live.py",
     "test_inventory_workflows_live.py",
     "test_workflow_execution_failures_live.py",
     "test_extended_wire_replay_live.py",
@@ -111,7 +113,7 @@ NAMESPACE_ONLY_FILES = {"test_source_tools_live.py", "test_legacy_shell_boundary
 PLATFORM_FILES = {"test_legacy_shell_darwin_live.py": "Darwin", "test_owned_memory_live.py": "Linux",
                   "test_lab_validation_live.py": "Linux"}
 KERNEL_ONLY_FILES = {"test_owned_memory_live.py"}
-NAMESPACE_CGROUP_FILES = {"test_lab_validation_live.py"}
+NAMESPACE_CGROUP_FILES = {"test_lab_validation_live.py", "test_trivy_sbom_live.py", "test_wpscan_observe_live.py"}
 LOCAL_PROCESS_CASES = {
     "test_real_stdio_unknown_mutation_is_never_replayed",
     "test_real_stdio_cancellation_terminates_worker_and_releases_lease",
@@ -139,13 +141,6 @@ def pytest_collection_modifyitems(config, items):
         filename = Path(str(item.path)).name
         name = item.originalname or item.name
         real = filename in REAL_FILES or name in REAL_CASES
-        if filename == "test_wpscan_observe_live.py" and os.environ.get("REDJOHN_REQUIRE_WORDPRESS_OBSERVE_E2E") != "1":
-            if suite in ("all", "integration"):
-                non_applicable.append({"nodeid": item.nodeid, "required_platform": "Linux+wordpress_observe_fixture",
-                                   "actual_platform": platform.system(),
-                                   "reason": "candidate_fixture_not_installed_not_executed_not_passed"})
-            deselected.append(item)
-            continue
         if filename in PLATFORM_FILES and platform.system() != PLATFORM_FILES[filename]:
             if suite == "all" or (suite == "integration") == real:
                 non_applicable.append({"nodeid": item.nodeid, "required_platform": PLATFORM_FILES[filename],

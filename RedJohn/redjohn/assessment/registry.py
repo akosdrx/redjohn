@@ -375,6 +375,30 @@ CAPABILITIES = (
             ),
         )
     ),
+    Capability(
+        "trivy_sbom",
+        "Trivy offline CycloneDX advisory matching",
+        domains=("source",),
+        resource_class="scanner",
+        adapter_implemented=True,
+        cancellation=True,
+        source="https://github.com/aquasecurity/trivy/tree/v0.76.0",
+        license="Apache-2.0_engine_separate_explicit_advisory_terms",
+        status="implemented_requires_native_evidence",
+        reason="requires_approved_sbom_and_content_pinned_fresh_offline_database",
+    ),
+    Capability(
+        "wordpress_observe",
+        "WPScan external offline HTML observation",
+        domains=("source",),
+        resource_class="scanner",
+        adapter_implemented=True,
+        cancellation=True,
+        source="https://github.com/wpscanteam/wpscan/tree/f6169f00652c07feb45f57ff2a10e38949c28d56",
+        license="WPScan_custom_external_operator_component_own_systems_only",
+        status="implemented_requires_native_evidence",
+        reason="requires_approved_html_and_external_pinned_ruby_component_no_vulnerability_database",
+    ),
     *tuple(
         Capability(id=name, tool=tool, binary_names=bins, domains=domains, source=source)
         for name, tool, bins, domains, source in (
@@ -540,6 +564,8 @@ class CapabilityRegistry:
         interactsh_config: dict[str, Any] | None = None,
         semgrep_config: dict[str, Any] | None = None,
         trivy_config: dict[str, Any] | None = None,
+        trivy_sbom_config: dict[str, Any] | None = None,
+        wordpress_observe_config: dict[str, Any] | None = None,
         naabu_config: dict[str, Any] | None = None,
         dnsx_config: dict[str, Any] | None = None,
         nmap_config: dict[str, Any] | None = None,
@@ -563,6 +589,11 @@ class CapabilityRegistry:
         self._lab_validation_configured = lab_validation_configured
         self._ffuf_config = None
         self._source_configs = _source_configurations(semgrep_config, trivy_config)
+        from redjohn.assessment.artifact_tools import artifact_configurations  # noqa: PLC0415
+
+        self._artifact_configs = artifact_configurations(
+            trivy_sbom_config, wordpress_observe_config
+        )
         self._network_configs = _network_configurations(naabu_config, dnsx_config)
         self._preparation_configs = _preparation_configurations(prowler_config, kube_bench_config)
         self._nmap_config = None
@@ -654,7 +685,7 @@ class CapabilityRegistry:
             for value in (binary.get("path"), binary.get("version"), bundle.get("sha256"))
         )
 
-    def execution_versions(self, capability: str) -> ExecutionVersions:  # noqa: PLR0911
+    def execution_versions(self, capability: str) -> ExecutionVersions:  # noqa: PLR0911, PLR0912 - explicit optional version identities
         """Return configured cache/job identities, never runtime version proof."""
         if capability == "owned_lab_regression":
             from redjohn.assessment.lab_contract import VERSION  # noqa: PLC0415
@@ -674,6 +705,9 @@ class CapabilityRegistry:
         if capability in self._network_configs:
             network = self._network_configs[capability]
             return {"tool_version": network.version, "template_version": network.revision}
+        if capability in self._artifact_configs:
+            artifact = self._artifact_configs[capability]
+            return {"tool_version": artifact.version, "template_version": artifact.revision}
         if capability in self._source_configs:
             source = self._source_configs[capability]
             return {"tool_version": source.version, "template_version": source.revision}
@@ -720,6 +754,14 @@ class CapabilityRegistry:
         self._mcp_target_versions = versions
 
     def _binary_presence(self, entry: Capability) -> tuple[str | None, str | None]:  # noqa: PLR0911 - explicit pin prevents PATH fallback
+        if entry.id in self._artifact_configs:
+            selected = self._artifact_configs[entry.id]
+            path = (
+                selected.binary.path
+                if entry.id == "trivy_sbom"
+                else selected.runtime.root / "ruby/bin/ruby"
+            )
+            return (str(path) if path.is_file() else None, "configured")
         configured = (
             self._preparation_configs[entry.id].binary
             if entry.id in self._preparation_configs
@@ -774,6 +816,19 @@ class CapabilityRegistry:
             ):
                 row.update(
                     status="blocked_missing_dependency", reason="oast_crypto_or_httpx_missing"
+                )
+            elif (
+                entry.id in {"trivy_sbom", "wordpress_observe"}
+                and entry.id not in self._artifact_configs
+            ):
+                row.update(
+                    status="blocked_configuration",
+                    reason="explicit_approved_artifact_and_pinned_runtime_missing",
+                )
+            elif entry.id in self._artifact_configs and not row["binary_path"]:
+                row.update(
+                    status="blocked_missing_dependency",
+                    reason="configured_artifact_runtime_not_installed",
                 )
             elif entry.adapter_implemented and entry.binary_names and not row["binary_path"]:
                 row.update(status="blocked_missing_dependency", reason="binary_not_installed")

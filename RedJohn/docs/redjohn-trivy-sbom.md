@@ -6,11 +6,12 @@ explicitly approved CycloneDX JSON file and an operator-supplied immutable
 Trivy vulnerability database snapshot. It never installs a dependency, downloads
 a database, opens a registry, builds an image or executes source code.
 
-This first slice contains standalone configuration, runner, adapter, job factory
-and contracts. Shared registry/runtime/configuration selection and the reviewed
-official-database CI preparation step are pending. No new CLI launch command or
-hosted native success is claimed by these files alone. The existing scanner
-installer, working misconfiguration integration and existing job IDs are unchanged.
+Shared registry/runtime/configuration selection is implemented through the explicit
+`trivy_sbom` configuration and `source_jobs` selector. CI prepares a separately
+labelled controlled GHSA fixture database and executes real Trivy matching;
+[the runtime guide](../../docs/redjohn-artifact-runtime.md) describes the scope and
+current verification state. The official aggregate database is not downloaded
+or licensed by this fixture. Existing misconfiguration behavior is preserved.
 
 ## Supported scope and truthful results
 

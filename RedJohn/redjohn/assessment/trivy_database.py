@@ -105,6 +105,7 @@ class DatabaseSnapshot:
     provenance_file: Path
     provenance_sha256: str
     max_age_seconds: int = 86400
+    origin: str = "operator_oci"
 
     @classmethod
     def from_mapping(cls, value: object) -> DatabaseSnapshot:
@@ -116,11 +117,12 @@ class DatabaseSnapshot:
             "provenance_file",
             "provenance_sha256",
             "max_age_seconds",
+            "origin",
         }
         if (
             not isinstance(value, dict)
             or set(value) - fields
-            or fields - {"max_age_seconds"} - set(value)
+            or fields - {"max_age_seconds", "origin"} - set(value)
         ):
             raise ValueError("trivy_exact_database_snapshot_required")
         for field in ("database_sha256", "metadata_sha256", "provenance_sha256"):
@@ -134,6 +136,8 @@ class DatabaseSnapshot:
             for key in ("root", "provenance_file")
         ):
             raise ValueError("trivy_database_absolute_paths_required")
+        if value.get("origin", "operator_oci") not in {"operator_oci", "controlled_ghsa_fixture"}:
+            raise ValueError("trivy_database_origin_invalid")
         size, age = value["database_bytes"], value.get("max_age_seconds", 86400)
         if type(size) is not int or not 1 <= size <= MAX_DATABASE_BYTES:
             raise ValueError("trivy_database_disk_budget_exceeded")
@@ -147,6 +151,7 @@ class DatabaseSnapshot:
             Path(value["provenance_file"]),
             value["provenance_sha256"],
             age,
+            value.get("origin", "operator_oci"),
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -158,6 +163,7 @@ class DatabaseSnapshot:
             "provenance_file": str(self.provenance_file),
             "provenance_sha256": self.provenance_sha256,
             "max_age_seconds": self.max_age_seconds,
+            "origin": self.origin,
         }
 
     def validate(self) -> None:
@@ -174,10 +180,11 @@ class DatabaseSnapshot:
                 self.metadata_sha256,
                 self.provenance_sha256,
                 self.max_age_seconds,
+                self.origin,
             ]
         )
 
-    def read_metadata(self) -> tuple[bytes, bytes, tuple[str, ...]]:
+    def read_metadata(self) -> tuple[bytes, bytes, tuple[str, ...]]:  # noqa: PLR0912 - independent mandatory provenance/freshness gates
         """Worker/local-contract IO; production callers require the owned helper."""
         self.validate()
         descriptor, _info = _open_database(self)
@@ -219,8 +226,18 @@ class DatabaseSnapshot:
             or any(
                 provenance.get(key) != expected
                 for key, expected in (
-                    ("format", "redjohn-trivy-db-provenance-v1"),
-                    ("publisher", "aquasecurity/trivy-db"),
+                    (
+                        "format",
+                        "redjohn-trivy-db-controlled-fixture-v1"
+                        if self.origin == "controlled_ghsa_fixture"
+                        else "redjohn-trivy-db-provenance-v1",
+                    ),
+                    (
+                        "publisher",
+                        "redjohn-local-controlled-fixture"
+                        if self.origin == "controlled_ghsa_fixture"
+                        else "aquasecurity/trivy-db",
+                    ),
                     ("database_sha256", self.database_sha256),
                     ("database_bytes", self.database_bytes),
                     ("metadata_sha256", self.metadata_sha256),
@@ -228,7 +245,13 @@ class DatabaseSnapshot:
             )
         ):
             raise ValueError("trivy_database_provenance_binding_required")
-        if (
+        if self.origin == "controlled_ghsa_fixture":
+            if (
+                provenance["oci_reference"] != ""
+                or provenance["builder_revision"] != "cbebf2ecd6df42d36463844a45e689afee51c70f"
+            ):
+                raise ValueError("trivy_controlled_fixture_builder_required")
+        elif (
             not isinstance(provenance["oci_reference"], str)
             or re.fullmatch(
                 r"ghcr\.io/aquasecurity/trivy-db@sha256:[a-f0-9]{64}", provenance["oci_reference"]
@@ -254,6 +277,13 @@ class DatabaseSnapshot:
         sources = provenance["data_sources"]
         if not isinstance(sources, list) or not 1 <= len(sources) <= 16:
             raise ValueError("trivy_advisory_data_terms_required")
+        if self.origin == "controlled_ghsa_fixture" and (
+            len(sources) != 1
+            or sources[0].get("id") != "ghsa"
+            or sources[0].get("terms_sha256")
+            != "9e5f1b3c610b9c2da5c313bf81d577a7d1acec686bdb0384edefa6df0f90cd94"
+        ):
+            raise ValueError("trivy_controlled_fixture_exact_ghsa_terms_required")
         names = []
         terms_bytes = 0
         for source in sources:

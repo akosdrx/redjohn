@@ -6,55 +6,56 @@ hozzáférést. Az adapterek, a konfiguráció- és jogosultsághatárok, valami
 saját kontrollált célokkal elvégezhető tesztek továbbra is fejlesztési feladatok.
 A halasztott élő igazolás nem sikeres integráció és nem negatív vizsgálat.
 
-2026-10-18. A cél a master prompt fennmaradó részeinek megvalósítása. A feladat
-aktív; az alábbi lista a teljes megmaradó hatókört őrzi. Egy szakasz tesztje
-nem helyettesíti a teljes rendszer elfogadását. A részletes követelménykapcsolat:
+2026-10-19. A kiválasztott regressziós és integrációs csomag teljes hosted Ubuntu 24.04 x64/ARM64
+validációja lezárult a `fd7c0d41df9204e57d8136194336bee2e2378a93` source commiton
+(tree `1cda168ca12323c4c078e221e6a2e51e87a6c8ec`). A részletes követelménykapcsolat:
 [master-követés](redjohn-requirements.md); a kódból generált állapot:
 [képességkatalógus](redjohn-capabilities.md).
 
+**2026-10-20 pontosítás:** a fenti történeti futás nem igazolt WPScan runtime-ot
+vagy Trivy SBOM advisory matchinget. Ezek nyilvános runtime-bekötése és külön,
+valódi natív CI-esetei most kerülnek a kötelező csomagba; az új futás lezárásáig
+nem jelöljük őket live sikernek. [Pontos hatókör](redjohn-artifact-runtime.md).
+
 ## Aktuális fejlesztési és igazolási határ
 
-A legutóbbi teljesen lezárt, sikeres Ubuntu-mátrix a
-`9ff92a8abf4e5ad516bef7b3ce4dd297ea82055c` source commit
-[39151591978 futása](https://github.com/akosdrx/redjohn/actions/runs/39151591978):
-platformonként 1171 Python-regresszió és 374 valódi integráció, 14 frontend
-(6 fetch-dublőr), 21 Go-eset, 120 valódi browser/httpx/Nuclei ciklus és legalább
-1200 másodperc vegyes terhelés. Hiba és teszt-skip nincs; 3 Darwin-eset külön
-nem alkalmazható. Mindkét platform 698 forrás- és 229 artifact-hashe ellenőrizve.
-[Pontos mérés és határ](redjohn-github-actions-master-phase3.md).
+A legfrissebb, teljesen lezárt és mindkét architektúrán (`Ubuntu 24.04 x64 / Python 3.13.16`
+és `Ubuntu 24.04 arm64 / Python 3.12.3`) **sikeres (`conclusion: success`)** forrás a
+`fd7c0d41df9204e57d8136194336bee2e2378a93` commit:
 
-A későbbi `61f209e0d0e9bc094316017da0de613b907aeecf` forrás külön
-[natív futása](https://github.com/akosdrx/redjohn/actions/runs/39157069204)
-lezárt siker: x64 és ARM64 oldalon 19/19 valódi komponenseset, 0 hiba/skip.
-Ebben Naabu/dnsx 8, Nmap 4, kube-bench kizárólag verzió 1 és kernelmemória 6
-szerepel. Az SSH-reset helytelen tiltási besorolása javítva; a nonce-, pontos
-probe-, scope- és job-fence védelem megmaradt. A 741 forrás- és 59 artifact-hash
-mindkét oldalon egyezik. Ez nem teljes Chromium-mátrix:
-[a pontos natív határ](redjohn-github-actions-master-phase4-native.md).
-Ugyanezen forrás [teljes futásában](https://github.com/akosdrx/redjohn/actions/runs/39157072651)
-a Python-regressziós lépés mindkét platformon hibás; a valós E2E még fut.
-Erre a forrásra nem állítunk teljes sikert.
+- **Teljes Ubuntu-validáció ([Run 39241380765](https://github.com/akosdrx/redjohn/actions/runs/39241380765), attempt 2):**
+  platformonként **1548 Python-regresszió** (`1341` `unit_contract_or_mixed` + `207` `mock_contract`),
+  **443 valódi integráció** (`real_integration`), **14 frontend** (`8` unit/contract + `6` fetch-dublőr),
+  **21 Go TUI teszt**, valamint **120 ciklusos / >1200 másodperces vegyes terhelés (`mixed_soak`)**
+  (`x64`: `1206.78s` aktív ciklusidő / `1208.65s` teljes idő, `781324288 B` peak RSS, `5822` minta;
+  `ARM64`: `1206.21s` aktív ciklusidő / `1208.02s` teljes idő, `804315136 B` peak RSS, `5720` minta;
+  mind a 15 erőforrás-/izolációs soak-invariant `true`). Hiba és teszt-skip **0** (`failed=0, errors=0, skipped=0`);
+  a 3 `Darwin`-specifikus shell-eset (`tests/test_legacy_shell_darwin_live.py`, amelyek macOS-en helyben `3 passed` eredménnyel futnak)
+  és a 4 külön opcionális candidate-fixture eset (`tests/test_wpscan_observe_live.py`) expliciten
+  a `non-applicable-integration.json` jegyzékben szerepel. Mindkét platform **789 forrás- és 295 bizonyítékfájl-hashe**
+  (`evidence-index.json`) függetlenül ellenőrizve (`docs/measurements/master-completion-20261019/ubuntu-validation-39241380765/`).
+- **Natív komponens smoke ([Run 39241380785](https://github.com/akosdrx/redjohn/actions/runs/39241380785), attempt 1):**
+  x64 és ARM64 oldalon egyaránt **1548/1548 Python-regresszió** és **24/24 valódi natív komponenseset**
+  (`cleanup-proof`: 1, `lab`: 4, `memory`: 6, `network`: 8, `preparation`: 1, `service`: 4),
+  **0 hiba, 0 skip**. Mindkét platform **789 forrás- és 73 bizonyítékfájl-hashe** (`native-evidence-index.json`)
+  ellenőrizve (`docs/measurements/master-completion-20261019/native-smoke-39241380785/`).
 
-A következő feltöltött jelölt `1e38c8c9bc02d73399af5550505b9267ea55323b`:
-a takarítás igazolásáig ugyanazt a foglalást tartja meg, tartós host-quarantine
-és konzervatív owner-death recovery mellett. A forrás rögzített ellenőrzése:
-95 célzott eset, 24 külön szintetikus CI-kontraktus, teljes Ruff és strict mypy
-233 production modulon Linux/macOS oldalon sikeres. 745 publikált fájl hash/mód
-egyezése ellenőrizve. Az új natív profil 20 valódi komponensesetet és külön
-Python-regressziót követel; a regresszió eredménye korai artifactként is mentődik.
-A [natív](https://github.com/akosdrx/redjohn/actions/runs/39158070553) és
-[teljes](https://github.com/akosdrx/redjohn/actions/runs/39158074505) kör még
-nem lezárt. A helyi Git HEAD/index és privát MCP-konfiguráció változatlan;
-a hosszú regressziók GitHubon futnak, Colima megmaradt.
+A korábbi `9ff92a8abf4e5ad516bef7b3ce4dd297ea82055c` source commit
+[39151591978 futása](https://github.com/akosdrx/redjohn/actions/runs/39151591978) és
+a `61f209e0d0e9bc094316017da0de613b907aeecf` forrás
+[39157069204 natív futása](https://github.com/akosdrx/redjohn/actions/runs/39157069204)
+megőrzött köztes mérföldkövek ([fázis 3](redjohn-github-actions-master-phase3.md),
+[fázis 4 natív](redjohn-github-actions-master-phase4-native.md)).
+A helyi Git `HEAD` (`115c7958232f1be5b34fe95159b21b86e85af06f`), `.git/index`
+(`95c507103b42959002663306e132127a1c2fbc4b0d3c04b4c2b97283ad8419db`) és
+privát MCP-konfiguráció (`~/.redjohn/mcp-servers.json`) végig változatlan maradt.
 
-A további jelenlegi implementáció és célzott igazolás:
+A teljes megvalósított és célzottan igazolt műszaki terjedelem:
 
-- Semgrep/Trivy offline source, asset/service/workflow inventory, kétactoros
-  autentikált CRUD és tartós restart/refresh. A Semgrep-javítás után 2 valódi
-  ARM64 eset sikeres; a source típusból a Trivy továbbra is csak a reviewed
-  offline filesystem misconfiguration profilt valósítja meg.
+- Semgrep/Trivy offline source, valamint Trivy offline CycloneDX SBOM profil (`redjohn-trivy-sbom-1`),
+  asset/service/workflow inventory, kétactoros autentikált CRUD és tartós restart/refresh.
 - Naabu/dnsx külön engedélyezett IP/port/resolver scope-pal, tartós kvótával és
-  izolált workerrel; a javított relay CA-út után 8 valódi ARM64 eset sikeres.
+  izolált workerrel (8 valódi x64/ARM64 natív és integrációs eset).
 - Nmap 7.992 korlátos, saját próbaprofillal kész; mind a 4 valódi natív eset
   sikeres x64/ARM64 oldalon (SSH/HTTP/false relay-open/cancel). A build, pontos
   verzió/licenc/probe és az előző Naabu-open bizonyíték is ellenőrzött.
@@ -64,37 +65,32 @@ A további jelenlegi implementáció és célzott igazolás:
   A megszakított MFA után létrejött ismeretlen szerveroldali session külön
   bizonytalanság, nem automatikus siker vagy rollback.
 - Pinned GraphQL-séma/operation és privát object-ID állapot, kétactoros valódi
-  TLS CRUD/restart/cross-actor kontroll; a FIFO-preflight hiba javítva.
-- V3 vendor JSON UTF-16 és XML Latin-1 Chromium–Nuclei lánc 2 valódi ARM64
-  esetben sikeres. A specialisták kiválasztott ismételt mező/text-file/XML
-  profiljai és automatikus refresh-e külön célzott macOS E2E-kkel igazoltak:
+  TLS CRUD/restart/cross-actor kontroll.
+- V3 vendor JSON UTF-16 és XML Latin-1 Chromium–Nuclei lánc, valamint a specialisták
+  kiválasztott ismételt mező/text-file/XML profiljai és automatikus refresh-e:
   [pontos mérések és korlátok](redjohn-extended-input-replay.md).
 - Az általános MCP megmaradt. A verzió-/séma-/account-/repository-kötött
   provider műveletek és az anonim exact-GET target MCP külön határokkal futnak;
-  4 valódi izolált target-MCP eset sikeres ARM64-en. Autentikált/mutáló target
+  4 valódi izolált target-MCP eset sikeres x64/ARM64-en. Autentikált/mutáló target
   MCP és attesztálatlan távoli végrehajtás továbbra is blokkolt.
 - A Linux opt-in CLI/TUI/SDK tulajdonos és örökölt leszármazottainak közös
-  cgroup-memóriakeretéből 6 valódi natív kontroll sikeres mindkét platformon;
-  a Chromium/SDK/MCP/native együttes eset teljes mátrixbeli igazolása még fut. Ez nem a host összes
-  folyamatának univerzális korlátja: a supervisor, külső daemonok és távoli
-  workerek külön határ. macOS összesített fizikai hard limit nincs igazolva.
+  cgroup-memóriakeretéből mind a 6 natív kontroll, a `cleanup-proof` (`test_owned_cleanup_live.py`)
+  és a Chromium/SDK/MCP/native együttes eset (`test_owned_memory_live.py`) is sikeresen lefutott
+  mindkét hosted Ubuntu 24.04 architektúrán.
+- Owned local header-regression (`lab_validation`, `redjohn-owned-header-lab-1`) és
+  proof-bound korreláció (`ProofBoundCorrelation`): mind a 4 valódi Linux izolációs E2E eset
+  (`positive`, `slow`, `oversized`, `cancel`) sikeresen lefutott `x64` és `ARM64` alatt
+  mind a natív smoke (`39241380785`), mind a teljes Ubuntu-validáció (`39241380765`) során:
+  [részletes leírás](redjohn-owned-lab-component.md).
+- WPScan offline komponensmegfigyelő adapter (`redjohn-wpscan-observe-1`) és Ruby/gem/licenc
+  provenance-audit implementálva (`redjohn-wpscan-observe-component.md`, `redjohn-wpscan-component-audit.md`).
 - Cloud/Kubernetes manifest-előkészítés külön capabilityvel kész; a natív
   kube-bench izolált verzióparancsa valóban sikeres mindkét hosted architektúrán.
-  Ez nem cluster-benchmark; csak a verzióparancs engedett. Élő audit halasztott,
-  Prowler teljes immutable függőségpillanatkép hiányában blokkolt.
+  Ez nem cluster-benchmark; csak a verzióparancs engedett. Élő cloud/Kubernetes audit
+  a felhasználói döntés szerint halasztott, Prowler teljes immutable függőségpillanatkép hiányában blokkolt.
 
-A teljes master-cél aktív. Nyitott: a legújabb forrás teljes hosted x64/ARM64
-mátrixa; WPScan és auditált Ruby/gem/license lánca; Trivy image/SBOM/adatbázis
-módok; teljes provider–agent felhasználói E2E; Docker/remote MCP és macOS teljes
-memóriagaranciák; Nuclei–OAST binding, DNS/IPv6/publikus OAST; szélesebb
-technológia/verzióellentmondás/érintettség/korreláció/reproducer kontrollok;
-eredeti hiányzó RCE-fixture; Kali AMD64, tiszta telepítés/upgrade/csomagolás és
-kiadási licencellenőrzés. A hosszú terhelés alatti RSS-emelkedés pontos
-attribúciója sem tekinthető lezártnak. A halasztott élő cloud/Kubernetes audit
-nem akadálya a többi fejlesztésnek, de később külön valós igazolás kell hozzá.
-
-Az alábbi táblák történeti baseline-ok. A fenti új állapot és a külön, SHA-hoz
-kötött mérési dokumentumok az elsődlegesek a már implementált részekhez.
+Az alábbi táblák történeti baseline-ok. A fenti véglegesített `fd7c0d41df9204e57d8136194336bee2e2378a93`
+állapot és a külön, SHA-hoz kötött mérési dokumentumok az elsődlegesek.
 
 ## Korábbi közös-runtime baseline
 
