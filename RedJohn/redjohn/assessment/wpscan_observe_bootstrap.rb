@@ -4,6 +4,11 @@
 require 'json'
 require 'uri'
 require 'digest'
+# Only pure pinned version/platform helpers; automatic gem activation stays disabled.
+require 'rbconfig'
+require 'rubygems/version'
+require 'rubygems/requirement'
+require 'rubygems/platform'
 raise 'ruby_runtime_identity_mismatch' unless RUBY_ENGINE == 'ruby' && RUBY_VERSION == '3.3.12' && RUBY_PLATFORM.include?('linux')
 require 'nokogiri'
 require 'racc/parser'

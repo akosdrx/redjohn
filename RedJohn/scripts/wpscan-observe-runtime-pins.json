@@ -143,5 +143,31 @@
     "runtime_bytes": 134217728,
     "runtime_file_bytes": 33554432,
     "runtime_manifest_bytes": 1048576
+  },
+  "rubygems_support": {
+    "version": "3.5.22",
+    "commit": "342d4542fdaaea847507a84a1ccef3a157fd03a4",
+    "license": "MIT OR Ruby",
+    "components": [
+      "version.rb",
+      "requirement.rb",
+      "platform.rb",
+      "deprecate.rb"
+    ],
+    "license_files": [
+      {
+        "name": "LICENSE.txt",
+        "url": "https://raw.githubusercontent.com/rubygems/rubygems/342d4542fdaaea847507a84a1ccef3a157fd03a4/LICENSE.txt",
+        "bytes": 2265,
+        "sha256": "a47865226d6998fc4da794f7fbfd11c3c21aa64e258b131a867eec8a2908438c"
+      },
+      {
+        "name": "MIT.txt",
+        "url": "https://raw.githubusercontent.com/rubygems/rubygems/342d4542fdaaea847507a84a1ccef3a157fd03a4/MIT.txt",
+        "bytes": 1138,
+        "sha256": "4dfcfe3109885eda7274c85053f0fe0e1c99ae8777e4c58297d447bf3e859545"
+      }
+    ],
+    "automatic_gem_activation": false
   }
 }

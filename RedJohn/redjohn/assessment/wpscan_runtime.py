@@ -55,6 +55,10 @@ GEM_ARCHIVE_SHAS = {
     "racc": "4a7f6929691dbec8b5209a0b373bc2614882b55fc5d2e447a21aaa691303d62f",
 }
 REQUIRED_LICENSE_SHAS = {
+    "licenses/rubygems/LICENSE.txt": (
+        "a47865226d6998fc4da794f7fbfd11c3c21aa64e258b131a867eec8a2908438c"
+    ),
+    "licenses/rubygems/MIT.txt": "4dfcfe3109885eda7274c85053f0fe0e1c99ae8777e4c58297d447bf3e859545",
     "licenses/ruby/COPYING": "967586d538a28955ec2541910cf63c5ac345fcdea94bfb1f1705a1f6eb36bcbb",
     "licenses/ruby/BSDL": "36a9a6e7347214bbba599a412617204e65bff065dcbe5c46f5cb454c80de9eb0",
     "licenses/ruby/LEGAL": "e849b28d324423e636a3e6bc5d583cdaf4bd046c2b20872c53886b612d01a4a1",

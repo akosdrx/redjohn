@@ -38,7 +38,7 @@ RACC_VERSION = "1.8.1"
 MAX_HTML_BYTES = 256 * 1024
 MAX_SOURCE_BYTES = 64 * 1024
 SHA256 = re.compile(r"[a-f0-9]{64}\Z")
-BOOTSTRAP_SHA256 = "655602083c0febd56c56fda2d4174245a1718746a4ea98f11accec27d17fb724"
+BOOTSTRAP_SHA256 = "4aee6996b6801ee51b9d3677296e2c01bd73eed262081534d35296634bbbfbfb"
 BOOTSTRAP = Path(__file__).with_name("wpscan_observe_bootstrap.rb")
 
 

@@ -443,6 +443,15 @@ def main() -> int:
                 64 * 1024,
             )
             files["licenses/ruby/" + license_pin["name"]] = path.read_bytes(), False
+        for license_pin in pins["rubygems_support"]["license_files"]:
+            path = fetch(
+                args.cache,
+                "rubygems-" + license_pin["name"],
+                license_pin["url"],
+                license_pin["sha256"],
+                65536,
+            )
+            files["licenses/rubygems/" + license_pin["name"]] = path.read_bytes(), False
         for name, paths in {
             "nokogiri": ("LICENSE.md", "LICENSE-DEPENDENCIES.md"),
             "racc": ("COPYING",),
