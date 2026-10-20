@@ -470,6 +470,7 @@ class TrivySBOMAdapter:
             await self.runner.prepare_offline()
             self._fence(job, surface, spec)
             health = await self.runner.healthcheck()
+            self._fence(job, surface, spec)
             stage = "scan"
             raw = await self.runner.execute(self.runner.argv(), spec.timeout_seconds)
             self._fence(job, surface, spec)

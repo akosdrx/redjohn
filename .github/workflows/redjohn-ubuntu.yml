@@ -164,6 +164,12 @@ jobs:
         with:
           path: ~/.cache/ms-playwright
           key: chromium-ubuntu-24.04-${{ runner.arch }}-playwright-1.58.0
+      - name: Cache only content-verified external Ruby and gem archives
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
+        uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        with:
+          path: ${{ runner.temp }}/wordpress-cache
+          key: wordpress-observe-ubuntu-24.04-${{ runner.arch }}-${{ hashFiles('RedJohn/scripts/wpscan-observe-runtime-pins.json', 'RedJohn/scripts/install-wpscan-observe.py') }}
       - name: Install Chromium and reviewed optional scanners sequentially
         if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
         id: engines
@@ -206,11 +212,24 @@ jobs:
         id: sandbox
         run: python .github/scripts/ci.py run --name sandbox-setup -- python .github/scripts/sandbox.py prepare
       - name: Build the external offline WordPress runtime inside the owned profile
+        id: artifact_runtime
         if: ${{ !cancelled() && steps.sandbox.outcome == 'success' }}
         run: |
           task_python="$(command -v python)"
           task_home="$HOME"
           sudo -E env HOME="$task_home" bash .github/scripts/linux-tests.sh "$task_python" artifact-install
+      - name: Preserve native artifact build diagnostics before the long E2E suite
+        if: ${{ always() && steps.artifact_runtime.outcome != 'skipped' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: redjohn-artifact-build-${{ matrix.arch }}-${{ github.sha }}-${{ github.run_attempt }}
+          path: |
+            artifacts/source.json
+            artifacts/wordpress-build/**
+            artifacts/sbom-build/**
+            artifacts/artifact-runtime-install.*
+          if-no-files-found: error
+          retention-days: 14
       - name: Attest namespace and memory boundaries without disabling protection
         if: ${{ !cancelled() && steps.sandbox.outcome == 'success' }}
         id: capability
@@ -225,6 +244,9 @@ jobs:
           task_python="$(command -v python)"
           task_home="$HOME"
           sudo -E env HOME="$task_home" bash .github/scripts/linux-tests.sh "$task_python" integration
+      - name: Require all WordPress and SBOM native cases and genuine owner receipts
+        if: ${{ always() && steps.integration.outcome != 'skipped' }}
+        run: python .github/scripts/ci.py run --name artifact-native-evidence -- python .github/scripts/artifact-evidence.py
       - name: Preserve actual integration results before the mixed soak
         if: ${{ always() && steps.integration.outcome != 'skipped' }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -239,7 +261,7 @@ jobs:
           if-no-files-found: error
           retention-days: 14
       - name: Run mixed scheduler, browser, scanners and maximum-limit pressure
-        if: ${{ !cancelled() && steps.capability.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.capability.outcome == 'success' && steps.integration.outcome == 'success' }}
         run: |
           task_python="$(command -v python)"
           task_home="$HOME"

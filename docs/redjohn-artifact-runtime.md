@@ -59,11 +59,17 @@ sudo -E bash .github/scripts/linux-tests.sh "$(command -v python)" artifact-inst
 
 The second command requires the job-scoped profile/delegation setup. The full
 workflow provides these. To launch an operator assessment after supplying
-reviewed pins/grants, use the existing `redjohn assess run --config` interface;
-consult `redjohn assess run --help` for required output/caller arguments.
+reviewed pins/grants, use the existing command:
+
+```sh
+redjohn assess run --config /absolute/approved-assessment.json --output /absolute/run
+```
+
+The existing CLI resolves the configured operator identity; no extra public
+scanner endpoint or credential is introduced.
 
 `test_optional_artifact_runtime.py` and synthetic DB/engine contracts are local
-unit/contract evidence, **not native E2E**. The four WPScan cases and four SBOM
+unit/contract evidence, **not native E2E**. The four WPScan cases and seven SBOM
 cases are in the required real-integration selection. Native proof is pending
 until the new x64/ARM64 Actions run completes; older runs explicitly excluded
 WPScan and did not execute Trivy SBOM matching.

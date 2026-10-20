@@ -279,6 +279,7 @@ class DatabaseSnapshot:
             raise ValueError("trivy_advisory_data_terms_required")
         if self.origin == "controlled_ghsa_fixture" and (
             len(sources) != 1
+            or not isinstance(sources[0], dict)
             or sources[0].get("id") != "ghsa"
             or sources[0].get("terms_sha256")
             != "9e5f1b3c610b9c2da5c313bf81d577a7d1acec686bdb0384edefa6df0f90cd94"

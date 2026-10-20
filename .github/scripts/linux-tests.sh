@@ -14,7 +14,7 @@ task_python="$1"
 task_suite="$2"
 task_workspace="$(pwd -P)"
 test "$task_workspace" = "$GITHUB_WORKSPACE"
-case "$task_suite" in regression|integration|capability|soak|native|native-capability|artifact-install) ;; *) exit 2 ;; esac
+case "$task_suite" in regression|integration|capability|soak|native|native-capability|artifact-install|artifact-test) ;; *) exit 2 ;; esac
 test -x "$task_python"
 if test "$task_suite" = artifact-install; then
   exec aa-exec -p "${REDJOHN_CI_APPARMOR_PROFILE:?}" -- \
@@ -33,6 +33,19 @@ if test "$task_suite" = capability || test "$task_suite" = native-capability; th
     env USER="$SUDO_USER" LOGNAME="$SUDO_USER" \
     PYTHONPATH="$task_workspace/RedJohn:$task_workspace/.github/scripts" \
     "$task_python" .github/scripts/capabilities.py "${task_capability_args[@]}"
+fi
+if test "$task_suite" = artifact-test; then
+  printf '%s' "$$" > "$REDJOHN_TEST_CGROUP_ROOT/launcher-integration/cgroup.procs"
+  exec aa-exec -p "${REDJOHN_CI_APPARMOR_PROFILE:?}" -- \
+    /usr/bin/setpriv --reuid="$SUDO_UID" --regid="$SUDO_GID" --init-groups \
+    env USER="$SUDO_USER" LOGNAME="$SUDO_USER" \
+    PYTHONPATH="$task_workspace/RedJohn:$task_workspace/.github/scripts" \
+    "$task_python" .github/scripts/ci.py run --name python-integration -- \
+    timeout --signal=TERM --kill-after=20s 12m "$task_python" -m pytest \
+    RedJohn/tests/test_wpscan_observe_live.py RedJohn/tests/test_trivy_sbom_live.py \
+    -q -s -p no:cacheprovider -p pytest_evidence --ci-suite=integration \
+    -o junit_family=xunit1 --junitxml=artifacts/integration.junit.xml \
+    --basetemp="$RUNNER_TEMP/redjohn-artifact-e2e"
 fi
 if test "$task_suite" = native; then
   # Reuse this job's integration launcher; the native workflow has its own

@@ -52,8 +52,9 @@ privát MCP-konfiguráció (`~/.redjohn/mcp-servers.json`) végig változatlan m
 
 A teljes megvalósított és célzottan igazolt műszaki terjedelem:
 
-- Semgrep/Trivy offline source, valamint Trivy offline CycloneDX SBOM profil (`redjohn-trivy-sbom-1`),
-  asset/service/workflow inventory, kétactoros autentikált CRUD és tartós restart/refresh.
+- Semgrep/Trivy offline source, asset/service/workflow inventory, kétactoros
+  autentikált CRUD és tartós restart/refresh a történeti futásban igazolva.
+  A Trivy offline CycloneDX SBOM-profil külön új igazolási kör; lásd a fenti pontosítást.
 - Naabu/dnsx külön engedélyezett IP/port/resolver scope-pal, tartós kvótával és
   izolált workerrel (8 valódi x64/ARM64 natív és integrációs eset).
 - Nmap 7.992 korlátos, saját próbaprofillal kész; mind a 4 valódi natív eset
@@ -74,7 +75,7 @@ A teljes megvalósított és célzottan igazolt műszaki terjedelem:
   4 valódi izolált target-MCP eset sikeres x64/ARM64-en. Autentikált/mutáló target
   MCP és attesztálatlan távoli végrehajtás továbbra is blokkolt.
 - A Linux opt-in CLI/TUI/SDK tulajdonos és örökölt leszármazottainak közös
-  cgroup-memóriakeretéből mind a 6 natív kontroll, a `cleanup-proof` (`test_owned_cleanup_live.py`)
+  cgroup-memóriakeretéből mind a 6 natív kontroll, a `cleanup-proof` (`test_cleanup_quarantine_live.py`)
   és a Chromium/SDK/MCP/native együttes eset (`test_owned_memory_live.py`) is sikeresen lefutott
   mindkét hosted Ubuntu 24.04 architektúrán.
 - Owned local header-regression (`lab_validation`, `redjohn-owned-header-lab-1`) és

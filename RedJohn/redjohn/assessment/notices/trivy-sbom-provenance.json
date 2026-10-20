@@ -52,7 +52,8 @@
     "provided_or_downloaded": false,
     "automatic_download": false,
     "publisher_provenance_verified": false,
-    "license_scope": "Engine/database-builder licenses do not establish rights for all advisory datasets. Every selected data source requires separate operator-reviewed, content-pinned local terms."
+    "license_scope": "Engine/database-builder licenses do not establish rights for all advisory datasets. Every selected data source requires separate operator-reviewed, content-pinned local terms.",
+    "controlled_ghsa_fixture_preparation_implemented": true
   },
   "native_execution_performed_during_preparation": false,
   "upstream_source_copied_into_redjohn": false,
@@ -95,7 +96,7 @@
         "url": "https://raw.githubusercontent.com/github/advisory-database/c18aa0e82ff81450c9a57bdf5050f6a9d8193125/advisories/github-reviewed/2023/05/GHSA-j8r2-6x86-q33q/GHSA-j8r2-6x86-q33q.json",
         "bytes": 5346,
         "sha256": "2ec79fe91b41e6b681da97c1edc7db44a6a47a77e81e6d5386109c4743bf0c66",
-        "native_match_executed": false
+        "native_match_executed_during_source_preparation": false
       },
       {
         "ecosystem": "npm",
@@ -107,7 +108,7 @@
         "url": "https://raw.githubusercontent.com/github/advisory-database/c18aa0e82ff81450c9a57bdf5050f6a9d8193125/advisories/github-reviewed/2023/06/GHSA-c2qf-rxjj-qqgw/GHSA-c2qf-rxjj-qqgw.json",
         "bytes": 3691,
         "sha256": "955a08aac8ac34aada62d20397b3c331c9a03473d37a5ffcf7a6a7e79b728f37",
-        "native_match_executed": false
+        "native_match_executed_during_source_preparation": false
       }
     ]
   },
@@ -118,7 +119,9 @@
     "nonce_bound_cleanup_in_supervised_process": true,
     "controller_opens_original_operator_files": false,
     "arbitrary_kernel_io_claimed_interruptible": false,
-    "scheduler_lease_retention_wired": false,
-    "registered": false
-  }
+    "scheduler_lease_retention_wired": true,
+    "registered": true,
+    "registration": "explicit_public_runtime_selection_only"
+  },
+  "native_evidence_report": "docs/redjohn-artifact-runtime.md"
 }

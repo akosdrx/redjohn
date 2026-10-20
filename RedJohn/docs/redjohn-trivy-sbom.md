@@ -85,7 +85,8 @@ pins are recorded in
 their own terms. The operator's approval and content digests identify the
 selected bytes; declared publisher/OCI metadata does not authenticate an official
 publisher. Evidence therefore always records
-`database_origin: operator_supplied_content_pins` and
+`database_origin: operator_oci` (or the explicitly labelled lab-only
+`controlled_ghsa_fixture`) and
 `publisher_provenance_verified: false`. The database and terms are not uploaded
 as public CI evidence or embedded in the RedJohn package.
 
@@ -129,8 +130,10 @@ operator path. Process cleanup and complete resource cleanup are separate facts.
 `resource_cleanup_verified()` remains false while a pending spawn, process,
 drain, late reaper, prepared path, native worker, namespace or listener is owned.
 The typed exception requests retention of the existing logical scheduler lease.
-**That shared release guard is not wired yet:** evidence explicitly records
-`reservation_retention_wired: false`, and the component remains unregistered.
+**The public scheduler binds the adapter’s `resource_cleanup_verified` guard
+to its existing reservation.** Standalone copier contract proofs keep
+`reservation_retention_wired: false`: they do not establish scheduler composition.
+The public runtime contract and native E2Es exercise the shared binding.
 No second worker lease is acquired for this helper.
 
 The synchronous `DatabaseSnapshot.snapshot`, `read_metadata` and
@@ -156,7 +159,7 @@ current durable job owner/attempt/lease, exact spec/revision, active source asse
 and current policy before and after the scan. A DB or terms change alters the
 configuration revision. Restart deduplicates the same reviewed queued job;
 discovery never grants a source permission. Selection must use the same
-scheduler/resource governor when shared composition is wired.
+scheduler/resource governor supplied by public composition.
 
 The standalone queue API is explicit:
 
@@ -169,8 +172,8 @@ job_id = assessment_store.submit(current_policy, [spec])[0]
 ```
 
 This does not start a scanner and does not bypass capability-registry admission.
-The pending shared integration must register only this selected adapter and
-retain the existing governor/namespace requirements.
+Public configuration registers only the explicitly selected adapter and retains
+the existing governor/namespace requirements.
 
 ## Evidence and remaining proof
 
@@ -190,13 +193,13 @@ signal denial and confirmed reap. Its kernel-admission entrypoint is a test
 double. Its unreaped-child case injects a failed wait proof around a real child;
 it is not a real D-state test. Real local file/process IO and SQLite restart
 checks do not turn those fixtures into native/advisory E2E evidence.
-The next hosted proof must install the existing pinned Linux engine
-sequentially, prepare a separately reviewed immutable official DB download with
-receipts, and run owned declared positive/fixed package fixtures through the
-real scheduler on Ubuntu x64/ARM64. It must verify the selected advisory,
-complete inventory, deny-all/read-only attestations, restart, cancellation,
-resource measurements and zero residual workers/snapshots. Missing official DB,
-unsupported schema, expired metadata or missing kernel capability stays blocked.
+The required hosted suite installs the existing pinned Linux engine sequentially
+and builds a controlled two-record GHSA database using the reviewed official
+builder and licensed upstream input. `test_trivy_sbom_live.py` exercises actual
+positive/fixed PyPI/npm matching, restart, post-health cancellation and missing/
+changed DB rejection. The owner wrapper records real kernel memory/cleanup
+proof. Missing DB, unsupported schema, expired metadata or missing kernel
+capability remains blocked. See the runtime guide for completed Actions evidence.
 No Mac/VM scanner run or external account/cluster access was performed for this slice.
 
 ## Reviewed public OCI metadata, not a downloaded database

@@ -1,5 +1,13 @@
 # Követelménykövetés — master prompt 2.0
 
+
+**2026-10-20 runtime-pontosítás:** a `wordpress_observe` és `trivy_sbom` most
+explicit közös konfigurációval/registryvel/tartós schedulerrel választható.
+A régi 443 integrációs eset ezeket nem igazolta. Az új valódi Linux-esetek és
+szűk hatókörük: [artifact runtime](redjohn-artifact-runtime.md). A teljes WPScan
+CLI/adatbázisos WordPress-audit és a teljes hivatalos Trivy advisory feed továbbra
+sem állítható késznek a HTML-/kétadvisorys SBOM-fixture alapján.
+
 **2026-10-19, lezárt ellenőrzési határ:** a véglegesített és mindkét architektúrán
 (`Ubuntu 24.04 x64 / Python 3.13.16` és `Ubuntu 24.04 arm64 / Python 3.12.3`)
 sikeresen lezárt Ubuntu Actions-kör SHA-ja `fd7c0d41df9204e57d8136194336bee2e2378a93`

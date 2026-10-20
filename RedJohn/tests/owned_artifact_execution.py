@@ -48,7 +48,7 @@ async def supervise_owned_test(request, tmp_path):
             sys.executable,
             "-m",
             "pytest",
-            request.node.nodeid,
+            str(request.node.path.resolve()) + "::" + request.node.nodeid.split("::", 1)[1],
             "-q",
             "-s",
             "-p",

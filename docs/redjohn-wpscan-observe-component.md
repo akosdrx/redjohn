@@ -1,6 +1,6 @@
-# Offline `wordpress_observe` candidate
+# Offline `wordpress_observe` runtime capability
 
-Status: **implemented candidate, unregistered; native Linux execution remains blocked pending hosted proof**. `wordpress_assess` remains unimplemented. The new adapter and job factory have file/SQLite regression coverage; four actual native cases are prepared but skipped on this Mac because the reviewed Linux runtime is absent. No native Ruby/gem build or scanner execution occurred locally.
+Status: **public opt-in runtime/registry/scheduler integration implemented; new native hosted proof pending completion**. `wordpress_assess` remains unimplemented. The new adapter and job factory have file/SQLite regression coverage; four actual native cases are prepared but skipped on this Mac because the reviewed Linux runtime is absent. No native Ruby/gem build or scanner execution occurred locally.
 
 The separate frozen 35-package full-CLI audit still exits 2 for the missing `get_process_mem` license notice. That package is outside this narrow component's require closure; the full CLI is neither installed nor loaded.
 
@@ -30,7 +30,7 @@ The descriptor reader rejects symlinks, FIFOs, digest changes and oversize input
 
 `wordpress_observe_job(config, policy, store, timeout_seconds=30, retest_revision='')` requires the independent explicit `allowed_source_artifacts` HTML digest and `target_domains=['source']`. It records one deduplicated immutable INPUT manifest and typed source asset/surface with an empty URL. Inventory discovery or a web-origin grant cannot authorize execution. Jobs are idempotent, family `cms_observation`, capability `wordpress_observe`, and have no options. Reopening SQLite preserves job and INPUT identity.
 
-`WPScanObserveAdapter(config, policy, store)` is a selected scanner using the existing shared Scheduler worker claim. It checks current policy, stop/deadline, asset/surface state, exact job specification, owner, attempt, live lease and cancellation before snapshot, every worker dispatch, health, observation and evidence. It has no private governor, shell input, dynamic command or additional HTTP controller. The default runtime/registry has **not** been modified; current native tests explicitly host-bind the candidate. Public composition and its tests remain required before shipping.
+`WPScanObserveAdapter(config, policy, store)` is a selected scanner using the existing shared Scheduler worker claim. It checks current policy, stop/deadline, asset/surface state, exact job specification, owner, attempt, live lease and cancellation before snapshot, every worker dispatch, health, observation and evidence. It has no private governor, shell input, dynamic command or additional HTTP controller. The public runtime/registry composes this adapter only from explicit `wordpress_observe` configuration. `source_jobs` selects the durable job. The actual native tests use this public composition; they do not inject a private registry entry. See [the runtime guide](redjohn-artifact-runtime.md) for the current proof boundary.
 
 The runner reuses the real deny-all Linux user/network/mount namespace and read-only snapshot attestation. Every runtime file is bounded and hash checked into a private immutable sibling snapshot; only workspace/output is writable. Unsupported platform, pin/license mismatch, missing namespace or native health is `blocked`; malformed/incomplete output is `inconclusive`, never a scanner-negative. Timeout and cancel release the existing owned process/boundary/snapshot lifecycle.
 
