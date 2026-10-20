@@ -326,6 +326,7 @@ def main() -> int:
         gem_home.mkdir(mode=0o700)
         home = build / "home"
         home.mkdir(mode=0o700)
+        (home / "empty-gemrc").write_text("--- {}\n")
         env = {
             "PATH": str(ruby / "bin") + ":/usr/bin:/bin",
             "HOME": str(home),
@@ -338,6 +339,10 @@ def main() -> int:
         }
         run_fixed(["/usr/bin/true"], build, env, args.logs / "namespace-health.log", 5)
         build_identities = {
+            "rubygems": run_fixed(
+                [str(ruby / "bin/ruby"), str(ruby / "bin/gem"), "--version"],
+                build, env, args.logs / "rubygems-version.log", 5,
+            ),
             "compiler": run_fixed(
                 ["/usr/bin/gcc", "--version"], build, env, args.logs / "compiler.log", 5
             ),
@@ -375,7 +380,8 @@ def main() -> int:
             command = [
                 str(ruby / "bin/ruby"),
                 str(ruby / "bin/gem"),
-                "--norc",
+                "--config-file",
+                str(home / "empty-gemrc"),
                 "install",
                 "--local",
                 "--ignore-dependencies",
