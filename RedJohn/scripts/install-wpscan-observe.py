@@ -260,6 +260,26 @@ def native_dependencies(text: str) -> dict[str, Path]:
     return result
 
 
+def gem_install_command(
+    ruby: Path, archive: Path, configuration: Path, *, system_libraries: bool = False
+) -> list[str]:
+    # RubyGems 3.5.22 consumes common options after its subcommand. Placing
+    # either configuration flag before `install` is a hard parser error.
+    command = [
+        str(ruby / "bin/ruby"),
+        str(ruby / "bin/gem"),
+        "install",
+        "--norc",
+        "--config-file",
+        str(configuration),
+        "--local",
+        "--ignore-dependencies",
+        "--no-document",
+        str(archive),
+    ]
+    return command + (["--", "--use-system-libraries"] if system_libraries else [])
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--cache", type=Path, required=True)
@@ -341,7 +361,10 @@ def main() -> int:
         build_identities = {
             "rubygems": run_fixed(
                 [str(ruby / "bin/ruby"), str(ruby / "bin/gem"), "--version"],
-                build, env, args.logs / "rubygems-version.log", 5,
+                build,
+                env,
+                args.logs / "rubygems-version.log",
+                5,
             ),
             "compiler": run_fixed(
                 ["/usr/bin/gcc", "--version"], build, env, args.logs / "compiler.log", 5
@@ -377,19 +400,9 @@ def main() -> int:
             ),
         }
         for name in ("mini_portile2", "racc", "nokogiri"):
-            command = [
-                str(ruby / "bin/ruby"),
-                str(ruby / "bin/gem"),
-                "--config-file",
-                str(home / "empty-gemrc"),
-                "install",
-                "--local",
-                "--ignore-dependencies",
-                "--no-document",
-                str(gems[name]),
-            ]
-            if name == "nokogiri":
-                command += ["--", "--use-system-libraries"]
+            command = gem_install_command(
+                ruby, gems[name], home / "empty-gemrc", system_libraries=name == "nokogiri"
+            )
             run_fixed(command, build, env, args.logs / (name + "-build.log"), 600)
         runtime = args.destination / "runtime"
         files = {"ruby/bin/ruby": ruby_files["bin/ruby"]}

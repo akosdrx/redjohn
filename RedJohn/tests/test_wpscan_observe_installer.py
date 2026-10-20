@@ -131,3 +131,23 @@ def test_mock_owned_process_group_cleanup_on_success_failure_and_timeout(
             )
     assert groups and all(row == (MockProcess.pid, signal.SIGKILL) for row in groups)
     assert calls == ([5, 2] if failure == "timeout" else [5])
+
+
+@pytest.mark.parametrize("package", ["mini_portile2", "racc", "nokogiri"])
+def test_pinned_rubygems_configuration_options_follow_install_and_remain_offline(tmp_path, package):
+    ruby, archive, configuration = (
+        tmp_path / "ruby",
+        tmp_path / (package + ".gem"),
+        tmp_path / "empty-gemrc",
+    )
+    command = INSTALLER.gem_install_command(
+        ruby, archive, configuration, system_libraries=package == "nokogiri"
+    )
+    assert command[:3] == [str(ruby / "bin/ruby"), str(ruby / "bin/gem"), "install"]
+    assert command.index("--norc") > command.index("install")
+    assert command.index("--config-file") > command.index("install")
+    assert command[command.index("--config-file") + 1] == str(configuration)
+    assert (
+        "--local" in command and "--ignore-dependencies" in command and "--no-document" in command
+    )
+    assert (command[-2:] == ["--", "--use-system-libraries"]) == (package == "nokogiri")
