@@ -132,6 +132,15 @@ controlled pressure check, not a new 120-cycle/20-minute soak. The older
 `fd7c0d4` long-run evidence remains historical. RSS sums are observations, not
 kernel hard limits; the artifact owner limits are independently attested above.
 
+The later manual [long run 39505094482](https://github.com/akosdrx/redjohn/actions/runs/39505094482)
+completed successfully at documentation-only successor source
+`3cc92d20ee37fe54663dc7c25a73aeb802f98ef1`: both architectures ran 120 actual
+cycles / 360 scheduled jobs with a 1200-second minimum loop window. Benchmark
+elapsed times were 1208.382665 s (x64) and 1205.942122 s (ARM64), all 15 checks
+true. [The separate long-run record](redjohn-long-soak-3cc92d2.md) distinguishes
+the final per-cycle work log, pacing, benchmark duration, RSS and hard-limit scope.
+The earlier two-cycle measurements in this section remain unchanged.
+
 | Full-run evidence artifact | ID | ZIP SHA-256 |
 |---|---:|---|
 | x64 | 12301268328 | `d7126c7d2e9064b17160f2861cfac30b1458186f01e04d5e2f254db5c228b492` |
@@ -186,6 +195,9 @@ Subsequent documentation-only publication records these completed results;
 runtime, test and workflow blobs remain identical to the tested source SHA.
 
 ## Modified files
+
+This 42-path list records the artifact-runtime slice through source `3cc92d2`;
+subsequent long-run documentation changes are listed in [the long-run record](redjohn-long-soak-3cc92d2.md).
 
 Compared with source `fd7c0d41df9204e57d8136194336bee2e2378a93`;
 the four pre-existing documentation edits were retained. No baseline path was deleted.

@@ -27,6 +27,15 @@ Az új teljes push-futás 2 vegyes ciklust mért (x64 19.281431 s, ARM64 16.8663
 ez nem új 20 perces soak. A korábbi hosszú terhelés igazolása történeti marad.
 [Pontos hatókör](redjohn-artifact-runtime.md).
 
+**2026-10-21 hosszú terhelés:** az új `3cc92d20ee37fe54663dc7c25a73aeb802f98ef1`
+SHA-n a kézzel indított [39505094482 futás](https://github.com/akosdrx/redjohn/actions/runs/39505094482)
+**mindkét architektúrán sikeresen lezárult**. Platformonként 120 valós ciklus /
+360 scheduler-job; benchmarkidő x64 **1208.382665 s**, ARM64 **1205.942122 s**,
+minimum 1200 másodperces, ütemezési várakozást is tartalmazó ciklusablakkal.
+Mind a 15 invariant igaz; a teljes csomag platformonként 1558 regresszió +
+454 valódi integráció + 14 frontend + 21 Go, 0 hiba/error/skip.
+[A nyers időadatok különbsége, RSS-mérések, verziók, artifact-hashek és korlátok](redjohn-long-soak-3cc92d2.md).
+
 ## Aktuális fejlesztési és igazolási határ
 
 A korábbi, teljesen lezárt és mindkét architektúrán (`Ubuntu 24.04 x64 / Python 3.13.16`
@@ -100,8 +109,8 @@ A teljes megvalósított és célzottan igazolt műszaki terjedelem:
   Ez nem cluster-benchmark; csak a verzióparancs engedett. Élő cloud/Kubernetes audit
   a felhasználói döntés szerint halasztott, Prowler teljes immutable függőségpillanatkép hiányában blokkolt.
 
-Az alábbi táblák történeti baseline-ok. A legfrissebb teljes igazolás a fenti
-`9f3a1a037b2f44bf1b503e2c796a0682f1ba146c` forrás; a régebbi hosszú soak
+Az alábbi táblák történeti baseline-ok. A legfrissebb teljes és hosszú igazolás a fenti
+`3cc92d20ee37fe54663dc7c25a73aeb802f98ef1` forrás; a régebbi hosszú soak
 adatai a saját SHA-jukhoz tartoznak. A külön mérési dokumentumok rögzítik a hatókört.
 
 ## Korábbi közös-runtime baseline
