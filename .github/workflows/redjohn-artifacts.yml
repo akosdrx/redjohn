@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: redjohn-artifacts-${{ github.event.pull_request.head.repo.full_name || github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}
+  group: redjohn-artifacts-${{ github.repository }}-${{ github.sha }}
   cancel-in-progress: false
 
 defaults:
