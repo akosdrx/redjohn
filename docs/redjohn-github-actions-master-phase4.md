@@ -1,5 +1,10 @@
 # Phase 4 candidate and validation boundaries
 
+This document preserves the historical Phase 4 candidate and its then-current
+validation scope. The later WPScan observation and Trivy SBOM runtime slice now
+has separate [completed hosted proof](redjohn-artifact-runtime-verification.md);
+the exclusions and counts below describe this earlier candidate.
+
 This candidate preserves the RedJohn application and existing active tests. It
 adds the reviewed GraphQL/private workflow extension, selected v3 specialist
 input replay, observed-open Nmap service adapter, cloud/Kubernetes preparation,

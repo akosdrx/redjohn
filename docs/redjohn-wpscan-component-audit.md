@@ -1,9 +1,16 @@
 # WPScan component supply-chain preparation
 
-This slice audits public package bytes. **The WPScan runtime adapter remains
-unimplemented and blocked; no WPScan, gem installer, native extension, Ferrum,
-password check, updater or vulnerability API was executed.** It is separate from
-phase 4's frozen Nmap/runtime source and from the hosted E2E results.
+This is the historical 2026-10-18 audit of the full 35-gem CLI closure. Its
+missing-license block remains in force for that closure. The separately reviewed
+offline `wordpress_observe` component is now implemented in the public runtime
+and passed actual x64/ARM64 hosted E2Es; see [the component contract](redjohn-wpscan-observe-component.md)
+and [the verification record](redjohn-artifact-runtime-verification.md). That
+narrow result does not clear the full CLI audit or authorize its redistribution.
+
+The preparatory audit below inspected public package bytes only. At that point,
+the runtime adapter was unimplemented; no WPScan, gem installer, native extension,
+Ferrum, password check, updater or vulnerability API was executed by the audit.
+It was separate from phase 4's frozen Nmap/runtime source and hosted E2E results.
 
 ## Fixed identity and actual audit
 
@@ -84,7 +91,7 @@ archive/parser/requirement contracts are separate from the actual 35-archive
 measurement under
 `docs/measurements/master-completion-20261018/wpscan-component-audit/`.
 
-## Next isolated component boundary
+## Historical proposed isolated component boundary
 
 The next review must trace the actual `require` closure for the inspected passive
 WordPress detection component, rather than installing this whole declared CLI

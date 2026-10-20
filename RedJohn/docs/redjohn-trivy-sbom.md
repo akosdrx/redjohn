@@ -236,22 +236,26 @@ is CC-BY-4.0; preserve source/license attribution and disclose transformations.
 Those terms do not cover every other feed in the aggregated DB. Do not publish
 the full DB as a CI artifact under a blanket engine-license assumption.
 The full public aggregate's feed/terms closure has not been reviewed, so a real
-official-aggregate native E2E remains blocked. A future independently built,
-immutable GHSA-only schema2 fixture would need exact licensed advisory inputs,
-builder pins and real engine execution, and must be labelled a controlled feed
-fixture rather than validation of the full public DB.
+official-aggregate native E2E remains blocked. The separate CI fixture is now
+implemented by `.github/scripts/install-sbom-database.py`: it builds an immutable
+two-advisory schema2 DB with the pinned official builder and licensed GHSA input.
+Actual Trivy positive/fixed matching completed on hosted Ubuntu x64 and ARM64;
+see [the verification record](../../docs/redjohn-artifact-runtime-verification.md).
+That controlled fixture does not validate the full public DB.
 
-Future real positive/fixed controls can assert these individual advisories:
+The completed real positive/fixed controls use these individual advisories:
 
 | Ecosystem | Declared positive | Fixed control | Selected advisory |
 | --- | --- | --- | --- |
 | PyPI | requests 2.20.0 | requests 2.31.0 | [CVE-2023-32681 / GHSA-j8r2-6x86-q33q](https://github.com/github/advisory-database/blob/c18aa0e82ff81450c9a57bdf5050f6a9d8193125/advisories/github-reviewed/2023/05/GHSA-j8r2-6x86-q33q/GHSA-j8r2-6x86-q33q.json) |
 | npm | semver 7.5.1 | semver 7.5.2 | [CVE-2022-25883 / GHSA-c2qf-rxjj-qqgw](https://github.com/github/advisory-database/blob/c18aa0e82ff81450c9a57bdf5050f6a9d8193125/advisories/github-reviewed/2023/06/GHSA-c2qf-rxjj-qqgw/GHSA-c2qf-rxjj-qqgw.json) |
 
-These are reviewed source definitions, not executed Trivy results. The fixed
-control asserts absence of the selected CVE only; other advisories may remain.
+These pinned source definitions produced the controlled DB used by the executed
+Trivy controls. The fixed control asserts absence of the selected CVE only;
+other advisories may remain. Fixture build freshness is not current full-feed
+advisory coverage.
 
-A future CI-only installer must GET the exact manifest with a64KiB cap, verify
+A future **official-aggregate** CI-only installer must GET the exact manifest with a64KiB cap, verify
 its digest and exact single reviewed layer descriptor, stream only that pinned
 layer with an exact compressed size/hash cap and a whole-operation deadline,
 and safely extract only reviewed regular `trivy.db`/`metadata.json` members.
@@ -262,5 +266,5 @@ schema/freshness/content pins after extraction and on cache hits. Keep pull
 tokens in memory and do not forward authorization on blob redirects to another
 host. Receipts must bind commit SHA, manifest/layer/DB/metadata/terms digests,
 byte counts, UTC times and platform; no token or full DB belongs in public
-artifacts. No installer or native official-feed E2E has been executed by this
-preparatory slice.
+artifacts. The controlled fixture installer does not perform that OCI extraction;
+no native official-aggregate E2E has been executed.

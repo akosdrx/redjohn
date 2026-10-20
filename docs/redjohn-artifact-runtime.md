@@ -9,6 +9,11 @@ Use `source_jobs: [{"capability": "trivy_sbom"}]` or
 configuration object. Changed source/database/runtime pins change the durable
 execution identity; reopening unchanged completed jobs does not rerun them.
 
+Hosted proof is tied to its source SHA, runner and fixtures. It does not promote
+the registry's unconfigured entries to ready or set global `live_verified` state.
+The generated capability catalog and a new operator host still require explicit
+configuration, reviewed inputs and actual local admission/health checks.
+
 ## WordPress observation
 
 The `wordpress_observe` object contains `component`, `artifact`, and `runtime`
@@ -44,8 +49,9 @@ Java, scoped npm packages and arbitrary source trees remain outside this mode.
 
 The Ubuntu validation workflow runs native x64 and ARM64. Installation is
 sequential. Ruby build/health enters only the job-owned enforcing AppArmor
-profile; every artifact E2E runs below a genuine pre-exec cgroup-v2 owner fence,
-then the existing deny-all worker namespace/read-only snapshot. Missing required
+profile. Every artifact E2E starts below a genuine pre-exec cgroup-v2 owner fence;
+native scanner workers additionally use the existing deny-all namespace and
+read-only snapshot. Invalid DB inputs are blocked before a scanner starts. Missing required
 engine, profile, namespace or delegation fails the required CI gate; no sandbox
 or global restriction is disabled. Receipts, logs, JUnit and owner memory/cleanup
 measurements are retained on failure too, tied to the Actions source commit.
@@ -65,11 +71,30 @@ reviewed pins/grants, use the existing command:
 redjohn assess run --config /absolute/approved-assessment.json --output /absolute/run
 ```
 
+The approved configuration must also request the existing Linux `os_memory`
+owner fence (or a host must supply a genuinely attested pre-exec owner). See
+[the memory setup](../RedJohn/docs/shared-resources-and-os-memory.md). A cooperative
+resource ledger alone does not authorize these IO helpers. For example:
+
+```json
+{
+  "resources": {"total_memory_budget": 2147483648, "max_workers": 1},
+  "os_memory": {"delegated_root": "/sys/fs/cgroup/redjohn-owned-assessments", "pids_max": 512}
+}
+```
+
+The root must already be privately delegated with memory/pids controllers.
+Missing delegation/namespace/runtime blocks the task; it does not yield a
+negative finding. These fields supplement the explicit policy/artifact/tool
+configuration; this fragment alone is not an assessment grant.
+
 The existing CLI resolves the configured operator identity; no extra public
 scanner endpoint or credential is introduced.
 
 `test_optional_artifact_runtime.py` and synthetic DB/engine contracts are local
 unit/contract evidence, **not native E2E**. The four WPScan cases and seven SBOM
-cases are in the required real-integration selection. Native proof is pending
-until the new x64/ARM64 Actions run completes; older runs explicitly excluded
-WPScan and did not execute Trivy SBOM matching.
+cases are in the required real-integration selection. Both architectures completed the actual native proof at source
+`9f3a1a037b2f44bf1b503e2c796a0682f1ba146c`: **11 passed, 0 failed/error/skipped**.
+See [the verification record](redjohn-artifact-runtime-verification.md) for the
+completed run, source/artifact hashes, controls and measured memory. Older runs
+explicitly excluded WPScan and did not execute Trivy SBOM matching.

@@ -1,6 +1,6 @@
 # Offline `wordpress_observe` runtime capability
 
-Status: **public opt-in runtime/registry/scheduler integration implemented; new native hosted proof pending completion**. `wordpress_assess` remains unimplemented. The new adapter and job factory have file/SQLite regression coverage; four actual native cases are prepared but skipped on this Mac because the reviewed Linux runtime is absent. No native Ruby/gem build or scanner execution occurred locally.
+Status: **public opt-in runtime/registry/scheduler integration implemented and actual hosted x64/ARM64 proof completed**. See [the verification record](redjohn-artifact-runtime-verification.md): four WPScan native scenarios passed on each architecture at source `9f3a1a037b2f44bf1b503e2c796a0682f1ba146c`. `wordpress_assess` remains unimplemented. The new adapter and job factory have file/SQLite regression coverage; four actual native cases ran successfully on hosted Ubuntu; a Mac without the required Linux owner/runtime remains unsupported for these native cases. No native Ruby/gem build or scanner execution occurred locally.
 
 The separate frozen 35-package full-CLI audit still exits 2 for the missing `get_process_mem` license notice. That package is outside this narrow component's require closure; the full CLI is neither installed nor loaded.
 
@@ -48,13 +48,17 @@ From `RedJohn/`, after Ubuntu build dependencies and namespace capability are av
 
 ```sh
 python scripts/install-wpscan-observe.py --cache "$RUNNER_TEMP/wordpress-cache" --destination "$PWD/.tools/wordpress-observe/4.1.0" --logs "$ARTIFACTS/wordpress-build" --external-operator-component
-REDJOHN_REQUIRE_WORDPRESS_OBSERVE_E2E=1 python -m pytest -q tests/test_wpscan_observe_live.py --junitxml="$ARTIFACTS/wordpress-live.junit.xml"
+REDJOHN_REQUIRE_ARTIFACT_E2E=1 REDJOHN_REQUIRE_WORDPRESS_OBSERVE_E2E=1 python -m pytest -q tests/test_wpscan_observe_live.py --junitxml="$ARTIFACTS/wordpress-live.junit.xml"
 ```
 
-Required build packages: gcc, make, pkg-config, binutils, libc6-dev, libxml2-dev, libxslt1-dev, zlib1g-dev. The installer performs no apt operation. Cache keys must bind architecture, Ubuntu release, runtime pins, installer and bootstrap hashes. Artifacts should include `.tools/wordpress-observe/4.1.0/{receipt,runtime-manifest}.json` and the requested logs directory, including failure logs. Do not cache a partially built destination as a valid install.
+The test command also requires the existing delegated `REDJOHN_TEST_CGROUP_ROOT`
+and enforcing profile; the hosted workflow sets and attests both. The required
+flags make absent capabilities a failure rather than a successful skipped run.
+
+Required build packages: gcc, make, pkg-config, binutils, libc6-dev, libxml2-dev, libxslt1-dev, zlib1g-dev. The installer performs no apt operation. CI caches only input archives, keyed by architecture, Ubuntu release, runtime pins and installer; every cache hit is content verified. The runtime is rebuilt and receipted against the current pinned bootstrap, not restored as a cached executable closure. Artifacts should include `.tools/wordpress-observe/4.1.0/{receipt,runtime-manifest}.json` and the requested logs directory, including failure logs. Do not cache a partially built destination as a valid install.
 
 ## Verified and remaining
 
-Focused local results: **65 passed, 0 failed, 4 blocked native skips**, 0.45 s. Payload/protocol fixtures and installer-process doubles are explicitly synthetic; SQLite, file-reader, archive-budget and lifecycle assertions use actual files/state. Both real Ruby archives plus all four selected gem archives passed the new safe read-only extractor. Ruby/component syntax-only parsing is distinct from engine execution. Measurement manifests and JUnit are under `docs/measurements/master-completion-20261018/wpscan-observe-component/`.
+Historical local preparation results: **65 passed, 0 failed, 4 blocked native skips**, 0.45 s. Payload/protocol fixtures and installer-process doubles are explicitly synthetic; SQLite, file-reader, archive-budget and lifecycle assertions use actual files/state. Both real Ruby archives plus all four selected gem archives passed the safe read-only extractor. Ruby/component syntax-only parsing is distinct from engine execution. Those historical measurements are under `docs/measurements/master-completion-20261018/wpscan-observe-component/`; the current hosted proof and artifact hashes are in [the verification record](redjohn-artifact-runtime-verification.md).
 
-Prepared actual cases are positive generator, generic absence, external-DTD non-fetch and cancellation after actual native health. They assert shared worker admission, immutable namespace, zero HTTP requests, partial-only coverage, cleanup and SQLite restart deduplication. They have **not completed on hosted Linux yet**. A partial generator observation is never a database-confirmed version, deployment assurance, vulnerability finding or global clean result. Real WordPress assessment, authenticated replay, vulnerability API/database and browser artifact provenance remain separate blocked capabilities.
+The actual positive-generator, generic-absence, external-DTD non-fetch and post-health cancellation cases all passed on hosted Ubuntu x64 and ARM64 at the source SHA above. They assert public runtime composition, shared worker admission, immutable namespace, zero HTTP requests, partial-only coverage, cleanup and SQLite restart deduplication. The adapter scenarios run under an actual 2 GiB pre-exec owner memory fence. A partial generator observation is never a database-confirmed version, deployment assurance, vulnerability finding or global clean result. Full WordPress assessment, authenticated WordPress replay, vulnerability API/database and browser artifact provenance remain outside this component.

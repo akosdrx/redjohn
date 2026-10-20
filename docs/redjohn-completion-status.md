@@ -13,13 +13,23 @@ validációja lezárult a `fd7c0d41df9204e57d8136194336bee2e2378a93` source comm
 [képességkatalógus](redjohn-capabilities.md).
 
 **2026-10-20 pontosítás:** a fenti történeti futás nem igazolt WPScan runtime-ot
-vagy Trivy SBOM advisory matchinget. Ezek nyilvános runtime-bekötése és külön,
-valódi natív CI-esetei most kerülnek a kötelező csomagba; az új futás lezárásáig
-nem jelöljük őket live sikernek. [Pontos hatókör](redjohn-artifact-runtime.md).
+vagy Trivy SBOM advisory matchinget. Ezek nyilvános runtime-bekötése elkészült, és
+az új [natív futás](https://github.com/akosdrx/redjohn/actions/runs/39498243803)
+lezárult: mindkét architektúrán **4 WPScan + 7 SBOM E2E sikeres, 0 fail/error/skip**,
+source SHA `9f3a1a037b2f44bf1b503e2c796a0682f1ba146c`. Ugyanezen a forráson a
+[teljes Ubuntu-kör](https://github.com/akosdrx/redjohn/actions/runs/39498243880) is
+**sikeresen lezárult**: platformonként **1558 Python-regresszió + 454 valódi
+integráció + 14 frontend + 21 Go**, 0 hiba/error/skip. A 207 Python-mock és a
+6 frontend fetch-dublőr külön címkézett; 3 Darwin-eset Linuxon nem alkalmazható,
+nem futott és nem sikeres teszt. A külön natív körben további 3 ismételt kernel
+orphan-recovery kontroll sikeres platformonként. [Részletes mérések és fájllista](redjohn-artifact-runtime-verification.md).
+Az új teljes push-futás 2 vegyes ciklust mért (x64 19.281431 s, ARM64 16.866308 s);
+ez nem új 20 perces soak. A korábbi hosszú terhelés igazolása történeti marad.
+[Pontos hatókör](redjohn-artifact-runtime.md).
 
 ## Aktuális fejlesztési és igazolási határ
 
-A legfrissebb, teljesen lezárt és mindkét architektúrán (`Ubuntu 24.04 x64 / Python 3.13.16`
+A korábbi, teljesen lezárt és mindkét architektúrán (`Ubuntu 24.04 x64 / Python 3.13.16`
 és `Ubuntu 24.04 arm64 / Python 3.12.3`) **sikeres (`conclusion: success`)** forrás a
 `fd7c0d41df9204e57d8136194336bee2e2378a93` commit:
 
@@ -33,12 +43,12 @@ A legfrissebb, teljesen lezárt és mindkét architektúrán (`Ubuntu 24.04 x64 
   a 3 `Darwin`-specifikus shell-eset (`tests/test_legacy_shell_darwin_live.py`, amelyek macOS-en helyben `3 passed` eredménnyel futnak)
   és a 4 külön opcionális candidate-fixture eset (`tests/test_wpscan_observe_live.py`) expliciten
   a `non-applicable-integration.json` jegyzékben szerepel. Mindkét platform **789 forrás- és 295 bizonyítékfájl-hashe**
-  (`evidence-index.json`) függetlenül ellenőrizve (`docs/measurements/master-completion-20261019/ubuntu-validation-39241380765/`).
+  (`evidence-index.json`) függetlenül ellenőrizve (a hivatkozott Actions-futás artifactjaiból; a régi helyi méréskönyvtár nem része az aktuális checkoutnak).
 - **Natív komponens smoke ([Run 39241380785](https://github.com/akosdrx/redjohn/actions/runs/39241380785), attempt 1):**
   x64 és ARM64 oldalon egyaránt **1548/1548 Python-regresszió** és **24/24 valódi natív komponenseset**
   (`cleanup-proof`: 1, `lab`: 4, `memory`: 6, `network`: 8, `preparation`: 1, `service`: 4),
   **0 hiba, 0 skip**. Mindkét platform **789 forrás- és 73 bizonyítékfájl-hashe** (`native-evidence-index.json`)
-  ellenőrizve (`docs/measurements/master-completion-20261019/native-smoke-39241380785/`).
+  ellenőrizve (a hivatkozott Actions-futás artifactjaiból).
 
 A korábbi `9ff92a8abf4e5ad516bef7b3ce4dd297ea82055c` source commit
 [39151591978 futása](https://github.com/akosdrx/redjohn/actions/runs/39151591978) és
@@ -90,8 +100,9 @@ A teljes megvalósított és célzottan igazolt műszaki terjedelem:
   Ez nem cluster-benchmark; csak a verzióparancs engedett. Élő cloud/Kubernetes audit
   a felhasználói döntés szerint halasztott, Prowler teljes immutable függőségpillanatkép hiányában blokkolt.
 
-Az alábbi táblák történeti baseline-ok. A fenti véglegesített `fd7c0d41df9204e57d8136194336bee2e2378a93`
-állapot és a külön, SHA-hoz kötött mérési dokumentumok az elsődlegesek.
+Az alábbi táblák történeti baseline-ok. A legfrissebb teljes igazolás a fenti
+`9f3a1a037b2f44bf1b503e2c796a0682f1ba146c` forrás; a régebbi hosszú soak
+adatai a saját SHA-jukhoz tartoznak. A külön mérési dokumentumok rögzítik a hatókört.
 
 ## Korábbi közös-runtime baseline
 
