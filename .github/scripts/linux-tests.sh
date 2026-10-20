@@ -14,7 +14,7 @@ task_python="$1"
 task_suite="$2"
 task_workspace="$(pwd -P)"
 test "$task_workspace" = "$GITHUB_WORKSPACE"
-case "$task_suite" in regression|integration|capability|soak|native|native-capability|artifact-install|artifact-test) ;; *) exit 2 ;; esac
+case "$task_suite" in regression|integration|capability|soak|native|native-capability|artifact-install|artifact-test|recovery-test) ;; *) exit 2 ;; esac
 test -x "$task_python"
 if test "$task_suite" = artifact-install; then
   exec aa-exec -p "${REDJOHN_CI_APPARMOR_PROFILE:?}" -- \
@@ -33,6 +33,26 @@ if test "$task_suite" = capability || test "$task_suite" = native-capability; th
     env USER="$SUDO_USER" LOGNAME="$SUDO_USER" \
     PYTHONPATH="$task_workspace/RedJohn:$task_workspace/.github/scripts" \
     "$task_python" .github/scripts/capabilities.py "${task_capability_args[@]}"
+fi
+if test "$task_suite" = recovery-test; then
+  printf '%s' "$$" > "$REDJOHN_TEST_CGROUP_ROOT/launcher-integration/cgroup.procs"
+  task_recovery_failed=0
+  for task_repeat in 1 2 3; do
+    if ! aa-exec -p "${REDJOHN_CI_APPARMOR_PROFILE:?}" -- \
+      /usr/bin/setpriv --reuid="$SUDO_UID" --regid="$SUDO_GID" --init-groups \
+      env USER="$SUDO_USER" LOGNAME="$SUDO_USER" \
+      PYTHONPATH="$task_workspace/RedJohn:$task_workspace/.github/scripts" \
+      REDJOHN_OS_MEMORY_MEASUREMENTS="$task_workspace/artifacts/recovery-$task_repeat" \
+      "$task_python" .github/scripts/ci.py run --name "memory-recovery-$task_repeat" -- \
+      timeout --signal=TERM --kill-after=20s 90s "$task_python" -m pytest \
+      RedJohn/tests/test_os_memory_live.py::test_actual_orphan_is_killed_before_crashed_owner_capacity_is_reclaimed \
+      -q -s -p no:cacheprovider -p pytest_evidence --ci-suite=integration \
+      -o junit_family=xunit1 --junitxml="artifacts/recovery-$task_repeat.junit.xml" \
+      --basetemp="$RUNNER_TEMP/redjohn-recovery-$task_repeat"; then
+      task_recovery_failed=1
+    fi
+  done
+  exit "$task_recovery_failed"
 fi
 if test "$task_suite" = artifact-test; then
   printf '%s' "$$" > "$REDJOHN_TEST_CGROUP_ROOT/launcher-integration/cgroup.procs"

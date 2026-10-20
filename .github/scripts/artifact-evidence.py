@@ -72,6 +72,41 @@ def validate(junit, receipts):
             'full_wordpress_vulnerability_audit': False, 'official_aggregate_advisory_coverage': False}
 
 
+RECOVERY_CASE = 'test_actual_orphan_is_killed_before_crashed_owner_capacity_is_reclaimed'
+
+
+def validate_recovery(root):
+    results = []
+    for repeat in (1, 2, 3):
+        cases = list(ET.parse(root / f'recovery-{repeat}.junit.xml').getroot().iter('testcase'))
+        if (len(cases) != 1 or cases[0].get('name') != RECOVERY_CASE
+            or Path(cases[0].get('file', '')).name != 'test_os_memory_live.py'
+            or any(cases[0].find(tag) is not None for tag in ('error', 'failure', 'skipped'))):
+            raise ValueError('recovery_actual_case_missing_or_failed')
+        props = {x.get('name'): x.get('value') for x in cases[0].findall('properties/property')}
+        if props.get('evidence_kind') != 'real_integration':
+            raise ValueError('recovery_real_evidence_required')
+        path = root / f'recovery-{repeat}' / 'owner-crash-recovery.json'
+        if path.stat().st_size > 65536:
+            raise ValueError('recovery_receipt_byte_budget')
+        data = json.loads(path.read_text())
+        memory = data['os_memory']
+        if (data.get('actual_owner_exit_verified') is not True
+            or data.get('orphan_survived_owner_exit') is not True
+            or data.get('orphan_stopped') is not True
+            or data['before']['lost_owners'] != 1 or data['after']['active'] != {}
+            or memory.get('enforced') is not True
+            or memory.get('memory_max_bytes') != 128 * 1024**2
+            or memory.get('oom_kills') != 0
+            or memory.get('owner_namespace', {}).get('verified') is not True):
+            raise ValueError('recovery_actual_owner_and_orphan_proof_required')
+        results.append({'repeat': repeat, 'test': RECOVERY_CASE,
+                        'receipt_sha256': hashlib.sha256(path.read_bytes()).hexdigest(),
+                        'memory_max_bytes': memory['memory_max_bytes'],
+                        'memory_peak_bytes': memory.get('memory_peak_bytes')})
+    return {'passed_executions': 3, 'results': results}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--final-artifact', action='store_true')
@@ -85,7 +120,8 @@ def main():
         result.update(validation_scope='offline_artifact_e2e', full_project_validated=False)
         for name in ('python-install', 'pip-check', 'artifact-ci-contracts', 'artifact-linux-dependencies',
                      'artifact-trivy-install', 'artifact-database-install', 'artifact-runtime-install',
-                     'linux-setup', 'sandbox-setup', 'python-integration', 'sandbox-cleanup'):
+                     'linux-setup', 'sandbox-setup', 'python-integration', 'sandbox-cleanup',
+                     'memory-recovery-1', 'memory-recovery-2', 'memory-recovery-3'):
             try:
                 command = json.loads((OUT / (name + '.json')).read_text())
                 if command['commit_sha'] != meta['commit_sha'] or command['exit_code'] != 0 or command['leaked_descendant_pids_before_cleanup']:
@@ -100,6 +136,10 @@ def main():
                     raise ValueError('unverified_cleanup_or_capability')
             except (OSError, ValueError, TypeError, KeyError):
                 result['blockers'].append('missing_or_invalid_boundary:' + name)
+        try:
+            result['owner_recovery'] = validate_recovery(OUT)
+        except (OSError, ValueError, KeyError, TypeError, ET.ParseError):
+            result['blockers'].append('missing_or_invalid_owner_recovery_proof')
         result['success'] = not result['blockers']
     (OUT / 'artifact-native-summary.json').write_text(json.dumps(result, indent=2) + '\n')
     if args.final_artifact:

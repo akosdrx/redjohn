@@ -68,3 +68,48 @@ class ArtifactEvidenceContracts(unittest.TestCase):
                     path.write_text(json.dumps(record))
                 ET.ElementTree(suite).write(junit)
                 self.assertFalse(evidence.validate(junit, receipts)['success'])
+
+
+class OwnerRecoveryEvidenceContracts(unittest.TestCase):
+    def fixture(self, root):
+        for repeat in (1, 2, 3):
+            suite = ET.Element('testsuite')
+            case = ET.SubElement(suite, 'testcase', file='RedJohn/tests/test_os_memory_live.py', name=evidence.RECOVERY_CASE)
+            props = ET.SubElement(case, 'properties')
+            ET.SubElement(props, 'property', name='evidence_kind', value='real_integration')
+            ET.ElementTree(suite).write(root / f'recovery-{repeat}.junit.xml')
+            folder = root / f'recovery-{repeat}'
+            folder.mkdir()
+            value = {'actual_owner_exit_verified': True, 'orphan_survived_owner_exit': True,
+                     'orphan_stopped': True, 'before': {'lost_owners': 1}, 'after': {'active': {}},
+                     'os_memory': {'enforced': True, 'memory_max_bytes': 128 * 1024**2,
+                                   'oom_kills': 0, 'owner_namespace': {'verified': True},
+                                   'memory_peak_bytes': 16000000}}
+            (folder / 'owner-crash-recovery.json').write_text(json.dumps(value))
+
+    def test_three_complete_synthetic_gate_receipts_pass_only_the_contract(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self.fixture(root)
+            self.assertEqual(evidence.validate_recovery(root)['passed_executions'], 3)
+
+    def test_missing_skipped_live_owner_or_unverified_kernel_cannot_pass(self):
+        for defect in ('missing', 'skipped', 'owner', 'orphan', 'kernel', 'capacity'):
+            with self.subTest(defect=defect), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                self.fixture(root)
+                path = root / 'recovery-2' / 'owner-crash-recovery.json'
+                data = json.loads(path.read_text())
+                if defect == 'missing': path.unlink()
+                elif defect == 'skipped':
+                    tree = ET.parse(root / 'recovery-2.junit.xml')
+                    ET.SubElement(tree.getroot().find('testcase'), 'skipped')
+                    tree.write(root / 'recovery-2.junit.xml')
+                else:
+                    if defect == 'owner': data['actual_owner_exit_verified'] = False
+                    elif defect == 'orphan': data['orphan_survived_owner_exit'] = False
+                    elif defect == 'kernel': data['os_memory']['owner_namespace']['verified'] = False
+                    else: data['after']['active'] = {'worker': 1}
+                    path.write_text(json.dumps(data))
+                with self.assertRaises((ValueError, OSError)):
+                    evidence.validate_recovery(root)

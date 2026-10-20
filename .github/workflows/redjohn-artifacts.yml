@@ -133,6 +133,12 @@ jobs:
           task_python="$(command -v python)"
           task_home="$HOME"
           sudo -E env HOME="$task_home" bash .github/scripts/linux-tests.sh "$task_python" artifact-test
+      - name: Repeat actual orphan recovery three times with the original strict assertions
+        if: ${{ !cancelled() && steps.sandbox.outcome == 'success' }}
+        run: |
+          task_python="$(command -v python)"
+          task_home="$HOME"
+          sudo -E env HOME="$task_home" bash .github/scripts/linux-tests.sh "$task_python" recovery-test
       - name: Clean only this job-owned process delegation
         if: always()
         run: |

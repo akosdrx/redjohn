@@ -79,14 +79,14 @@ async def test_actual_orphan_is_killed_before_crashed_owner_capacity_is_reclaime
 ):
     pool = HostResourcePool(tmp_path / "host.sqlite3")
     command = """
-import json,subprocess,sys
+import json,os,subprocess,sys
 from redjohn.assessment.host_resources import HostResourcePool
 from redjohn.assessment.resources import ResourceGovernor
 governor=ResourceGovernor(host_pool=HostResourcePool(sys.argv[1]))
 lease=governor.acquire('worker',1024*1024)
 child=subprocess.Popen([sys.executable,'-c','import time;time.sleep(60)'],
     stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
-print(json.dumps({'child_pid':child.pid}),flush=True)
+print(json.dumps({'owner_pid':os.getpid(),'child_pid':child.pid}),flush=True)
 sys.stdin.readline()
 """
     with LinuxMemoryBoundary({"delegated_root": str(delegated_root)}, 128 * MIB) as boundary:
@@ -99,11 +99,22 @@ sys.stdin.readline()
         )
         assert process.stdout is not None
         data = json.loads(await asyncio.wait_for(process.stdout.readline(), 10))
+        owner = data["owner_pid"]
+        owner_identity = process_identity(owner)
+        assert owner_identity is not None
+        assert pool.snapshot()["lost_owners"] == 0
+        measured = boundary.snapshot()
         orphan = data["child_pid"]
         identity = process_identity(orphan)
         assert identity is not None
         process.kill()
         await asyncio.wait_for(process.wait(), 5)
+        # The asyncio handle belongs to bwrap. Its exit does not synchronously
+        # reap the ledger owner. Observe that exact host PID/start identity;
+        # polling the pool's expected result would hide an owner-detection bug.
+        async with asyncio.timeout(5):
+            while process_identity(owner) == owner_identity:
+                await asyncio.sleep(0.01)
         assert process_identity(orphan) == identity
         before = pool.snapshot()
         assert before["lost_owners"] == 1
@@ -115,7 +126,17 @@ sys.stdin.readline()
         governor.close()
         after = pool.snapshot()
         assert after["active"] == {}
-        _save("owner-crash-recovery", {"before": before, "after": after, "orphan_stopped": True})
+        _save(
+            "owner-crash-recovery",
+            {
+                "before": before,
+                "after": after,
+                "orphan_stopped": True,
+                "actual_owner_exit_verified": True,
+                "orphan_survived_owner_exit": True,
+                "os_memory": measured,
+            },
+        )
 
 
 async def test_actual_contained_https_chromium_inventory_nuclei_restart_and_fixed_control(
