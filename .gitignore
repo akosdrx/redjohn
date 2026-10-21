@@ -30,5 +30,6 @@ resources/.tools-build-*/
 .bootstrap/
 redjohn_runs/
 RedJohn/.tools/
+RedJohn/build/
 /artifacts/
 /.ci-state/
