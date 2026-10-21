@@ -61,7 +61,8 @@ def put_synthetic_kernel_cases(path):
 def synthetic_memory_observation():
     memory = synthetic_owner_receipt()["os_memory"]
     return {"status": "complete", "process_limit_exceeded": False,
-            "processes": [{"role": "controller", "status": "complete",
+            "sample_monotonic": 4.0,
+            "processes": [{"role": "controller", "status": "complete", "pid": 100, "start_ticks": 123,
                            "rss_bytes": 100, "pss_bytes": 90, "private_bytes": 80}],
             "kernel_memory": memory}
 
@@ -70,8 +71,8 @@ def synthetic_soak_receipt():
     names = ("before_synthetic_pressure", "after_synthetic_pressure",
              "runtime_ready_before_loop", "after_warmup", "before_runtime_close",
              "after_runtime_close", "after_workload_return_before_gc",
-             "after_diagnostic_gc", "after_tracemalloc_stop")
-    return {"commit_sha": "abc", "ok": True, "requested_cycles": 2,
+             "after_diagnostic_gc", "after_tracemalloc_stop", "after_allocator_trim")
+    result = {"commit_sha": "abc", "ok": True, "requested_cycles": 2,
             "checks": {name: True for name in ci.SOAK_CHECKS},
             "minimum_elapsed_seconds": 0, "observation_errors": {},
             "resources_after_close": {"os_hard_limit": False},
@@ -89,6 +90,18 @@ def synthetic_soak_receipt():
                 "role_peaks": {"controller": synthetic_memory_observation()}},
             "allocation_observations": {"closed_cache_payload_bytes": 0,
                                         "retained_memory_observation_json_bytes": 100}}
+    before = synthetic_memory_observation()
+    before["sample_monotonic"] = 10
+    after = next(item for item in result["memory_attribution"]["checkpoints"]
+                 if item["checkpoint"] == "after_allocator_trim")
+    after["sample_monotonic"] = 11
+    result["allocation_diagnostic"] = {"status": "completed", "method": "glibc_malloc_trim_0",
+        "call_count": 1, "returncode": 0, "glibc_version": "synthetic-contract",
+        "elapsed_seconds": 0.01, "scope": "controller_allocator_only",
+        "runtime_policy_changed": False, "library_prepared_before_observation": True,
+        "before_checkpoint": "after_tracemalloc_stop", "after_checkpoint": "after_allocator_trim",
+        "before_observation": before, "after_observation": after}
+    return result
 
 
 class EvidenceContract(unittest.TestCase):
@@ -305,6 +318,48 @@ class EvidenceContract(unittest.TestCase):
             value["minimum_elapsed_seconds"] = 1200
             with self.assertRaisesRegex(ValueError, "explicit_workload_window"):
                 ci.validate_soak_observations(value)
+
+    def test_allocator_call_availability_and_bracketed_identity_are_required(self):
+        for fault in ("missing", "blocked", "failed", "no-call", "bad-return", "bool-return",
+                      "unprepared-library", "changed-policy", "wrong-owner", "reordered",
+                      "different-after-checkpoint", "missing-pss"):
+            with self.subTest(fault=fault):
+                value = synthetic_soak_receipt()
+                diagnostic = value["allocation_diagnostic"]
+                if fault == "missing":
+                    del value["allocation_diagnostic"]
+                elif fault in {"blocked", "failed"}:
+                    diagnostic["status"] = fault
+                elif fault == "no-call":
+                    diagnostic["call_count"] = 0
+                elif fault == "bad-return":
+                    diagnostic["returncode"] = -1
+                elif fault == "bool-return":
+                    diagnostic["returncode"] = False
+                elif fault == "unprepared-library":
+                    diagnostic["library_prepared_before_observation"] = False
+                elif fault == "changed-policy":
+                    diagnostic["runtime_policy_changed"] = True
+                elif fault == "wrong-owner":
+                    diagnostic["before_observation"]["processes"][0]["start_ticks"] += 1
+                elif fault == "reordered":
+                    diagnostic["before_observation"]["sample_monotonic"] = 12
+                elif fault == "different-after-checkpoint":
+                    diagnostic["after_observation"] = synthetic_memory_observation()
+                else:
+                    diagnostic["before_observation"]["processes"][0]["pss_bytes"] = None
+                with self.assertRaisesRegex(ValueError, "mixed_soak_"):
+                    ci.validate_soak_observations(value)
+
+    def test_allocator_noop_and_no_rss_reduction_remain_valid_observations(self):
+        for returned in (0, 1):
+            with self.subTest(returned=returned):
+                value = synthetic_soak_receipt()
+                value["allocation_diagnostic"]["returncode"] = returned
+                summary = ci.validate_soak_observations(value)["allocation_diagnostic"]
+                self.assertEqual(summary["returncode"], returned)
+                self.assertEqual(summary["controller_after_minus_before"],
+                                 {"rss_bytes": 0, "pss_bytes": 0, "private_bytes": 0})
 
     def test_missing_browser_does_not_hide_supported_native_or_kernel_cases(self):
         spec = importlib.util.spec_from_file_location("evidence", Path(__file__).parents[1] / "scripts/pytest_evidence.py")

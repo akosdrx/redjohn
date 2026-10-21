@@ -163,6 +163,51 @@ def _validate_memory_observation(value):
         or any(type(measured.get(key)) is not int or measured[key] != number
                for key, number in expected.items())):
         raise ValueError("mixed_soak_observed_controller_kernel_fence_invalid")
+    return controllers[0]
+
+
+def validate_allocator_diagnostic(value, checkpoints):
+    """Verify the real Linux call and its observations; a no-op is valid data."""
+    if (not isinstance(value, dict) or value.get("status") != "completed"
+        or value.get("method") != "glibc_malloc_trim_0"
+        or type(value.get("call_count")) is not int or value["call_count"] != 1
+        or type(value.get("returncode")) is not int or value["returncode"] not in (0, 1)
+        or not isinstance(value.get("glibc_version"), str) or not value["glibc_version"]
+        or not _finite_nonnegative(value.get("elapsed_seconds"))
+        or value.get("scope") != "controller_allocator_only"
+        or value.get("runtime_policy_changed") is not False
+        or value.get("library_prepared_before_observation") is not True
+        or value.get("before_checkpoint") != "after_tracemalloc_stop"
+        or value.get("after_checkpoint") != "after_allocator_trim"):
+        raise ValueError("mixed_soak_allocator_diagnostic_missing_or_blocked")
+    before, after = value.get("before_observation"), value.get("after_observation")
+    previous = checkpoints["after_tracemalloc_stop"]
+    def normalize(item):
+        return {key: measured for key, measured in item.items()
+                if key not in {"phase", "checkpoint"}}
+    if (not isinstance(after, dict)
+        or normalize(after) != normalize(checkpoints["after_allocator_trim"])):
+        raise ValueError("mixed_soak_allocator_after_observation_checkpoint_mismatch")
+    controllers = [_validate_memory_observation(item) for item in (previous, before, after)]
+    identities = {(item.get("pid"), item.get("start_ticks")) for item in controllers}
+    if (len(identities) != 1
+        or any(type(item.get(key)) is not int or item[key] <= 0
+               for item in controllers for key in ("pid", "start_ticks"))
+        or any(not _finite_nonnegative(item.get("sample_monotonic"))
+               for item in (previous, before, after))
+        or not previous["sample_monotonic"] <= before["sample_monotonic"] <= after["sample_monotonic"]
+        or value["elapsed_seconds"] > after["sample_monotonic"] - before["sample_monotonic"]):
+        raise ValueError("mixed_soak_allocator_observation_identity_or_order_invalid")
+    first, last = controllers[1:]
+    fields = ("rss_bytes", "pss_bytes", "private_bytes")
+    return {"status": "completed", "method": value["method"], "returncode": value["returncode"],
+            "call_count": 1, "library_prepared_before_observation": True,
+            "before_checkpoint": "after_tracemalloc_stop", "after_checkpoint": "after_allocator_trim",
+            "glibc_version": value["glibc_version"], "elapsed_seconds": value["elapsed_seconds"],
+            "controller_before": {key: first[key] for key in fields},
+            "controller_after": {key: last[key] for key in fields},
+            "controller_after_minus_before": {key: last[key] - first[key] for key in fields},
+            "scope": "controller_allocator_only", "runtime_policy_changed": False}
 
 
 def validate_soak_observations(value):
@@ -205,20 +250,22 @@ def validate_soak_observations(value):
     if (not isinstance(samples, list) or not 1 <= len(samples) <= 2048
         or type(profile.get("sample_count")) is not int
         or profile["sample_count"] < len(samples)
-        or not isinstance(checkpoints, list) or len(checkpoints) != 9):
+        or not isinstance(checkpoints, list) or len(checkpoints) != 10):
         raise ValueError("mixed_soak_memory_profile_retention_invalid")
     names = {item.get("checkpoint") for item in checkpoints if isinstance(item, dict)}
     if names != {"before_synthetic_pressure", "after_synthetic_pressure",
                  "runtime_ready_before_loop", "after_warmup", "before_runtime_close",
                  "after_runtime_close", "after_workload_return_before_gc",
-                 "after_diagnostic_gc", "after_tracemalloc_stop"}:
+                 "after_diagnostic_gc", "after_tracemalloc_stop", "after_allocator_trim"}:
         raise ValueError("mixed_soak_memory_checkpoints_incomplete")
     phases, roles = profile.get("phase_peaks"), profile.get("role_peaks")
-    if (not isinstance(phases, dict) or not 1 <= len(phases) <= 12
+    if (not isinstance(phases, dict) or not 1 <= len(phases) <= 13
         or not isinstance(roles, dict) or not 1 <= len(roles) <= 8):
         raise ValueError("mixed_soak_phase_or_role_peaks_incomplete")
     for observed in (*samples, *checkpoints, *phases.values(), *roles.values()):
         _validate_memory_observation(observed)
+    diagnostic = validate_allocator_diagnostic(value.get("allocation_diagnostic"),
+        {item["checkpoint"]: item for item in checkpoints})
     allocation = value.get("allocation_observations", {})
     if (allocation.get("closed_cache_payload_bytes") != 0
         or not _finite_nonnegative(allocation.get("retained_memory_observation_json_bytes"))):
@@ -226,7 +273,7 @@ def validate_soak_observations(value):
     return {"timing": timing, "actual_cycles": len(cycles), "sample_count": profile["sample_count"],
             "retained_samples": len(samples), "checkpoints": sorted(names),
             "observed_phases": sorted(phases), "observed_roles": sorted(roles),
-            "allocation_observations": allocation}
+            "allocation_observations": allocation, "allocation_diagnostic": diagnostic}
 
 
 def write(name, value):

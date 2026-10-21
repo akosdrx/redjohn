@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -139,3 +140,137 @@ def test_unsupported_platform_reports_unavailable_instead_of_fabricating_pss(mon
     assert value["status"] == "unavailable"
     assert value["reason"] == "linux_smaps_rollup_required"
     assert value["processes"] == []
+
+
+def test_executable_basename_classifies_renamed_browser_threads_without_exporting_paths(
+    tmp_path, monkeypatch
+):
+    profile = helpers(monkeypatch)
+    monkeypatch.setattr(profile.sys, "platform", "linux")
+    write_process(tmp_path, 100, 1, "python")
+    write_process(tmp_path, 101, 100, "MainThread")
+    write_process(tmp_path, 102, 101, "MainThread")
+    (tmp_path / "101/exe").symlink_to("/private/controlled/browser/headless_shell")
+    (tmp_path / "102/exe").symlink_to("/private/controlled/driver/node")
+    value = profile.process_memory_sample(proc_root=tmp_path, controller_pid=100)
+    assert set(value["roles"]) == {"controller", "chromium", "node"}
+    for row in value["processes"][1:]:
+        assert row["role_source"] == "executable_basename"
+        assert row["role_observation_status"] == "observed"
+        assert not {"argv", "environment", "executable", "basename", "name"} & row.keys()
+
+
+def test_executable_readlink_denial_is_explicit_comm_fallback(tmp_path, monkeypatch):
+    profile = helpers(monkeypatch)
+    write_process(tmp_path, 100, 1, "node")
+
+    def denied(_path):
+        raise PermissionError("controlled_proc_readlink_denial")
+
+    monkeypatch.setattr(Path, "readlink", denied)
+    role, source, status = profile._observed_role(tmp_path, 100, "node", 123, 1)
+    assert (role, source, status) == (
+        "node",
+        "comm_fallback",
+        "executable_basename_permission_denied",
+    )
+
+
+def test_reused_pid_cannot_publish_executable_role(tmp_path, monkeypatch):
+    profile = helpers(monkeypatch)
+    write_process(tmp_path, 100, 1, "MainThread", identity=124)
+    (tmp_path / "100/exe").symlink_to("/controlled/headless_shell")
+    role, source, status = profile._observed_role(tmp_path, 100, "MainThread", 123, 1)
+    assert (role, source, status) == ("other_descendant", "unverified", "process_identity_changed")
+
+
+@pytest.mark.parametrize("returned", [0, 1])
+def test_glibc_trim_brackets_only_call_after_library_preparation(monkeypatch, returned):
+    profile = helpers(monkeypatch)
+    monkeypatch.setattr(profile.sys, "platform", "linux")
+    events = []
+
+    class Function:
+        def __init__(self, action):
+            self.action = action
+
+        def __call__(self, *arguments):
+            return self.action(*arguments)
+
+    def trim(pad):
+        events.append("trim")
+        assert pad == 0
+        return returned
+
+    def version():
+        events.append("version")
+        return b"2.39"
+
+    def load(name):
+        assert name is None
+        events.append("library")
+        return SimpleNamespace(gnu_get_libc_version=Function(version), malloc_trim=Function(trim))
+
+    def capture():
+        events.append("observation")
+        return {"sample_order": len(events)}
+
+    result = profile.allocator_trim_diagnostic(capture, library_loader=load)
+    assert events == ["library", "version", "observation", "trim", "observation"]
+    assert result["status"] == "completed" and result["returncode"] == returned
+    assert result["call_count"] == 1 and result["library_prepared_before_observation"] is True
+    assert result["before_observation"]["sample_order"] == 3
+    assert result["after_observation"]["sample_order"] == 5
+    assert result["runtime_policy_changed"] is False
+
+
+def test_trim_unavailable_is_blocked_without_a_call_or_fabricated_observations(monkeypatch):
+    profile = helpers(monkeypatch)
+    monkeypatch.setattr(profile.sys, "platform", "linux")
+    result = profile.allocator_trim_diagnostic(
+        lambda: pytest.fail("unavailable trim must not fabricate pre/post observations"),
+        library_loader=lambda _: SimpleNamespace(),
+    )
+    assert result["status"] == "blocked" and result["call_count"] == 0
+    assert result["reason"] == "glibc_malloc_trim_symbol_unavailable"
+    assert "before_observation" not in result and "after_observation" not in result
+
+
+def test_non_linux_trim_diagnostic_never_loads_native_allocator(monkeypatch):
+    profile = helpers(monkeypatch)
+    monkeypatch.setattr(profile.sys, "platform", "darwin")
+    result = profile.allocator_trim_diagnostic(
+        lambda: pytest.fail("unsupported capture"),
+        library_loader=lambda _: pytest.fail("unsupported library load"),
+    )
+    assert result["status"] == "blocked" and result["call_count"] == 0
+
+
+@pytest.mark.parametrize("failure", ["unexpected_returncode", "os_error"])
+def test_failed_trim_preserves_before_after_evidence_and_remains_failed(monkeypatch, failure):
+    profile = helpers(monkeypatch)
+    monkeypatch.setattr(profile.sys, "platform", "linux")
+
+    def version():
+        return b"2.39"
+
+    def trim(_pad):
+        if failure == "os_error":
+            raise OSError("controlled_trim_failure")
+        return 2
+
+    observations = []
+
+    def capture():
+        value = {"observation": len(observations)}
+        observations.append(value)
+        return value
+
+    result = profile.allocator_trim_diagnostic(
+        capture,
+        library_loader=lambda _: SimpleNamespace(gnu_get_libc_version=version, malloc_trim=trim),
+    )
+    assert result["status"] == "failed" and result["call_count"] == 1
+    assert result["before_observation"] is observations[0]
+    assert result["after_observation"] is observations[1]
+    assert "returncode" not in result

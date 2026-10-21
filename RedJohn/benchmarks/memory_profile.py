@@ -10,6 +10,7 @@ available for processes whose Linux smaps_rollup is readable.
 
 from __future__ import annotations
 
+import ctypes
 import os
 import sys
 import time
@@ -32,7 +33,7 @@ def process_role(name: str, pid: int, controller_pid: int) -> str:
     if pid == controller_pid:
         return "controller"
     name = name.lower()
-    if name.startswith(("chrome", "chromium")):
+    if name.startswith(("chrome", "chromium", "headless_shell")):
         return "chromium"
     fixed = {
         "node": "node",
@@ -80,12 +81,35 @@ def _smaps(path: Path) -> dict[str, int]:
     }
 
 
+def _observed_role(proc_root, pid, name, identity, controller_pid):
+    """Classify a basename only; never export paths or inspect arguments."""
+    source, status = "comm_fallback", "executable_basename_unavailable"
+    try:
+        executable = (proc_root / str(pid) / "exe").readlink().name.removesuffix(" (deleted)")
+        role = process_role(executable, pid, controller_pid)
+        source, status = "executable_basename", "observed"
+    except PermissionError:
+        role = process_role(name, pid, controller_pid)
+        status = "executable_basename_permission_denied"
+    except OSError:
+        role = process_role(name, pid, controller_pid)
+    try:
+        if _stat(proc_root / str(pid) / "stat")[2] == identity:
+            return role, source, status
+    except (OSError, ValueError, IndexError):
+        return "other_descendant", "unverified", "process_identity_unavailable"
+    return "other_descendant", "unverified", "process_identity_changed"
+
+
 def _process_record(proc_root, pid, row, controller_pid):
     name, _, identity, rss = row
+    role, source, role_status = _observed_role(proc_root, pid, name, identity, controller_pid)
     item = {
         "pid": pid,
         "start_ticks": identity,
-        "role": process_role(name, pid, controller_pid),
+        "role": role,
+        "role_source": source,
+        "role_observation_status": role_status,
         "rss_bytes": rss,
         "pss_bytes": None,
         "private_bytes": None,
@@ -94,6 +118,11 @@ def _process_record(proc_root, pid, row, controller_pid):
         detail = _smaps(proc_root / str(pid) / "smaps_rollup")
         if _stat(proc_root / str(pid) / "stat")[2] != identity:
             status = "process_identity_changed"
+            item.update(
+                role="other_descendant",
+                role_source="unverified",
+                role_observation_status="process_identity_changed",
+            )
         else:
             item.update(detail)
             status = "complete"
@@ -165,6 +194,55 @@ def process_memory_sample(*, proc_root: Path = Path("/proc"), controller_pid: in
     return result
 
 
+def allocator_trim_diagnostic(capture, *, library_loader=ctypes.CDLL):
+    """One optional controller-only glibc probe after natural cleanup.
+
+    Library/symbol initialization precedes the explicit before observation.
+    The fixed one-call diagnostic does not change runtime allocator policy.
+    Return value alone neither quantifies released pages nor proves a leak.
+    """
+    result = {
+        "status": "blocked",
+        "method": "glibc_malloc_trim_0",
+        "call_count": 0,
+        "scope": "controller_allocator_only",
+        "runtime_policy_changed": False,
+        "before_checkpoint": "after_tracemalloc_stop",
+        "after_checkpoint": "after_allocator_trim",
+        "interpretation": (
+            "Compare explicit before/after observations; "
+            "returncode is not released bytes or leak proof."
+        ),
+    }
+    if sys.platform != "linux":
+        return {**result, "reason": "linux_glibc_allocator_diagnostic_unavailable"}
+    try:
+        library = library_loader(None)
+        version = library.gnu_get_libc_version
+        version.argtypes, version.restype = [], ctypes.c_char_p
+        trim = library.malloc_trim
+        trim.argtypes, trim.restype = [ctypes.c_size_t], ctypes.c_int
+        result["glibc_version"] = version().decode("ascii")[:64]
+    except (OSError, AttributeError, UnicodeError, TypeError, ValueError):
+        return {**result, "reason": "glibc_malloc_trim_symbol_unavailable"}
+    result["library_prepared_before_observation"] = True
+    result["before_observation"] = capture()
+    started = time.monotonic()
+    result["call_count"] = 1
+    try:
+        returned = trim(0)
+        if type(returned) is int and returned in {0, 1}:
+            result.update(status="completed", returncode=returned)
+        else:
+            result.update(status="failed", reason="unexpected_malloc_trim_returncode")
+    except (OSError, ValueError, TypeError):
+        result.update(status="failed", reason="malloc_trim_call_failed")
+    finally:
+        result["elapsed_seconds"] = time.monotonic() - started
+        result["after_observation"] = capture()
+    return result
+
+
 class MemoryAttribution:
     """Retain a bounded 2s series and one peak per fixed workload phase."""
 
@@ -203,6 +281,7 @@ class MemoryAttribution:
             "closed",
             "after_gc",
             "after_tracer_stop",
+            "after_allocator_trim",
         }:
             raise ValueError("unknown_memory_measurement_phase")
         self.phase, self.cycle = phase, cycle
@@ -246,9 +325,11 @@ class MemoryAttribution:
                 self.report["retention_limit_reached"] = True
             self.next_retained = value["sample_monotonic"] + RETAIN_INTERVAL_SECONDS
 
-    def checkpoint(self, name: str):
+    def checkpoint(self, name: str, *, observation=None):
         # Fixed names at setup/warmup/close: never a target-derived label.
-        value = self.capture()
+        value = self.capture() if observation is None else dict(observation)
+        if observation is not None:
+            value.update(phase=self.phase, cycle=self.cycle)
         value["checkpoint"] = name
         self.report["checkpoints"].append(value)
         return value

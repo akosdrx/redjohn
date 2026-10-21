@@ -79,10 +79,10 @@ async def test_initial_memory_checkpoint_failure_restores_lifetime_and_saves_err
     monkeypatch.setenv("REDJOHN_RESOURCE_POOL_PATH", "/original/owned/pool")
     original = soak.MemoryAttribution.checkpoint
 
-    def checkpoint(recorder, name):
+    def checkpoint(recorder, name, **kwargs):
         if name == "before_synthetic_pressure":
             raise ValueError("initial_profile_checkpoint_failed")
-        return original(recorder, name)
+        return original(recorder, name, **kwargs)
 
     monkeypatch.setattr(soak.MemoryAttribution, "checkpoint", checkpoint)
     monkeypatch.setattr(

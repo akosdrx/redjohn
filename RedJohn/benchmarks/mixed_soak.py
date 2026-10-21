@@ -26,7 +26,7 @@ from pathlib import Path
 
 from browser_soak import _source_hashes, sample
 from limit_pressure import body_pressure, log_pressure
-from memory_profile import SAMPLE_INTERVAL_SECONDS, MemoryAttribution
+from memory_profile import SAMPLE_INTERVAL_SECONDS, MemoryAttribution, allocator_trim_diagnostic
 
 from redjohn.assessment.browser import BrowserLimits
 from redjohn.assessment.browser_tls import BrowserTLSConfig
@@ -485,6 +485,7 @@ async def run(  # noqa: PLR0915 - benchmark evidence retained even on workload f
             "synthetic_pressure_is_not_scanner_detection_evidence",
             "no_cloud_or_public_OAST_or_live_LLM",
             "memory_observer_and_allocation_snapshots_add_measured_controller_overhead",
+            "post_cleanup_glibc_trim_is_a_diagnostic_not_runtime_allocator_policy",
         ],
     }
     stop = asyncio.Event()
@@ -579,6 +580,12 @@ async def run(  # noqa: PLR0915 - benchmark evidence retained even on workload f
         try:
             memory.set_phase("after_tracer_stop")
             memory.checkpoint("after_tracemalloc_stop")
+            diagnostic = allocator_trim_diagnostic(memory.capture)
+            result["allocation_diagnostic"] = diagnostic
+            memory.set_phase("after_allocator_trim")
+            memory.checkpoint(
+                "after_allocator_trim", observation=diagnostic.get("after_observation")
+            )
         except Exception as exc:  # noqa: BLE001 - do not mask an earlier workload failure
             result.setdefault(
                 "final_observation_error",

@@ -40,6 +40,7 @@ REPORTS = {
     "naabu_ports": "redjohn-network-broker.md",
     "dnsx_resolve": "redjohn-network-broker.md",
     "nmap_services": "redjohn-nmap-service-profile.md",
+    "owned_lab_regression": "redjohn-owned-lab-component.md",
     "cloud_prepare": "../RedJohn/docs/redjohn-cloud-kubernetes-preparation.md",
     "kubernetes_prepare": "../RedJohn/docs/redjohn-cloud-kubernetes-preparation.md",
 }
@@ -68,6 +69,16 @@ def generate() -> dict[str, str]:
             f"{implemented} implementált képesség, {missing} hiányzó opcionális adapter és "
             f"{deferred} tudatosan halasztott alternatíva szerepel a jelenlegi registryben. A master szerinti "
             "teljes fennmaradó munka: [követett állapot](redjohn-completion-status.md)."
+        ),
+        "",
+        (
+            "A `pending_*`/`requires_*` kódstátusz egy gép futási előfeltételeit nem "
+            "helyettesíti, és nem aktuális hiánylista. A már lezárt auth/MFA/logout, "
+            "GraphQL, helyi target-MCP, source/network/service és owned-lab "
+            "igazolásokat a [követett állapot](redjohn-completion-status.md) konkrét "
+            "commitjai és futásai rögzítik. A `live_verified: false` JSON-mező azt "
+            "jelenti, hogy a generátor nem hajtott végre élő ellenőrzést; nem cáfol "
+            "egy korábbi mérési jegyzőkönyvet."
         ),
         "",
         "| Capability | Tool | Adapter | Kódstátusz | Forrás / licenc | Mérési jegyzőkönyv |",

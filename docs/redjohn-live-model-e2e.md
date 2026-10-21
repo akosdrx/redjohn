@@ -79,7 +79,7 @@ After this workflow is registered in GitHub:
 
 ```sh
 gh workflow run redjohn-live-model.yml --repo akosdrx/redjohn \
-  --ref codex/redjohn-ubuntu-actions -f model=YOUR_EXPLICIT_OPENAI_MODEL
+  --ref codex/redjohn-resource-closure -f model=YOUR_EXPLICIT_OPENAI_MODEL
 ```
 
 The workflow must exist on GitHub's default branch for normal standalone manual
@@ -90,7 +90,7 @@ are still a failed blocked run on both architectures, never a successful skip.
 
 ```sh
 gh workflow run redjohn-ubuntu.yml --repo akosdrx/redjohn \
-  --ref codex/redjohn-ubuntu-actions \
+  --ref codex/redjohn-resource-closure \
   -f live_model_only=true -f model=YOUR_EXPLICIT_OPENAI_MODEL
 ```
 

@@ -551,7 +551,7 @@
     "privilege": "unprivileged",
     "owner_process_only": false,
     "live_verified": false,
-    "recorded_verification_report": null
+    "recorded_verification_report": "redjohn-owned-lab-component.md"
   },
   {
     "id": "oast_correlate",
