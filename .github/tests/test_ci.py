@@ -646,6 +646,7 @@ class EvidenceContract(unittest.TestCase):
         assert "capability sys_ptrace," not in policy
         assert "capability sys_admin," in policy  # setuid bwrap namespace setup
         assert "capability net_admin," in policy  # bwrap loopback setup
+        assert "/proc/self/{uid_map,gid_map,setgroups} rw" in policy
         assert "/home/*/work/** rwklix" in policy
         assert "/sys/fs/cgroup/redjohn-ci-*/** rwklix" in policy
 

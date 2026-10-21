@@ -45,6 +45,8 @@ profile @REDJOHN_CI_PROFILE@ flags=(attach_disconnected,mediate_deleted) {
   /run/** rwklix,
   /dev/** rwklix,
   /proc/** r,
+  /proc/self/{uid_map,gid_map,setgroups} rw,
+  /proc/[0-9]*/{uid_map,gid_map,setgroups} rw,
   /proc/sys/** r,
   /sys/** r,
   /sys/fs/cgroup/redjohn-ci-*/** rwklix,
