@@ -19,6 +19,7 @@ from redjohn.config.loader import (
     load_settings,
     persist_current,
     save_llm_selection,
+    save_swarm_llm_selection,
 )
 from redjohn.config.settings import (
     ContextSettings,
@@ -44,4 +45,5 @@ __all__ = [
     "load_settings",
     "persist_current",
     "save_llm_selection",
+    "save_swarm_llm_selection",
 ]

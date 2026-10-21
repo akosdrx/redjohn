@@ -81,7 +81,7 @@ def _run_show(console: Console, argv: list[str], *, scopes_only: bool) -> int:
     profile = str(record.get("scope_profile") or "custom").title()
     if not scopes_only:
         device_name = escape(str(record.get("device_name") or "this device"))
-        console.print(f"[green]Active CLI session[/] on [bold]{device_name}[/]")
+        console.print(f"[#ef4444]Active CLI session[/] on [bold]{device_name}[/]")
         console.print(f"  Workspace: {escape(str(record.get('organization_id') or 'unknown'))}")
     console.print(f"  Access: {profile} · {len(scopes)} scopes granted · {len(ceiling)} maximum")
     if args.show_scopes or scopes_only:
@@ -132,7 +132,7 @@ def _run_scopes_set(console: Console, argv: list[str]) -> int:
     else:
         scopes = _string_list(result.get("scopes"))
         profile = str(result.get("scope_profile") or "custom").title()
-        console.print(f"[green]✓ CLI access updated.[/] {profile} · {len(scopes)} scopes granted")
+        console.print(f"[#ef4444]✓ CLI access updated.[/] {profile} · {len(scopes)} scopes granted")
         if args.show_scopes:
             console.print(f"  Scopes: [dim]{escape(' '.join(scopes))}[/]")
     return http.EXIT_OK

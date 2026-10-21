@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import Literal
 
 from pydantic import AliasChoices, Field, field_validator
@@ -9,6 +10,16 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 ReasoningEffort = Literal["none", "minimal", "low", "medium", "high", "xhigh", "max"]
+SwarmProfile = Literal[
+    "full",
+    "balanced",
+    "fast",
+    "deep",
+    "recon",
+    "exploit",
+    "whitebox",
+    "single",
+]
 ApiType = Literal["responses", "chat_completions"]
 
 DEFAULT_MAX_TURNS = 500
@@ -16,7 +27,10 @@ DEFAULT_MAX_TURNS = 500
 
 def _lowercase(value: object) -> object:
     """Enum-like env values are matched case-insensitively (``None`` is ``none``)."""
-    return value.strip().lower() if isinstance(value, str) else value
+    if isinstance(value, str):
+        stripped = value.strip().lower()
+        return stripped if stripped else None
+    return value
 
 
 _BASE_CONFIG = SettingsConfigDict(
@@ -56,6 +70,33 @@ class LlmSettings(BaseSettings):
         repr=False,
     )
     reasoning_effort: ReasoningEffort = Field(default="high", alias="REDJOHN_REASONING_EFFORT")
+    model_label: str | None = Field(default=None, alias="REDJOHN_LLM_LABEL")
+    supported_efforts: list[str] | None = Field(
+        default=None,
+        alias="REDJOHN_LLM_SUPPORTED_EFFORTS",
+    )
+    swarm_model: str | None = Field(default=None, alias="REDJOHN_SWARM_LLM")
+    swarm_reasoning_effort: ReasoningEffort | None = Field(
+        default=None,
+        alias="REDJOHN_SWARM_REASONING_EFFORT",
+    )
+    swarm_api_key: str | None = Field(
+        default=None,
+        alias="SWARM_LLM_API_KEY",
+        repr=False,
+    )
+    swarm_api_base: str | None = Field(
+        default=None,
+        alias="SWARM_LLM_API_BASE",
+    )
+    swarm_profile: SwarmProfile = Field(
+        default="full",
+        alias="REDJOHN_SWARM_PROFILE",
+    )
+    swarm_role_models: dict[str, str] | None = Field(
+        default=None,
+        alias="REDJOHN_SWARM_ROLE_MODELS",
+    )
     force_required_tool_choice: bool = Field(
         default=False,
         alias="REDJOHN_FORCE_REQUIRED_TOOL_CHOICE",
@@ -96,10 +137,59 @@ class LlmSettings(BaseSettings):
         description="Optional provider-enforced output token cap for every agent model call",
     )
 
-    @field_validator("api_type", "reasoning_effort", mode="before")
+    @field_validator(
+        "api_type",
+        "swarm_reasoning_effort",
+        mode="before",
+    )
     @classmethod
     def _normalize_case(cls, value: object) -> object:
         return _lowercase(value)
+
+    @field_validator("reasoning_effort", mode="before")
+    @classmethod
+    def _normalize_reasoning_effort(cls, value: object) -> object:
+        normalized = _lowercase(value)
+        return "high" if normalized is None else normalized
+
+    @field_validator("swarm_profile", mode="before")
+    @classmethod
+    def _normalize_swarm_profile(cls, value: object) -> object:
+        normalized = _lowercase(value)
+        return "full" if normalized is None else normalized
+
+    @field_validator("supported_efforts", mode="before")
+    @classmethod
+    def _parse_supported_efforts(cls, value: object) -> object:
+        if isinstance(value, str):
+            stripped = value.strip()
+            if not stripped:
+                return None
+            if stripped.startswith("["):
+                try:
+                    parsed = json.loads(stripped)
+                    if isinstance(parsed, list):
+                        return [str(item).strip().lower() for item in parsed if str(item).strip()]
+                except json.JSONDecodeError:
+                    pass
+            return [part.strip().lower() for part in stripped.split(",") if part.strip()]
+        return value
+
+    @field_validator("swarm_role_models", mode="before")
+    @classmethod
+    def _parse_role_models(cls, value: object) -> object:
+        if isinstance(value, str):
+            stripped = value.strip()
+            if not stripped:
+                return None
+            try:
+                parsed = json.loads(stripped)
+            except json.JSONDecodeError:
+                return None
+            if isinstance(parsed, dict):
+                return {str(k): str(v) for k, v in parsed.items() if v}
+            return None
+        return value
 
 
 class DedupeSettings(BaseSettings):
@@ -162,7 +252,7 @@ class TelemetrySettings(BaseSettings):
     enabled: bool = Field(default=False, alias="REDJOHN_TELEMETRY")
 
 
-WebSearchProvider = Literal["auto", "perplexity", "exa"]
+WebSearchProvider = Literal["auto", "perplexity", "exa", "duckduckgo", "browser"]
 ExaSearchType = Literal["auto", "fast", "instant", "deep-lite", "deep", "deep-reasoning"]
 
 

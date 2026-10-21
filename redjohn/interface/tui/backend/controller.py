@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from redjohn.config import load_settings
+from redjohn.config.model_catalog import resolve_model_effort_spec, short_model_label
 from redjohn.config.settings import DEFAULT_MAX_TURNS
 from redjohn.interface.tui.backend.live_view import TuiLiveView
 from redjohn.interface.tui.backend.llm_picker import LlmPicker
@@ -118,7 +119,9 @@ class TuiController:
         self._on_change = on_change
         self._llm_picker = LlmPicker()
         self._mcp_names = _configured_mcp_names()
-        self._skill_names = _skill_names()
+        self._skill_catalog = _skill_catalog()
+        self._skill_names = [entry["name"] for entry in self._skill_catalog]
+        self.selected_skills: list[str] = []
 
     def set_change_callback(self, callback: ChangeCallback) -> None:
         self._on_change = callback
@@ -179,11 +182,28 @@ class TuiController:
     def snapshot(self) -> dict[str, Any]:
         """Return small mutable state; histories are streamed as collections."""
         model = ""
-        effort = "high"
+        effort = ""
+        supported_efforts: list[str] = []
+        swarm_model = ""
+        swarm_effort = ""
+        swarm_profile = "full"
+        swarm_role_models: dict[str, str] = {}
         with contextlib.suppress(Exception):
             llm = load_settings().llm
             model = (llm.model or "").strip()
-            effort = llm.reasoning_effort
+            swarm_model = (llm.swarm_model or "").strip()
+            swarm_profile = llm.swarm_profile.strip() or "full"
+            swarm_role_models = dict(llm.swarm_role_models or {})
+            if model:
+                spec = resolve_model_effort_spec(model)
+                supported_efforts = list(spec.supported_efforts)
+                effort = llm.reasoning_effort
+                if supported_efforts and effort not in supported_efforts:
+                    effort = spec.default_effort or supported_efforts[0]
+            effective_swarm = swarm_model or model
+            if effective_swarm:
+                swarm_spec = resolve_model_effort_spec(effective_swarm)
+                swarm_effort = llm.swarm_reasoning_effort or effort or swarm_spec.default_effort
         usage: dict[str, Any] = {}
         if self.report_state is not None:
             usage = dict(self.report_state.get_total_llm_usage())
@@ -207,7 +227,21 @@ class TuiController:
             "scope_mode": self.scope_mode,
             "diff_base": terminal_projection(self.diff_base, max_string=256),
             "model": terminal_projection(model, max_string=256),
+            "short_model": terminal_projection(
+                short_model_label(model) if model else "", max_string=64
+            ),
             "reasoning_effort": effort,
+            "supported_efforts": supported_efforts,
+            "swarm_model": terminal_projection(swarm_model, max_string=256),
+            "short_swarm_model": terminal_projection(
+                short_model_label(swarm_model or model) if (swarm_model or model) else "",
+                max_string=64,
+            ),
+            "swarm_reasoning_effort": swarm_effort,
+            "swarm_profile": swarm_profile,
+            "swarm_role_models": terminal_projection(
+                swarm_role_models, max_string=128, max_items=10
+            ),
             "caido_url": terminal_projection(
                 getattr(self.report_state, "caido_url", None), max_string=1024
             ),
@@ -222,7 +256,11 @@ class TuiController:
             "usage": terminal_projection(usage, max_string=256, max_items=20),
             "subscription": subscription,
             "connections": self._connection_projection(),
-            "skills": [terminal_projection(name, max_string=64) for name in self._skill_names[:48]],
+            "skills": [terminal_projection(name, max_string=64) for name in self._skill_names],
+            "selected_skills": [
+                terminal_projection(name, max_string=64)
+                for name in self._effective_selected_skills()
+            ],
             "skill_count": len(self._skill_names),
             "viewer_status": self.viewer_status,
             "viewer_url": terminal_projection(self.viewer_url, max_string=1024),
@@ -337,6 +375,10 @@ class TuiController:
             "llm.auth_cancel": self._llm_auth_cancel,
             "llm.select_model": self._llm_select_model,
             "llm.set_effort": self._llm_set_effort,
+            "llm.set_swarm": self._llm_set_swarm,
+            "skills.catalog": self._skills_catalog,
+            "skills.toggle": self._skills_toggle,
+            "pentest.run": self._pentest_run,
         }
         handler = handlers.get(command)
         if handler is None:
@@ -570,13 +612,168 @@ class TuiController:
         model_id = payload.get("model")
         if not isinstance(model_id, str):
             raise TypeError("model must be a string")
-        return self._llm_picker.select_model(model_id, scan_started=self.scan_started)
+        target = str(payload.get("target") or payload.get("scope") or "both")
+        role = payload.get("role")
+        return self._llm_picker.select_model(
+            model_id,
+            scan_started=self.scan_started,
+            target=target,
+            role=role if isinstance(role, str) else None,
+        )
 
     async def _llm_set_effort(self, payload: dict[str, Any]) -> dict[str, Any]:
         effort = payload.get("effort")
         if not isinstance(effort, str):
             raise TypeError("effort must be a string")
-        return self._llm_picker.set_effort(effort, scan_started=self.scan_started)
+        target = str(payload.get("target") or "orchestrator")
+        return self._llm_picker.set_effort(
+            effort,
+            scan_started=self.scan_started,
+            target=target,
+        )
+
+    async def _llm_set_swarm(self, payload: dict[str, Any]) -> dict[str, Any]:
+        return self._llm_picker.set_swarm(payload, scan_started=self.scan_started)
+
+    def _effective_selected_skills(self) -> list[str]:
+        merged = list(self.selected_skills)
+        if not self.scan_started:
+            return merged
+        selectable_names = {
+            entry["name"]: entry["id"]
+            for entry in self._skill_catalog
+            if entry.get("selectable", True)
+        }
+        with contextlib.suppress(Exception):
+            from redjohn.skills import get_loaded_skill_names
+
+            for loaded_name in get_loaded_skill_names():
+                canonical = selectable_names.get(loaded_name)
+                if canonical and canonical not in merged and loaded_name not in merged:
+                    merged.append(canonical)
+        return merged
+
+    async def _skills_catalog(self, _payload: dict[str, Any]) -> dict[str, Any]:
+        self._skill_catalog = _skill_catalog()
+        self._skill_names = [entry["name"] for entry in self._skill_catalog]
+        effective = self._effective_selected_skills()
+        selected_set = set(effective)
+        entries = [
+            {
+                **entry,
+                "selected": entry["id"] in selected_set or entry["name"] in selected_set,
+            }
+            for entry in self._skill_catalog
+        ]
+        return {
+            "skills": entries,
+            "selected": effective,
+            "selected_skills": effective,
+            "total": len(entries),
+        }
+
+    async def _skills_toggle(self, payload: dict[str, Any]) -> dict[str, Any]:
+        skill_id = str(
+            payload.get("skill") or payload.get("id") or payload.get("name") or ""
+        ).strip()
+        if not skill_id:
+            self.selected_skills.clear()
+            return {"selected": [], "cleared": True}
+        self._skill_catalog = _skill_catalog()
+        match = next(
+            (
+                entry
+                for entry in self._skill_catalog
+                if entry["id"] == skill_id or entry["name"] == skill_id
+            ),
+            None,
+        )
+        if match is None:
+            raise ValueError(f"Unknown skill: {skill_id}")
+        if not match.get("selectable", True):
+            raise ValueError(
+                f"Skill '{match['name']}' is a core system contract and is always active"
+            )
+        canonical = str(match["id"])
+        if canonical in self.selected_skills:
+            self.selected_skills.remove(canonical)
+            active = False
+        elif match["name"] in self.selected_skills:
+            self.selected_skills.remove(match["name"])
+            active = False
+        else:
+            if len(self.selected_skills) >= 8:
+                raise ValueError("Maximum 8 specialist skills can be pinned at once")
+            self.selected_skills.append(canonical)
+            active = True
+        selected_set = set(self.selected_skills)
+        entries = [
+            {
+                **entry,
+                "selected": entry["id"] in selected_set or entry["name"] in selected_set,
+            }
+            for entry in self._skill_catalog
+        ]
+        return {
+            "id": canonical,
+            "name": match["name"],
+            "active": active,
+            "selected": list(self.selected_skills),
+            "selected_skills": list(self.selected_skills),
+            "skills": entries,
+        }
+
+    async def _pentest_run(self, payload: dict[str, Any]) -> dict[str, Any]:
+        """Launch or extend a Swarm pentest directly from ``/rj <target> [instructions]``."""
+        raw = str(payload.get("raw") or "").strip()
+        explicit_target = str(payload.get("target") or "").strip()
+        explicit_instruction = str(payload.get("instruction") or "").strip()
+        if raw and not explicit_target:
+            parts = raw.split(maxsplit=1)
+            explicit_target = parts[0].strip()
+            if len(parts) > 1 and not explicit_instruction:
+                explicit_instruction = parts[1].strip()
+        if not explicit_target:
+            raise ValueError("Usage: /rj <target> [instructions]")
+
+        if explicit_target not in self.targets:
+            self.targets.append(explicit_target)
+        if explicit_instruction:
+            self.instruction = explicit_instruction
+
+        if not self.scan_started:
+            await self._start({"mount_working_dir": False})
+            return {
+                "started": True,
+                "target": explicit_target,
+                "instruction": self.instruction,
+            }
+
+        root_id = self._root_agent_id()
+        if not root_id:
+            raise RuntimeError("No active Coordinator agent found for this session")
+        swarm_directive = (
+            f"[OPERATOR /rj PENTEST COMMAND]\n"
+            f"Target added to scope: {explicit_target}\n"
+            + (f"Operator instructions: {explicit_instruction}\n" if explicit_instruction else "")
+            + "Immediately decompose this target and spawn specialist Swarm agents "
+            "to execute the assessment."
+        )
+        await self._send_message({"agent_id": root_id, "message": swarm_directive})
+        return {
+            "started": True,
+            "dispatched_to": root_id,
+            "target": explicit_target,
+            "instruction": explicit_instruction,
+        }
+
+    def _root_agent_id(self) -> str | None:
+        for agent_id, agent in self.live_view.agents.items():
+            if not agent.get("parent_id"):
+                return str(agent_id)
+        if self.live_view.agents:
+            return str(next(iter(self.live_view.agents)))
+        return None
 
     @staticmethod
     def _required_string(payload: dict[str, Any], name: str) -> str:
@@ -599,10 +796,14 @@ def _configured_mcp_names() -> list[str]:
         return []
 
 
-def _skill_names() -> list[str]:
+def _skill_catalog() -> list[dict[str, Any]]:
     try:
-        from redjohn.skills import get_all_skill_names
+        from redjohn.skills import discover_skill_catalog
 
-        return sorted(get_all_skill_names())
+        return [entry.to_dict() for entry in discover_skill_catalog(include_internal=True)]
     except (ImportError, OSError, ValueError, RuntimeError):
         return []
+
+
+def _skill_names() -> list[str]:
+    return [entry["name"] for entry in _skill_catalog()]

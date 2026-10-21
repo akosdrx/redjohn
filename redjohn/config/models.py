@@ -1009,8 +1009,13 @@ def supports_strict_tool_schemas(model_name: str) -> bool:
 
 
 def model_supports_reasoning(model_name: str) -> bool:
+    from redjohn.config.model_catalog import resolve_model_effort_spec
+
+    spec = resolve_model_effort_spec(model_name)
     entry = _catalog_entry(model_name)
-    return bool(entry and entry.get("supports_reasoning"))
+    if entry is not None and "supports_reasoning" in entry:
+        return bool(entry.get("supports_reasoning")) or spec.supports_reasoning
+    return spec.supports_reasoning
 
 
 def model_supports_images(model_name: str) -> bool:

@@ -102,6 +102,10 @@ class GoTuiRuntime:
         self.server = TuiBackendServer(self.controller)
 
     def init_run_state(self) -> None:
+        with contextlib.suppress(Exception):
+            from redjohn.skills import reset_loaded_skills
+
+            reset_loaded_skills()
         self.scan_config = {
             "scan_id": self.args.run_name,
             "targets": self.args.targets_info,
@@ -109,6 +113,7 @@ class GoTuiRuntime:
             "run_name": self.args.run_name,
             "diff_scope": self.args.diff_scope,
             "scan_mode": self.args.scan_mode,
+            "skills": list(self.controller.selected_skills),
             "non_interactive": False,
             "local_sources": self.args.local_sources or [],
             "workspace_files": getattr(self.args, "workspace_files", None) or [],
@@ -398,17 +403,30 @@ class GoTuiRuntime:
 
     @staticmethod
     def binary_command() -> list[str]:
+        from redjohn.interface.tui.sidecar import _normalized_os_arch
+
         source = tui_source_dir()
-        # A checkout may also contain a stale wheel/build sidecar. Running the
-        # current source is the deterministic development choice.
-        if (source / "go.mod").is_file() and shutil.which("go"):
-            return ["go", "run", "./cmd/redjohn-tui"]
+        os_tag, _arch_tag = _normalized_os_arch()
+        exe_name = "redjohn-tui.exe" if os.name == "nt" else "redjohn-tui"
+        release_bin = source / "target" / "release" / exe_name
+        if release_bin.is_file():
+            return [str(release_bin)]
         for candidate in tui_executable_candidates():
             packaged = get_redjohn_resource_path("bin", candidate)
-            if packaged.is_file():
-                return [str(packaged)]
+            if not packaged.is_file():
+                continue
+            resolved_name = packaged.resolve().name.lower()
+            if any(
+                other in resolved_name
+                for other in ("linux", "darwin", "windows")
+                if other != os_tag
+            ):
+                continue
+            return [str(packaged)]
+        if (source / "Cargo.toml").is_file() and shutil.which("cargo"):
+            return ["cargo", "run", "--release", "--quiet", "--bin", "redjohn-tui"]
         raise RuntimeError(
-            "Bubble Tea TUI binary not found. Reinstall RedJohn from an official platform wheel."
+            "Native Rust TUI binary not found. Run `cargo build --release` in redjohn/interface/tui or reinstall RedJohn."
         )
 
     @staticmethod
@@ -440,12 +458,12 @@ class GoTuiRuntime:
             env = child_environment()
             env["REDJOHN_VERSION"] = package_version()
             command = self.binary_command()
-            cwd = str(tui_source_dir()) if command[:2] == ["go", "run"] else None
+            cwd = str(tui_source_dir()) if command[:2] == ["cargo", "run"] else None
             if cwd is not None:
-                # go run compiles the sidecar when the build cache is cold, so
+                # cargo run compiles the sidecar when the build cache is cold, so
                 # tell the terminal why nothing is on screen yet.
                 print(
-                    "\x1b[2mCompiling the TUI from source (cached after the first run)...\x1b[0m",
+                    "\x1b[2mCompiling the Rust TUI from source (cached after the first run)...\x1b[0m",
                     file=original_stdout,
                     flush=True,
                 )

@@ -131,15 +131,15 @@ async def warm_up_llm() -> None:
             and not llm.api_base
         ):
             warn_text = Text()
-            warn_text.append("UNKNOWN MODEL NAME", style="bold yellow")
+            warn_text.append("UNKNOWN MODEL NAME", style="bold #ef4444")
             warn_text.append("\n\n", style="white")
-            warn_text.append(f"'{raw_model}'", style="bold cyan")
+            warn_text.append(f"'{raw_model}'", style="bold #f87171")
             warn_text.append(
                 " is not a known OpenAI model. Bare names route to OpenAI by default.\n"
                 "If you meant a non-OpenAI provider, use the '",
                 style="white",
             )
-            warn_text.append("<provider>/<model>", style="bold cyan")
+            warn_text.append("<provider>/<model>", style="bold #f87171")
             warn_text.append(
                 "' form, e.g. 'anthropic/claude-opus-4-7', 'deepseek/deepseek-v4-pro'.",
                 style="white",
@@ -149,7 +149,7 @@ async def warm_up_llm() -> None:
                     warn_text,
                     title="[bold #ef4444]REDJOHN",
                     title_align="left",
-                    border_style="yellow",
+                    border_style="#ef4444",
                     padding=(1, 2),
                 ),
             )
@@ -196,9 +196,9 @@ def display_completion_message(args: argparse.Namespace, results_path: Path) -> 
 
     completion_text = Text()
     if scan_completed:
-        completion_text.append("Penetration test completed", style="bold #22c55e")
+        completion_text.append("Penetration test completed", style="bold #ef4444")
     else:
-        completion_text.append("SESSION ENDED", style="bold #eab308")
+        completion_text.append("SESSION ENDED", style="bold #f87171")
 
     target_text = Text()
     target_text.append("Target", style="dim")
@@ -222,14 +222,14 @@ def display_completion_message(args: argparse.Namespace, results_path: Path) -> 
     results_text.append("\n")
     results_text.append("Output", style="dim")
     results_text.append("  ")
-    results_text.append(str(results_path), style="#60a5fa")
+    results_text.append(str(results_path), style="#f87171")
     panel_parts.extend(["\n", results_text])
 
     view_text = Text()
     view_text.append("\n")
     view_text.append("View", style="dim")
     view_text.append("    ")
-    view_text.append(f"redjohn view {args.run_name}", style="#22c55e")
+    view_text.append(f"redjohn view {args.run_name}", style="bold #ef4444")
     panel_parts.extend(["\n", view_text])
 
     if not scan_completed:
@@ -237,12 +237,12 @@ def display_completion_message(args: argparse.Namespace, results_path: Path) -> 
         resume_text.append("\n")
         resume_text.append("Resume", style="dim")
         resume_text.append("  ")
-        resume_text.append(f"redjohn --resume {args.run_name}", style="#22c55e")
+        resume_text.append(f"redjohn --resume {args.run_name}", style="bold #ef4444")
         panel_parts.extend(["\n", resume_text])
 
     panel_content = Text.assemble(*panel_parts)
 
-    border_style = "#22c55e" if scan_completed else "#eab308"
+    border_style = "#ef4444" if scan_completed else "#dc2626"
 
     panel = Panel(
         panel_content,

@@ -4,7 +4,7 @@ version = "1.7.0"
 description = "Open-source AI Hackers for your apps"
 readme = "README.md"
 license = "Apache-2.0"
-license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md"]
+license-files = ["LICENSE"]
 requires-python = ">=3.12"
 authors = [
   { name = "RedJohn", email = "hi@redjohn.ai" },
@@ -94,12 +94,12 @@ packages = ["redjohn"]
 exclude = [
   "redjohn/interface/viewer/frontend",
   "redjohn/interface/viewer/frontend/**",
-  # Go TUI SOURCE lives under the package dir but must never ship in the wheel;
+  # Rust TUI SOURCE lives under the package dir but must never ship in the wheel;
   # the compiled sidecar is force-included as redjohn/bin/redjohn-tui instead.
-  "redjohn/interface/tui/cmd/**",
-  "redjohn/interface/tui/internal/**",
-  "redjohn/interface/tui/go.mod",
-  "redjohn/interface/tui/go.sum",
+  "redjohn/interface/tui/src/**",
+  "redjohn/interface/tui/target/**",
+  "redjohn/interface/tui/Cargo.toml",
+  "redjohn/interface/tui/Cargo.lock",
 ]
 
 [tool.hatch.build.targets.wheel.hooks.custom]
@@ -147,10 +147,6 @@ module = [
 ]
 ignore_missing_imports = true
 disable_error_code = ["import-untyped"]
-
-[[tool.mypy.overrides]]
-module = ["tests.*"]
-disallow_untyped_decorators = false
 
 # ============================================================================
 # Ruff Configuration (Fast Python Linter & Formatter)
@@ -243,9 +239,6 @@ ignore = [
     "PLW2901", "PTH105", "PTH115", "Q003", "S110", "S202", "S310",
     "S603", "S607", "SIM102", "TC003",
 ]
-# Test doubles use fixture tokens/passwords and match a callee signature whose
-# args they intentionally ignore.
-"tests/test_model_picker.py" = ["S105", "S106", "SLF001"]
 # Hatchling loads the build hook by path, not as an importable package.
 "scripts/tui_sidecar_hook.py" = ["INP001"]
 # Stdlib HTTP handler overrides (do_GET/do_POST).

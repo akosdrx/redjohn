@@ -1,9 +1,0 @@
-# Additional deterministic browser dependencies verified in this workspace.
-# Install on top of the existing RedJohn dependencies, not a second platform.
-playwright==1.58.0
-greenlet==3.5.6
-pyee==13.0.1
-# HTTP client already used by RedJohn; pin for reproducing this assessment run.
-httpx==0.28.1
-# Optional reviewed GraphQL workflow profile; parser/schema validation is pinned.
-graphql-core==3.3.0

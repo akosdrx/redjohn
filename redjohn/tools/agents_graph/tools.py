@@ -16,7 +16,7 @@ from redjohn.core.agents import ACTIVE_STATUSES, Status, coordinator_from_contex
 from redjohn.core.execution import notify_parent_on_terminal
 from redjohn.core.hooks import LLM_TURN_KEY
 from redjohn.report.state import get_global_report_state
-from redjohn.skills import validate_requested_skills
+from redjohn.skills import infer_skills_for_agent, validate_requested_skills
 
 
 logger = logging.getLogger(__name__)
@@ -276,12 +276,17 @@ async def swarm_broadcast(
     ctx: RunContextWrapper,
     category: Literal[
         "recon",
+        "fingerprint",
         "endpoint",
+        "auth",
         "credential",
         "token",
         "cve",
+        "sink",
+        "primitive",
         "vuln_lead",
         "blocker",
+        "finding",
         "confirmed_vuln",
     ],
     summary: str,
@@ -293,14 +298,15 @@ async def swarm_broadcast(
     Every running specialist agent automatically receives unseen Swarm Bus
     signals at the start of its next LLM turn (`[SWARM BUS UPDATE]`), with zero
     polling required. Use this immediately whenever you discover:
-    - Fingerprinted tech stack, CMS/shop versions, or hidden admin/API routes (``recon`` / ``endpoint``)
-    - Credentials, session cookies, JWT secrets, or API keys (``credential`` / ``token``)
-    - High-priority CVEs or exploit primitives another specialist can chain (``cve`` / ``vuln_lead``)
-    - Confirmed vulnerabilities or WAF/rate-limit rules (``confirmed_vuln`` / ``blocker``)
+    - Fingerprinted tech stack, CMS/shop versions, or hidden admin/API routes (``fingerprint`` / ``recon`` / ``endpoint``)
+    - Credentials, session cookies, JWT secrets, API keys, or auth quirks (``auth`` / ``credential`` / ``token``)
+    - High-priority CVEs, injection sinks, or exploit primitives another specialist can chain (``cve`` / ``sink`` / ``primitive`` / ``vuln_lead``)
+    - Confirmed vulnerabilities or WAF/rate-limit rules (``finding`` / ``confirmed_vuln`` / ``blocker``)
 
     Args:
-        category: Signal classification — one of ``recon``, ``endpoint``,
-            ``credential``, ``token``, ``cve``, ``vuln_lead``, ``blocker``,
+        category: Signal classification — one of ``recon``, ``fingerprint``,
+            ``endpoint``, ``auth``, ``credential``, ``token``, ``cve``,
+            ``sink``, ``primitive``, ``vuln_lead``, ``blocker``, ``finding``,
             or ``confirmed_vuln``.
         summary: Concise 1-line headline of the discovery (e.g.
             ``"Admin JWT secret leaked in /api/debug"``).
@@ -641,8 +647,10 @@ async def create_agent(
             share discoveries via ``swarm_broadcast`` and ``notes``).
             Set ``True`` only when a compact digest of the parent's
             recent history is needed.
-        skills: List of domain skill names (e.g. ``["injection", "auth"]``).
-            Max 8; prefer one or two that match the mission.
+        skills: List of domain or assessment skill names (e.g.
+            ``["injection", "assessment/sql-injection-validation", "auth"]``).
+            Max 8; relevant domain and assessment skills are also auto-inferred
+            from the specialist's ``name`` and ``task``.
     """
     inner = _ctx(ctx)
     coordinator = coordinator_from_context(inner)
@@ -673,6 +681,11 @@ async def create_agent(
             ensure_ascii=False,
             default=str,
         )
+    skill_list = infer_skills_for_agent(
+        name=name,
+        task=task,
+        explicit_skills=skill_list,
+    )
 
     parent_history = list(ctx.turn_input) if inherit_context and ctx.turn_input else []
     try:

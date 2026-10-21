@@ -205,6 +205,7 @@ class ReportUsageHooks(RunHooks[dict[str, Any]]):
         try:
             self._age_old_tool_outputs(input_items)
             self._maybe_inject_swarm_signals(context, input_items)
+            self._maybe_autoload_turn_skills(context, input_items)
             self._maybe_warn_turns(context, input_items)
             self._maybe_warn_budget(context, input_items)
         except Exception:
@@ -272,6 +273,60 @@ class ReportUsageHooks(RunHooks[dict[str, Any]]):
                     details = details[:400] + "..."
                 lines.append(f"  Details: {details}")
         input_items.append({"role": "user", "content": "\n".join(lines)})
+
+    def _maybe_autoload_turn_skills(
+        self,
+        context: RunContextWrapper[dict[str, Any]],
+        input_items: list[TResponseInputItem],
+    ) -> None:
+        """Continuously auto-load matching skill contracts when new turn signals/outputs need them."""
+        ctx = context.context if isinstance(context.context, dict) else {}
+        if ctx.get("parent_id") is None:
+            return
+        agent_skills = ctx.get("agent_skills")
+        if not isinstance(agent_skills, set):
+            agent_skills = set()
+            ctx["agent_skills"] = agent_skills
+        if len(agent_skills) >= 10:
+            return
+
+        cursor = int(ctx.get("_skill_scan_cursor", 0))
+        if cursor >= len(input_items):
+            return
+        new_slice = input_items[cursor:]
+        ctx["_skill_scan_cursor"] = len(input_items)
+
+        snippets: list[str] = []
+        for item in new_slice[-6:]:
+            if not isinstance(item, dict):
+                continue
+            content = item.get("content") or item.get("output") or item.get("arguments")
+            if isinstance(content, str) and content.strip():
+                snippets.append(content[:600])
+        if not snippets:
+            return
+
+        from redjohn.skills import infer_skills_for_agent, load_skills
+
+        candidates = infer_skills_for_agent(task="\n".join(snippets), max_skills=6)
+        unloaded = [s for s in candidates if s.split("/")[-1] not in agent_skills][:2]
+        if not unloaded:
+            return
+        loaded = load_skills(unloaded, supports_images=bool(ctx.get("supports_images", True)))
+        if not loaded:
+            return
+        agent_skills.update(loaded.keys())
+        sections = [f"<{name}>\n{body}\n</{name}>" for name, body in loaded.items()]
+        input_items.append(
+            {
+                "role": "user",
+                "content": (
+                    "[AUTO-LOADED SKILL CONTRACT — Injected automatically for newly observed surface]:\n"
+                    + "\n\n".join(sections)
+                ),
+            }
+        )
+        ctx["_skill_scan_cursor"] = len(input_items)
 
     def _pause_if_limited(self, context: RunContextWrapper[dict[str, Any]]) -> None:
         """Park the agent before a paid call when the scan is at its limit or paused.

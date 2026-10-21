@@ -209,9 +209,9 @@ def notify_update(console: Console) -> None:
     if not latest:
         return
     console.print(
-        f"[#eab308]A new version of redjohn is available:[/] "
-        f"[dim]{get_version()}[/] [dim]→[/] [bold #22c55e]{latest}[/]"
-        f"  [dim]·[/]  [#60a5fa]{get_upgrade_command()}[/]"
+        f"[#f87171]A new version of redjohn is available:[/] "
+        f"[dim]{get_version()}[/] [dim]→[/] [bold #ef4444]{latest}[/]"
+        f"  [dim]·[/]  [#f87171]{get_upgrade_command()}[/]"
     )
     console.print()
 
@@ -219,7 +219,7 @@ def notify_update(console: Console) -> None:
 def run_package_upgrade(console: Console, method: str) -> bool:
     """Upgrade a package-manager install by running its upgrade command."""
     command = get_upgrade_command(method).split()
-    console.print(f"[dim]Running[/] [#60a5fa]{' '.join(command)}[/]")
+    console.print(f"[dim]Running[/] [#f87171]{' '.join(command)}[/]")
     try:
         result = subprocess.run(command, check=False)  # noqa: S603
     except OSError as e:
@@ -228,10 +228,10 @@ def run_package_upgrade(console: Console, method: str) -> bool:
     if result.returncode != 0:
         console.print(
             f"[bold red]Update failed[/] [dim](exit code {result.returncode}).[/] "
-            f"Run it manually: [#60a5fa]{get_upgrade_command(method)}[/]"
+            f"Run it manually: [#f87171]{get_upgrade_command(method)}[/]"
         )
         return False
-    console.print("[#22c55e]✓ redjohn updated — restart the scan to use the new version[/]")
+    console.print("[#ef4444]✓ redjohn updated — restart the scan to use the new version[/]")
     return True
 
 
@@ -245,8 +245,8 @@ def prompt_update_if_available(console: Console) -> bool:
         return False
     console.print()
     console.print(
-        f"[#eab308]A new version of redjohn is available:[/] "
-        f"[dim]{get_version()}[/] [dim]→[/] [bold #22c55e]{latest}[/]"
+        f"[#f87171]A new version of redjohn is available:[/] "
+        f"[dim]{get_version()}[/] [dim]→[/] [bold #ef4444]{latest}[/]"
     )
     console.print(
         "[dim]  y — update now    n — not now (ask again next run)    s — skip this version[/]"
@@ -387,8 +387,8 @@ def self_update(console: Console | None = None, version: str | None = None) -> b
     if not is_binary_install():
         method = get_install_method()
         console.print(
-            f"[#eab308]This redjohn was installed via {method};[/] "
-            f"upgrade it with: [#60a5fa]{get_upgrade_command(method)}[/]"
+            f"[#f87171]This redjohn was installed via {method};[/] "
+            f"upgrade it with: [#f87171]{get_upgrade_command(method)}[/]"
         )
         return False
 
@@ -399,7 +399,7 @@ def self_update(console: Console | None = None, version: str | None = None) -> b
 
     current = get_version()
     if current != "unknown" and not _is_newer(latest, current):
-        console.print(f"[#22c55e]redjohn {current} is already the latest version.[/]")
+        console.print(f"[#ef4444]redjohn {current} is already the latest version.[/]")
         return True
 
     target = _release_target()
@@ -417,10 +417,10 @@ def self_update(console: Console | None = None, version: str | None = None) -> b
         console.print(f"[bold red]Update failed:[/] {e}")
         console.print(
             "[dim]You can reinstall manually with:[/] "
-            "[#60a5fa]curl -sSL https://redjohn.ai/install | bash[/]"
+            "[#f87171]curl -sSL https://redjohn.ai/install | bash[/]"
         )
         return False
 
     _write_cache(latest_version=latest, checked_at=time.time())
-    console.print(f"[#22c55e]✓ Updated redjohn to {latest}[/]")
+    console.print(f"[#ef4444]✓ Updated redjohn to {latest}[/]")
     return True

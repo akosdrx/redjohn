@@ -59,13 +59,13 @@ def format_token_count(count: float | None) -> str:
 
 
 def format_vulnerability_report(report: dict[str, Any]) -> Text:  # noqa: PLR0915
-    field_style = "bold #4ade80"
+    field_style = "bold #f87171"
 
     text = Text()
 
     title = report.get("title", "")
     if title:
-        text.append("Vulnerability Report", style="bold #ea580c")
+        text.append("Vulnerability Report", style="bold #ef4444")
         text.append("\n\n")
         text.append("Title: ", style=field_style)
         text.append(title)
@@ -255,13 +255,13 @@ def _build_vulnerability_stats(stats_text: Text, report_state: Any) -> None:
                 stats_text.append(" | ", style="dim white")
 
         stats_text.append(" (Total: ", style="dim white")
-        stats_text.append(str(vuln_count), style="bold yellow")
+        stats_text.append(str(vuln_count), style="bold #f87171")
         stats_text.append(")", style="dim white")
         stats_text.append("\n")
     else:
-        stats_text.append("Vulnerabilities  ", style="bold #22c55e")
+        stats_text.append("Vulnerabilities  ", style="bold #ef4444")
         stats_text.append("0", style="bold white")
-        stats_text.append(" (No exploitable vulnerabilities detected)", style="dim green")
+        stats_text.append(" (No exploitable vulnerabilities detected)", style="dim white")
         stats_text.append("\n")
 
 
@@ -328,10 +328,10 @@ def _build_llm_usage_stats(
         stats_text.append("\n")
         stats_text.append("Cost ", style="dim")
         if subscription:
-            stats_text.append("$0.00 ", style="#22c55e")
+            stats_text.append("$0.00 ", style="#f87171")
             stats_text.append("(subscription) ", style="dim")
         else:
-            stats_text.append("$0.0000 ", style="#fbbf24")
+            stats_text.append("$0.0000 ", style="#f87171")
         stats_text.append("· ", style="dim white")
         stats_text.append("Tokens ", style="dim")
         stats_text.append("0", style="white")
@@ -359,12 +359,12 @@ def _build_llm_usage_stats(
     if subscription:
         stats_text.append("  ·  ", style="dim white")
         stats_text.append("Cost ", style="dim")
-        stats_text.append("$0.00", style="#22c55e")
+        stats_text.append("$0.00", style="#f87171")
         stats_text.append(" (subscription)", style="dim")
     elif live or cost > 0:
         stats_text.append("  ·  ", style="dim white")
         stats_text.append("Cost ", style="dim")
-        stats_text.append(f"${cost:.4f}", style="#fbbf24")
+        stats_text.append(f"${cost:.4f}", style="#f87171")
 
 
 def build_final_stats_text(report_state: Any) -> Text:
@@ -388,7 +388,7 @@ def build_live_stats_text(report_state: Any) -> Text:
     stats_text.append(str(model), style="white")
     if is_subscription_run(report_state):
         stats_text.append("  ·  ", style="dim white")
-        stats_text.append("ChatGPT subscription", style="#22c55e")
+        stats_text.append("ChatGPT subscription", style="#f87171")
     stats_text.append("\n")
 
     vuln_count = len(report_state.vulnerability_reports)
@@ -1567,7 +1567,7 @@ def clone_repository(repo_url: str, run_name: str, dest_name: str | None = None)
         shutil.rmtree(clone_path)
 
     try:
-        with console.status(f"[bold cyan]Cloning repository {repo_url}...", spinner="dots"):
+        with console.status(f"[bold #ef4444]Cloning repository {repo_url}...", spinner="dots"):
             subprocess.run(  # noqa: S603
                 [
                     git_executable,
@@ -1616,7 +1616,7 @@ def check_docker_connection() -> Any:
 
         panel = Panel(
             error_text,
-            title="[bold white]REDJOHN",
+            title="[bold #ef4444]REDJOHN",
             title_align="left",
             border_style="red",
             padding=(1, 2),
@@ -1660,7 +1660,7 @@ def process_pull_line(
         total = len(layers_info)
 
         if total > 0:
-            update_msg = f"[bold cyan]Progress: {completed}/{total} layers complete"
+            update_msg = f"[bold #ef4444]Progress: {completed}/{total} layers complete"
             if update_msg != last_update:
                 status.update(update_msg)
                 return update_msg
@@ -1668,11 +1668,11 @@ def process_pull_line(
     elif "status" in line and "id" not in line:
         global_status = line["status"]
         if "Pulling from" in global_status:
-            status.update("[bold cyan]Fetching image manifest...")
+            status.update("[bold #ef4444]Fetching image manifest...")
         elif "Digest:" in global_status:
-            status.update("[bold cyan]Verifying image...")
+            status.update("[bold #ef4444]Verifying image...")
         elif "Status:" in global_status:
-            status.update("[bold cyan]Finalizing...")
+            status.update("[bold #ef4444]Finalizing...")
 
     return last_update
 

@@ -1,12 +1,16 @@
-"""Security-focused web research tools (Exa or Perplexity)."""
+"""Security-focused web research tools (Exa, Perplexity, or keyless DuckDuckGo + Playwright)."""
 
 from __future__ import annotations
 
 import asyncio
 import json
 import logging
+import os
+import shutil
+from html.parser import HTMLParser
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
-from urllib.parse import urlsplit, urlunsplit
+from urllib.parse import parse_qs, quote_plus, unquote, urlsplit, urlunsplit
 
 import requests
 from agents import RunContextWrapper, function_tool
@@ -161,28 +165,323 @@ def _exa_page_text(api_key: str, urls: list[str]) -> tuple[str, set[str]]:
     return "\n\n".join(blocks), fetched
 
 
+_BROWSER_USER_AGENT = (
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+)
+_BLOCK_TAGS = frozenset(
+    {
+        "p",
+        "div",
+        "section",
+        "article",
+        "main",
+        "aside",
+        "li",
+        "ul",
+        "ol",
+        "tr",
+        "td",
+        "th",
+        "h1",
+        "h2",
+        "h3",
+        "h4",
+        "h5",
+        "h6",
+        "pre",
+        "blockquote",
+        "br",
+        "hr",
+    }
+)
+_SKIP_TEXT_TAGS = frozenset({"script", "style", "noscript", "svg", "template", "head", "nav", "footer"})
+
+
+class _DDGResultParser(HTMLParser):
+    """Parse DuckDuckGo HTML endpoint results into title/url/summary dicts."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.results: list[dict[str, str]] = []
+        self._current: dict[str, str] | None = None
+        self._capture: str | None = None
+        self._buf: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        attr_map = dict(attrs)
+        classes = set((attr_map.get("class") or "").split())
+        if tag == "a" and "result__a" in classes:
+            href = (attr_map.get("href") or "").strip()
+            if href.startswith("//"):
+                href = f"https:{href}"
+            if "uddg=" in href:
+                qs = parse_qs(urlsplit(href).query)
+                href = unquote(qs.get("uddg", [href])[0])
+            self._current = {"url": href, "title": "", "summary": ""}
+            self._capture = "title"
+            self._buf = []
+        elif self._current is not None and "result__snippet" in classes:
+            self._capture = "summary"
+            self._buf = []
+
+    def handle_endtag(self, tag: str) -> None:
+        if self._capture == "title" and tag == "a" and self._current is not None:
+            self._current["title"] = " ".join("".join(self._buf).split())
+            self._capture = None
+            self._buf = []
+        elif (
+            self._capture == "summary"
+            and tag in ("a", "div", "span", "td")
+            and self._current is not None
+        ):
+            self._current["summary"] = " ".join("".join(self._buf).split())
+            self._capture = None
+            self._buf = []
+            url = self._current.get("url") or ""
+            if url and not url.startswith("https://duckduckgo.com/y.js"):
+                self.results.append(self._current)
+            self._current = None
+
+    def handle_data(self, data: str) -> None:
+        if self._capture is not None:
+            self._buf.append(data)
+
+
+class _PageTextParser(HTMLParser):
+    """Extract page title and readable body text from raw HTML."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.title_parts: list[str] = []
+        self.text_parts: list[str] = []
+        self._in_title = False
+        self._skip_depth = 0
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        lower = tag.lower()
+        if lower == "title":
+            self._in_title = True
+            return
+        if lower in _SKIP_TEXT_TAGS:
+            self._skip_depth += 1
+            return
+        if self._skip_depth == 0 and lower in _BLOCK_TAGS:
+            self.text_parts.append("\n")
+
+    def handle_endtag(self, tag: str) -> None:
+        lower = tag.lower()
+        if lower == "title":
+            self._in_title = False
+            return
+        if lower in _SKIP_TEXT_TAGS and self._skip_depth > 0:
+            self._skip_depth -= 1
+            return
+        if self._skip_depth == 0 and lower in _BLOCK_TAGS:
+            self.text_parts.append("\n")
+
+    def handle_data(self, data: str) -> None:
+        if self._in_title:
+            self.title_parts.append(data)
+            return
+        if self._skip_depth > 0:
+            return
+        cleaned = " ".join(data.split())
+        if cleaned:
+            self.text_parts.append(cleaned + " ")
+
+    def extracted(self, fallback_title: str) -> tuple[str, str]:
+        title = " ".join("".join(self.title_parts).split()).strip() or fallback_title
+        lines = [line.strip() for line in "".join(self.text_parts).splitlines()]
+        body = "\n".join(line for line in lines if line)
+        return title, body
+
+
+def _resolve_chromium_executable() -> str | None:
+    for env_var in (
+        "PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH",
+        "AGENT_BROWSER_EXECUTABLE_PATH",
+        "CHROME_PATH",
+    ):
+        candidate = (os.environ.get(env_var) or "").strip()
+        if candidate and Path(candidate).is_file():
+            return candidate
+    for bin_name in ("chromium", "chromium-browser", "google-chrome", "google-chrome-stable"):
+        found = shutil.which(bin_name)
+        if found:
+            return found
+    mac_chrome = Path("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome")
+    if mac_chrome.is_file():
+        return str(mac_chrome)
+    return None
+
+
+def _playwright_render_html(url: str, timeout_ms: int = 20000) -> tuple[str, str, str] | None:
+    """Render a URL in headless Chromium via Playwright and return (title, text, html)."""
+    try:
+        from playwright.sync_api import sync_playwright
+    except Exception:
+        return None
+
+    executable_path = _resolve_chromium_executable()
+    launch_kwargs: dict[str, Any] = {
+        "headless": True,
+        "args": [
+            "--no-sandbox",
+            "--disable-dev-shm-usage",
+            "--disable-blink-features=AutomationControlled",
+        ],
+    }
+    if executable_path:
+        launch_kwargs["executable_path"] = executable_path
+
+    try:
+        with sync_playwright() as pw:
+            try:
+                browser = pw.chromium.launch(**launch_kwargs)
+            except Exception:
+                if "executable_path" not in launch_kwargs:
+                    return None
+                launch_kwargs.pop("executable_path", None)
+                browser = pw.chromium.launch(**launch_kwargs)
+            try:
+                context = browser.new_context(user_agent=_BROWSER_USER_AGENT)
+                page = context.new_page()
+                page.goto(url, wait_until="domcontentloaded", timeout=timeout_ms)
+                title = (page.title() or "").strip() or url
+                try:
+                    text = (page.inner_text("body") or "").strip()
+                except Exception:
+                    text = ""
+                html = page.content() or ""
+                return title, text, html
+            finally:
+                browser.close()
+    except Exception:
+        logger.debug("Playwright fallback failed for %s", url, exc_info=True)
+        return None
+
+
+def _duckduckgo_content(query: str, num_results: int = 8) -> str:
+    """Perform keyless web search via DuckDuckGo HTML endpoint with Playwright fallback."""
+    headers = {
+        "User-Agent": _BROWSER_USER_AGENT,
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
+    }
+    parser = _DDGResultParser()
+    try:
+        with requests.post(
+            "https://html.duckduckgo.com/html/",
+            data={"q": query},
+            headers=headers,
+            timeout=25,
+        ) as response:
+            if response.ok:
+                parser.feed(response.text)
+    except requests.RequestException:
+        logger.debug("DuckDuckGo HTTP search failed, trying Playwright fallback", exc_info=True)
+
+    if not parser.results:
+        rendered = _playwright_render_html(
+            f"https://html.duckduckgo.com/html/?q={quote_plus(query)}"
+        )
+        if rendered is not None:
+            _, _, html = rendered
+            parser = _DDGResultParser()
+            parser.feed(html)
+
+    limit = max(1, min(num_results, 20))
+    blocks = _exa_blocks(parser.results[:limit], _exa_result_block)
+    if not blocks:
+        raise ValueError("No search results returned for query")
+    return "\n\n".join(blocks)
+
+
+def _fetch_single_page_local(url: str) -> dict[str, str] | None:
+    """Fetch a single URL via HTTP + HTML parser, falling back to Playwright when needed."""
+    headers = {
+        "User-Agent": _BROWSER_USER_AGENT,
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,text/plain;q=0.8,*/*;q=0.7",
+        "Accept-Language": "en-US,en;q=0.9",
+    }
+    title = url
+    text = ""
+    try:
+        with requests.get(url, headers=headers, timeout=25) as response:
+            response.raise_for_status()
+            content_type = (response.headers.get("Content-Type") or "").lower()
+            raw = response.text or ""
+            if "html" in content_type or "<html" in raw[:512].lower():
+                parser = _PageTextParser()
+                parser.feed(raw)
+                title, text = parser.extracted(url)
+            else:
+                text = raw.strip()
+    except requests.RequestException:
+        logger.debug("Direct HTTP page fetch failed for %s; trying Playwright", url, exc_info=True)
+
+    if len(text.strip()) < 120:
+        rendered = _playwright_render_html(url)
+        if rendered is not None:
+            pw_title, pw_text, pw_html = rendered
+            if not pw_text and pw_html:
+                parser = _PageTextParser()
+                parser.feed(pw_html)
+                pw_title, pw_text = parser.extracted(pw_title or url)
+            if len(pw_text.strip()) > len(text.strip()):
+                title = pw_title or title
+                text = pw_text.strip()
+
+    if not text.strip():
+        return None
+    return {"url": url, "title": title, "text": text}
+
+
+def _local_page_text(urls: list[str]) -> tuple[str, set[str]]:
+    """Fetch page text locally (HTTP + Playwright fallback) without external API keys."""
+    blocks: list[str] = []
+    fetched: set[str] = set()
+    for url in urls:
+        page = _fetch_single_page_local(url)
+        if not page:
+            continue
+        block = _exa_page_block(page)
+        if not block:
+            continue
+        blocks.append(block)
+        fetched.add(_normalize_url(url))
+    if not blocks:
+        raise ValueError("Could not extract content from any of the requested URLs")
+    return "\n\n".join(blocks), fetched
+
+
 def _resolve_provider(  # noqa: PLR0911 - each provider/missing-key case needs its own return
     integrations: Any,
 ) -> tuple[str, str] | dict[str, Any]:
-    """Pick the search provider and its key, or return a sanitized error dict."""
+    """Pick the search provider and its key, falling back to keyless DuckDuckGo search."""
     provider = integrations.web_search_provider
     perplexity_key = integrations.perplexity_api_key
     exa_key = integrations.exa_api_key
 
+    if provider in ("duckduckgo", "browser"):
+        return ("duckduckgo", "")
     if provider == "perplexity":
-        if not perplexity_key:
-            return _not_configured_error("PERPLEXITY_API_KEY")
-        return ("perplexity", perplexity_key)
+        if perplexity_key:
+            return ("perplexity", perplexity_key)
+        logger.info("PERPLEXITY_API_KEY not set; falling back to keyless DuckDuckGo search")
+        return ("duckduckgo", "")
     if provider == "exa":
-        if not exa_key:
-            return _not_configured_error("EXA_API_KEY")
-        return ("exa", exa_key)
+        if exa_key:
+            return ("exa", exa_key)
+        logger.info("EXA_API_KEY not set; falling back to keyless DuckDuckGo search")
+        return ("duckduckgo", "")
 
     if exa_key:
         return ("exa", exa_key)
     if perplexity_key:
         return ("perplexity", perplexity_key)
-    return _not_configured_error("EXA_API_KEY or PERPLEXITY_API_KEY")
+    return ("duckduckgo", "")
 
 
 def _not_configured_error(missing: str) -> dict[str, Any]:
@@ -243,7 +542,9 @@ def _do_search(query: str) -> dict[str, Any]:
                 integrations.exa_search_type,
                 integrations.exa_num_results,
             )
-        return _perplexity_content(api_key, query)
+        if provider == "perplexity":
+            return _perplexity_content(api_key, query)
+        return _duckduckgo_content(query, integrations.exa_num_results)
 
     outcome = _guarded_call(
         "Web search",
@@ -275,24 +576,18 @@ def _do_get_contents(urls: list[str]) -> dict[str, Any]:
 
     integrations = load_settings().integrations
     api_key = integrations.exa_api_key
-    if not api_key:
-        return _not_configured_error("EXA_API_KEY")
-    if integrations.web_search_provider == "perplexity":
-        logger.warning("web_get_contents invoked while the provider is pinned to Perplexity")
-        return {
-            "success": False,
-            "error": (
-                "Page fetching needs the Exa provider "
-                "(operator pinned REDJOHN_WEB_SEARCH_PROVIDER to perplexity). "
-                "Use web_search instead"
-            ),
-        }
+    use_exa = bool(
+        api_key and integrations.web_search_provider not in ("perplexity", "duckduckgo", "browser")
+    )
+    provider_label = "exa" if use_exa else "local"
 
-    logger.info("web_get_contents urls=%d", len(cleaned))
+    logger.info("web_get_contents provider=%s urls=%d", provider_label, len(cleaned))
     outcome = _guarded_call(
         "Page fetch",
         "Page fetch was rejected. Check the URLs are complete, public, and correctly formed",
-        lambda: _exa_page_text(api_key, cleaned),
+        (lambda: _exa_page_text(api_key, cleaned))
+        if use_exa and api_key
+        else (lambda: _local_page_text(cleaned)),
     )
     if isinstance(outcome, dict):
         return outcome
@@ -301,7 +596,7 @@ def _do_get_contents(urls: list[str]) -> dict[str, Any]:
     result: dict[str, Any] = {
         "success": True,
         "urls": [url for url in cleaned if url not in missing],
-        "provider": "exa",
+        "provider": provider_label,
         "content": content,
     }
     if missing:
@@ -310,7 +605,7 @@ def _do_get_contents(urls: list[str]) -> dict[str, Any]:
         )
         result["failed_urls"] = missing
         result["warning"] = (
-            f"Exa returned no content for {len(missing)} of {len(cleaned)} requested URLs. "
+            f"Page fetch returned no content for {len(missing)} of {len(cleaned)} requested URLs. "
             "Those pages are missing from the content below"
         )
     return result

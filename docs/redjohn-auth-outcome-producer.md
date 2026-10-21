@@ -1,9 +1,0 @@
-# Authentication outcomes stay bound to their producer
-
-The private authenticated-capture bootstrap now requires the ready flow's persisted `job_id` to equal the exact job that produced its outcome evidence. Existing actor, tenant, session revision, reviewed identity URL/plan, current job status/lease, private checkpoint, cookie scope and expiry checks remain mandatory. An unrelated or absent producer cannot write credentials into the replay vault; an old ready row without producer proof is blocked rather than inferred authenticated.
-
-The additive `rj_auth_flow.job_id` migration exposed 23 synthetic capture-bootstrap fixtures that still used a positional fifteen-column SQL insert. Their setup now names columns explicitly and supplies the actual fixture producer; all active assertions remain. Two extra negative controls reject null and unrelated producers without vault mutation or network use. Against the earlier production snapshot, both new controls failed because the bridge accepted the unbound outcome; the new guard rejects them. These are synthetic proof contracts, distinct from real Chromium login/replay.
-
-CI now routes `test_actual_nuclei_public_multipart_template_survives_refreshed_boundary` from its mixed test file into the real integration partition. It requires the actual reviewed Nuclei binary and controlled TLS fixture, not Chromium or a Linux namespace. The native component workflow does not install Nuclei, so this case is explicitly outside its regression partition; the full workflow continues to execute it as real engine evidence. The classification has a separate synthetic contract.
-
-The earlier native run `39158070553` failed its regression gate on both architectures with 1295 passed, 23 fixture setup errors and one dependency skip. No skipped test is counted as success. Its 20 actual component results and complete-source acceptance are separate evidence; a successful component does not make that failed workflow green.

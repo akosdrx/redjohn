@@ -1,7 +1,0 @@
-{
-  "memory_budget_bytes": 4294967296,
-  "max_workers": 4,
-  "max_browsers": 1,
-  "max_pages": 4,
-  "max_contexts": 4
-}

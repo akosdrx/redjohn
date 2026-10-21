@@ -468,12 +468,12 @@ def _choose_workspace(
     for index, org in enumerate(organizations, start=1):
         name = _terminal_markup(org.get("name", ""))
         org_role = _terminal_markup(org.get("role", ""))
-        console.print(f"  [cyan]{index}[/]. {name} [dim]({org_role})[/]")
+        console.print(f"  [#f87171]{index}[/]. {name} [dim]({org_role})[/]")
     while True:
         answer = console.input(f"Workspace [1-{len(organizations)}] (1): ").strip() or "1"
         if answer.isdigit() and 1 <= int(answer) <= len(organizations):
             return organizations[int(answer) - 1]
-        console.print("[yellow]Enter a number from the list.[/]")
+        console.print("[#f87171]Enter a number from the list.[/]")
 
 
 def _choose_scopes(
@@ -490,12 +490,12 @@ def _choose_scopes(
     console.print()
     console.print("[bold]Select token scopes:[/]")
     console.print(
-        "  [cyan]1[/]. Recommended [dim](scans, findings, schedules, assets, uploads, "
+        "  [#f87171]1[/]. Recommended [dim](scans, findings, schedules, assets, uploads, "
         "workspace switching, billing/top-ups; no token creation)[/]"
     )
-    console.print("  [cyan]2[/]. Full access [dim](every scope your role allows)[/]")
-    console.print("  [cyan]3[/]. Minimal [dim](scan read/write and billing read)[/]")
-    console.print("  [cyan]4[/]. Custom [dim](pick individual scopes)[/]")
+    console.print("  [#f87171]2[/]. Full access [dim](every scope your role allows)[/]")
+    console.print("  [#f87171]3[/]. Minimal [dim](scan read/write and billing read)[/]")
+    console.print("  [#f87171]4[/]. Custom [dim](pick individual scopes)[/]")
     while True:
         answer = console.input("Scopes [1-4] (1): ").strip() or "1"
         if answer == "1":
@@ -506,7 +506,7 @@ def _choose_scopes(
             return "minimal", None
         if answer == "4":
             return "custom", _choose_custom_scopes(console, allowed)
-        console.print("[yellow]Enter a number from 1 to 4.[/]")
+        console.print("[#f87171]Enter a number from 1 to 4.[/]")
 
 
 def _choose_custom_scopes(console: Console, allowed: list[dict[str, Any]]) -> list[str]:
@@ -519,12 +519,12 @@ def _choose_custom_scopes(console: Console, allowed: list[dict[str, Any]]) -> li
         console.print()
         for index, item in enumerate(allowed, start=1):
             scope = str(item.get("scope", ""))
-            mark = "[green]x[/]" if scope in selected else " "
+            mark = "[#ef4444]x[/]" if scope in selected else " "
             required = " [dim](always included)[/]" if item.get("minimum") else ""
             rendered_scope = _terminal_markup(scope)
             description = _terminal_markup(item.get("description", ""))
             console.print(
-                f"  [{mark}] [cyan]{index:>2}[/]. {rendered_scope}{required}"
+                f"  [{mark}] [#f87171]{index:>2}[/]. {rendered_scope}{required}"
                 f"\n         [dim]{description}[/]"
             )
         answer = console.input(
@@ -636,7 +636,7 @@ def _print_success(console: Console, record: dict[str, Any]) -> None:
     email = record.get("email", "")
     organization = record.get("organization_name") or record.get("organization_id", "")
     console.print()
-    console.print("[green]✓ Signed in to the RedJohn platform.[/]")
+    console.print("[#ef4444]✓ Signed in to the RedJohn platform.[/]")
     if email:
         console.print(f"  Account:   [bold]{_terminal_markup(email)}[/]")
     if organization:
@@ -694,7 +694,7 @@ def _status(console: Console, argv: list[str]) -> int:  # noqa: PLR0912
         }
         sys.stdout.write(json.dumps(payload, indent=2, default=str) + "\n")
         return 0
-    console.print(f"[green]Signed in[/] as [bold]{_terminal_markup(email)}[/]")
+    console.print(f"[#ef4444]Signed in[/] as [bold]{_terminal_markup(email)}[/]")
     if organization:
         console.print(f"  Workspace: {_terminal_markup(organization)}")
     if expires_at:
@@ -794,5 +794,5 @@ def _logout(console: Console, argv: list[str]) -> int:  # noqa: PLR0911, PLR0912
             "revoke it from API Access if needed."
         )
     else:
-        console.print("[green]Signed out.[/] The CLI session was revoked and removed locally.")
+        console.print("[#ef4444]Signed out.[/] The CLI session was revoked and removed locally.")
     return 0

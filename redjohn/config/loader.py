@@ -69,11 +69,14 @@ def invalidate_settings_cache() -> None:
 def save_llm_selection(
     *,
     model: str | None = None,
+    model_label: str | None = None,
+    supported_efforts: tuple[str, ...] | list[str] | None = None,
     api_key: str | None = None,
     api_base: str | None = None,
     reasoning_effort: str | None = None,
     clear_api_key: bool = False,
     clear_api_base: bool = False,
+    propagate_to_swarm: bool = False,
 ) -> None:
     """Persist an LLM choice into this process and ``~/.redjohn/cli-config.json``.
 
@@ -81,9 +84,18 @@ def save_llm_selection(
     empty env value, which ``persist_current`` drops from the file. Env vars
     win over the file, so the process env is updated too; otherwise the next
     ``load_settings`` would keep the previous connection.
+    When ``propagate_to_swarm`` is True, clears any separate Swarm override so
+    Swarm sub-agents inherit the new Orchestrator connection.
     """
     if model is not None:
         os.environ["REDJOHN_LLM"] = model
+        os.environ["REDJOHN_LLM_LABEL"] = (model_label or "").strip()
+        if supported_efforts is not None:
+            os.environ["REDJOHN_LLM_SUPPORTED_EFFORTS"] = ",".join(
+                str(item).strip().lower() for item in supported_efforts if str(item).strip()
+            )
+        else:
+            os.environ["REDJOHN_LLM_SUPPORTED_EFFORTS"] = ""
     if api_key is not None:
         os.environ["LLM_API_KEY"] = api_key
     elif clear_api_key:
@@ -97,6 +109,56 @@ def save_llm_selection(
         os.environ.pop("OPENAI_API_BASE", None)
     if reasoning_effort is not None:
         os.environ["REDJOHN_REASONING_EFFORT"] = reasoning_effort
+    if propagate_to_swarm:
+        os.environ["REDJOHN_SWARM_LLM"] = ""
+        os.environ["SWARM_LLM_API_KEY"] = ""
+        os.environ["SWARM_LLM_API_BASE"] = ""
+        os.environ["REDJOHN_SWARM_REASONING_EFFORT"] = ""
+    invalidate_settings_cache()
+    persist_current()
+
+
+def save_swarm_llm_selection(
+    *,
+    swarm_model: str | None = None,
+    swarm_api_key: str | None = None,
+    swarm_api_base: str | None = None,
+    swarm_reasoning_effort: str | None = None,
+    swarm_profile: str | None = None,
+    role: str | None = None,
+    role_model: str | None = None,
+    clear_swarm_model: bool = False,
+    clear_swarm_api_key: bool = False,
+    clear_swarm_api_base: bool = False,
+    clear_role_models: bool = False,
+) -> None:
+    """Persist Swarm-specific LLM / role / profile settings."""
+    if clear_swarm_model:
+        os.environ["REDJOHN_SWARM_LLM"] = ""
+        os.environ["REDJOHN_SWARM_REASONING_EFFORT"] = ""
+    elif swarm_model is not None:
+        os.environ["REDJOHN_SWARM_LLM"] = swarm_model
+    if swarm_api_key is not None:
+        os.environ["SWARM_LLM_API_KEY"] = swarm_api_key
+    elif clear_swarm_api_key:
+        os.environ["SWARM_LLM_API_KEY"] = ""
+    if swarm_api_base is not None:
+        os.environ["SWARM_LLM_API_BASE"] = swarm_api_base
+    elif clear_swarm_api_base:
+        os.environ["SWARM_LLM_API_BASE"] = ""
+    if swarm_reasoning_effort is not None:
+        os.environ["REDJOHN_SWARM_REASONING_EFFORT"] = swarm_reasoning_effort
+    if swarm_profile is not None:
+        os.environ["REDJOHN_SWARM_PROFILE"] = swarm_profile
+    if clear_role_models:
+        os.environ["REDJOHN_SWARM_ROLE_MODELS"] = ""
+    elif role is not None:
+        current = dict(load_settings().llm.swarm_role_models or {})
+        if role_model:
+            current[role] = role_model
+        else:
+            current.pop(role, None)
+        os.environ["REDJOHN_SWARM_ROLE_MODELS"] = json.dumps(current) if current else ""
     invalidate_settings_cache()
     persist_current()
 

@@ -182,7 +182,7 @@ def _use(  # noqa: PLR0912, PLR0915
         emit(console, result, as_json=True)
         return http.EXIT_OK
     workspace_name = escape(sanitize_terminal_text(record["organization_name"]))
-    console.print(f"[green]✓ Switched to workspace [bold]{workspace_name}[/].[/]")
+    console.print(f"[#ef4444]✓ Switched to workspace [bold]{workspace_name}[/].[/]")
     scopes = record.get("scopes")
     if isinstance(scopes, list) and scopes:
         scope_items = cast("list[Any]", cast("Any", scopes))

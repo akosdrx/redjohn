@@ -45,7 +45,7 @@ async def run_cli(args: Any) -> None:  # noqa: PLR0915
     console = Console()
 
     start_text = Text()
-    start_text.append("Penetration test initiated", style="bold #22c55e")
+    start_text.append("Penetration test initiated", style="bold #ef4444")
 
     target_text = Text()
     target_text.append("Target", style="dim")
@@ -61,7 +61,7 @@ async def run_cli(args: Any) -> None:  # noqa: PLR0915
     results_text = Text()
     results_text.append("Output", style="dim")
     results_text.append("  ")
-    results_text.append(f"redjohn_runs/{args.run_name}", style="#60a5fa")
+    results_text.append(f"redjohn_runs/{args.run_name}", style="#f87171")
 
     note_text = Text()
     note_text.append("\n\n", style="dim")
@@ -76,9 +76,9 @@ async def run_cli(args: Any) -> None:  # noqa: PLR0915
             results_text,
             note_text,
         ),
-        title="[bold white]REDJOHN",
+        title="[bold #ef4444]REDJOHN",
         title_align="left",
-        border_style="#22c55e",
+        border_style="#ef4444",
         padding=(1, 2),
     )
 
@@ -139,9 +139,9 @@ async def run_cli(args: Any) -> None:  # noqa: PLR0915
         console.print(
             Panel(
                 text,
-                title=f"[bold yellow]{report_id.upper()} (withdrawn)",
+                title=f"[bold #f87171]{report_id.upper()} (withdrawn)",
                 title_align="left",
-                border_style="yellow",
+                border_style="#dc2626",
                 padding=(1, 2),
             )
         )
@@ -172,7 +172,7 @@ async def run_cli(args: Any) -> None:  # noqa: PLR0915
 
     def create_live_status() -> Panel:
         status_text = Text()
-        status_text.append("Penetration test in progress", style="bold #22c55e")
+        status_text.append("Penetration test in progress", style="bold #ef4444")
         status_text.append("\n\n")
 
         if not has_model_response(report_state):
@@ -185,9 +185,9 @@ async def run_cli(args: Any) -> None:  # noqa: PLR0915
 
         return Panel(
             status_text,
-            title="[bold white]REDJOHN",
+            title="[bold #ef4444]REDJOHN",
             title_align="left",
-            border_style="#22c55e",
+            border_style="#ef4444",
             padding=(1, 2),
         )
 
@@ -246,7 +246,7 @@ async def run_cli(args: Any) -> None:  # noqa: PLR0915
         console.print()
 
         final_report_text = Text()
-        final_report_text.append("Penetration test summary", style="bold #60a5fa")
+        final_report_text.append("Penetration test summary", style="bold #ef4444")
 
         final_report_panel = Panel(
             Text.assemble(
@@ -254,9 +254,9 @@ async def run_cli(args: Any) -> None:  # noqa: PLR0915
                 "\n\n",
                 report_state.final_scan_result,
             ),
-            title="[bold white]REDJOHN",
+            title="[bold #ef4444]REDJOHN",
             title_align="left",
-            border_style="#60a5fa",
+            border_style="#ef4444",
             padding=(1, 2),
         )
 

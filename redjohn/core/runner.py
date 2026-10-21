@@ -9,6 +9,7 @@ import json
 import logging
 import uuid
 from collections.abc import Awaitable, Callable
+from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -231,6 +232,81 @@ def _resume_root_id(scan_id: str, coordinator: AgentCoordinator) -> str:
             return agent_id
     raise RuntimeError(
         f"Cannot resume scan {scan_id}: agents.json has no root agent (parent=None)",
+    )
+
+
+def _match_swarm_role_model(
+    role_models: dict[str, str] | None,
+    *,
+    name: str,
+    skills: list[str],
+) -> str | None:
+    if not role_models:
+        return None
+    haystack = " ".join([name.lower(), *(s.lower() for s in skills)])
+    role_aliases: tuple[tuple[str, tuple[str, ...]], ...] = (
+        ("recon", ("recon", "surface", "discover", "fingerprint", "dns", "service")),
+        ("auth_logic", ("auth", "logic", "idor", "bola", "bfla", "session", "jwt", "business")),
+        (
+            "exploit",
+            ("exploit", "rce", "injection", "sql", "xss", "ssrf", "xxe", "ssti", "command"),
+        ),
+        ("code_review", ("whitebox", "source", "supply", "code", "diff", "review", "dependency")),
+        ("triage", ("triage", "retest", "report", "coverage", "correlat")),
+    )
+    for role_key, keywords in role_aliases:
+        configured = (role_models.get(role_key) or "").strip()
+        if configured and any(kw in haystack for kw in keywords):
+            return configured
+    for role_key, configured in role_models.items():
+        if configured and role_key.lower() in haystack:
+            return configured.strip()
+    return None
+
+
+def _resolve_child_run_config(
+    base_run_config: RunConfig,
+    *,
+    name: str,
+    skills: list[str],
+    model_override: str | None = None,
+) -> RunConfig:
+    """Build a child agent's ``RunConfig``, honoring live Swarm/role model overrides."""
+    live_settings = load_settings()
+    llm = live_settings.llm
+    role_model = _match_swarm_role_model(llm.swarm_role_models, name=name, skills=skills)
+    chosen_model = (
+        (model_override or "").strip()
+        or (role_model or "").strip()
+        or (llm.swarm_model or "").strip()
+        or (llm.model or "").strip()
+        or (base_run_config.model if isinstance(base_run_config.model, str) else "")
+    )
+    if not chosen_model:
+        return base_run_config
+
+    effort = llm.swarm_reasoning_effort or llm.reasoning_effort
+    child_model_settings = make_model_settings(
+        effort,
+        model_name=chosen_model,
+        force_required_tool_choice=llm.force_required_tool_choice,
+        request_timeout=llm.timeout,
+        prompt_cache=llm.prompt_cache,
+        extra_headers=llm.extra_headers,
+        max_output_tokens=llm.max_output_tokens,
+    )
+    api_key = llm.swarm_api_key or llm.api_key
+    api_base = llm.swarm_api_base or llm.api_base
+    provider = (
+        RedJohnProvider(api_key=api_key, base_url=api_base)
+        if (api_key or api_base)
+        else base_run_config.model_provider
+    )
+    return replace(
+        base_run_config,
+        model=chosen_model,
+        model_provider=provider,
+        model_settings=child_model_settings,
     )
 
 
@@ -579,12 +655,30 @@ async def run_redjohn_scan(
         )
 
         async def spawn_child_agent(**kwargs: Any) -> dict[str, Any]:
+            from redjohn.skills import infer_skills_for_agent
+
+            model_override = kwargs.pop("model_override", None)
+            child_name = str(kwargs.get("name") or "")
+            child_task = str(kwargs.get("task") or "")
+            child_skills = infer_skills_for_agent(
+                name=child_name,
+                task=child_task,
+                explicit_skills=list(kwargs.get("skills") or []),
+                pinned_skills=skills,
+            )
+            kwargs["skills"] = child_skills
+            child_run_config = _resolve_child_run_config(
+                run_config,
+                name=child_name,
+                skills=child_skills,
+                model_override=model_override if isinstance(model_override, str) else None,
+            )
             return await start_child_agent(
                 coordinator=coordinator,
                 factory=child_agent_builder,
                 agents_db_path=agents_db,
                 sessions_to_close=sessions_to_close,
-                run_config=run_config,
+                run_config=child_run_config,
                 max_turns=max_turns,
                 interactive=interactive,
                 event_sink=event_sink,

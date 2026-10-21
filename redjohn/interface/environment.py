@@ -26,9 +26,7 @@ def _missing_web_search_vars(integrations: IntegrationSettings) -> list[str]:
         return [] if integrations.exa_api_key else ["EXA_API_KEY"]
     if integrations.web_search_provider == "perplexity":
         return [] if integrations.perplexity_api_key else ["PERPLEXITY_API_KEY"]
-    if integrations.exa_api_key or integrations.perplexity_api_key:
-        return []
-    return ["EXA_API_KEY", "PERPLEXITY_API_KEY"]
+    return []
 
 
 def validate_environment(*, require_model: bool = True) -> None:
@@ -93,20 +91,20 @@ def validate_environment(*, require_model: bool = True) -> None:
         error_text.append("\n\n", style="white")
 
         for var in missing_required_vars:
-            error_text.append(f"• {var}", style="bold yellow")
+            error_text.append(f"• {var}", style="bold #f87171")
             error_text.append(" is not set\n", style="white")
 
         if missing_optional_vars:
             error_text.append("\nOptional environment variables:\n", style="dim white")
             for var in missing_optional_vars:
-                error_text.append(f"• {var}", style="dim yellow")
+                error_text.append(f"• {var}", style="dim #f87171")
                 error_text.append(" is not set\n", style="dim white")
 
         error_text.append("\nRequired environment variables:\n", style="white")
         for var in missing_required_vars:
             if var == "REDJOHN_LLM":
                 error_text.append("• ", style="white")
-                error_text.append("REDJOHN_LLM", style="bold cyan")
+                error_text.append("REDJOHN_LLM", style="bold #f87171")
                 error_text.append(
                     " - Model name to use (e.g., 'openrouter/z-ai/glm-5.3' or "
                     "'anthropic/claude-opus-4-7')\n",
@@ -118,28 +116,28 @@ def validate_environment(*, require_model: bool = True) -> None:
             for var in missing_optional_vars:
                 if var == "LLM_API_BASE":
                     error_text.append("• ", style="white")
-                    error_text.append("LLM_API_BASE", style="bold cyan")
+                    error_text.append("LLM_API_BASE", style="bold #f87171")
                     error_text.append(
                         " - Custom API base URL if using local models (e.g., Ollama, LMStudio)\n",
                         style="white",
                     )
                 elif var == "PERPLEXITY_API_KEY":
                     error_text.append("• ", style="white")
-                    error_text.append("PERPLEXITY_API_KEY", style="bold cyan")
+                    error_text.append("PERPLEXITY_API_KEY", style="bold #f87171")
                     error_text.append(
                         " - API key for Perplexity AI web search (alternative to Exa)\n",
                         style="white",
                     )
                 elif var == "EXA_API_KEY":
                     error_text.append("• ", style="white")
-                    error_text.append("EXA_API_KEY", style="bold cyan")
+                    error_text.append("EXA_API_KEY", style="bold #f87171")
                     error_text.append(
                         " - API key for Exa web search (enables real-time research)\n",
                         style="white",
                     )
                 elif var == "REDJOHN_REASONING_EFFORT":
                     error_text.append("• ", style="white")
-                    error_text.append("REDJOHN_REASONING_EFFORT", style="bold cyan")
+                    error_text.append("REDJOHN_REASONING_EFFORT", style="bold #f87171")
                     error_text.append(
                         " - Reasoning effort level: none, minimal, low, medium, high, xhigh, "
                         "max (default: high)\n",
@@ -171,9 +169,9 @@ def validate_environment(*, require_model: bool = True) -> None:
 
         panel = Panel(
             error_text,
-            title="[bold white]REDJOHN",
+            title="[bold #ef4444]REDJOHN",
             title_align="left",
-            border_style="red",
+            border_style="#ef4444",
             padding=(1, 2),
         )
 
@@ -203,9 +201,9 @@ def check_docker_installed() -> None:
 
         panel = Panel(
             error_text,
-            title="[bold white]REDJOHN",
+            title="[bold #ef4444]REDJOHN",
             title_align="left",
-            border_style="red",
+            border_style="#ef4444",
             padding=(1, 2),
         )
         console.print("\n", panel, "\n")
@@ -229,10 +227,10 @@ def pull_docker_image() -> None:
     logger.info("Pulling docker image: %s", image)
     console.print()
     console.print(f"[dim]Pulling image[/] {image}")
-    console.print("[dim yellow]This only happens on first run and may take a few minutes...[/]")
+    console.print("[dim #f87171]This only happens on first run and may take a few minutes...[/]")
     console.print()
 
-    with console.status("[bold cyan]Downloading image layers...", spinner="dots") as status:
+    with console.status("[bold #ef4444]Downloading image layers...", spinner="dots") as status:
         try:
             layers_info: dict[str, str] = {}
             last_update = ""
@@ -251,9 +249,9 @@ def pull_docker_image() -> None:
 
             panel = Panel(
                 error_text,
-                title="[bold white]REDJOHN",
+                title="[bold #ef4444]REDJOHN",
                 title_align="left",
-                border_style="red",
+                border_style="#ef4444",
                 padding=(1, 2),
             )
             console.print(panel, "\n")
@@ -262,6 +260,6 @@ def pull_docker_image() -> None:
 
     logger.info("Docker image %s ready", image)
     success_text = Text()
-    success_text.append("Docker image ready", style="#22c55e")
+    success_text.append("Docker image ready", style="bold #ef4444")
     console.print(success_text)
     console.print()

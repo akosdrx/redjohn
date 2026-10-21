@@ -15,8 +15,8 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
-from redjohn.config import codex, grok
-from redjohn.config.loader import save_llm_selection
+from redjohn.config import codex, grok, load_settings
+from redjohn.config.loader import save_llm_selection, save_swarm_llm_selection
 from redjohn.config.model_catalog import (
     EFFORTS,
     CatalogEntry,
@@ -25,6 +25,8 @@ from redjohn.config.model_catalog import (
     find_entry,
     format_model_setting,
     list_models,
+    resolve_model_effort_spec,
+    short_model_label,
 )
 from redjohn.interface.auth_cli import (
     _CallbackServer,
@@ -92,7 +94,14 @@ class LlmPicker:
         self._status = {"phase": "idle"}
         return {"cancelled": True}
 
-    def select_model(self, model_id: str, *, scan_started: bool) -> dict[str, Any]:
+    def select_model(
+        self,
+        model_id: str,
+        *,
+        scan_started: bool,
+        target: str = "both",
+        role: str | None = None,
+    ) -> dict[str, Any]:
         pending = self._pending
         if pending is None:
             raise RuntimeError("Connect a provider before choosing a model.")
@@ -101,32 +110,141 @@ class LlmPicker:
         setting = format_model_setting(pending.entry.route, model_id)
         clear_base = connection_clears_base(pending.entry)
         subscription = pending.entry.route in {"chatgpt", "grok"}
-        save_llm_selection(
-            model=setting,
-            api_key=None if subscription else pending.api_key,
-            api_base=None if clear_base else pending.entry.api_base,
-            clear_api_key=subscription,
-            clear_api_base=clear_base,
-        )
+        spec = resolve_model_effort_spec(setting)
+        default_effort = spec.default_effort or "high"
+        normalized_target = (target or "both").strip().lower()
+        clean_role = role.strip().lower() if isinstance(role, str) and role.strip() else None
+
+        if clean_role:
+            save_swarm_llm_selection(
+                role=clean_role,
+                role_model=setting,
+                swarm_api_key=None if subscription else pending.api_key,
+                swarm_api_base=None if clear_base else pending.entry.api_base,
+                clear_swarm_api_key=subscription,
+                clear_swarm_api_base=clear_base,
+            )
+        elif normalized_target == "swarm":
+            save_swarm_llm_selection(
+                swarm_model=setting,
+                swarm_api_key=None if subscription else pending.api_key,
+                swarm_api_base=None if clear_base else pending.entry.api_base,
+                swarm_reasoning_effort=default_effort,
+                clear_swarm_api_key=subscription,
+                clear_swarm_api_base=clear_base,
+            )
+        else:
+            save_llm_selection(
+                model=setting,
+                model_label=short_model_label(setting),
+                supported_efforts=spec.supported_efforts,
+                api_key=None if subscription else pending.api_key,
+                api_base=None if clear_base else pending.entry.api_base,
+                reasoning_effort=default_effort,
+                clear_api_key=subscription,
+                clear_api_base=clear_base,
+                propagate_to_swarm=(normalized_target == "both"),
+            )
         self._pending = None
         self._status = {"phase": "idle"}
         return {
             "model": setting,
-            "applied": "next_scan" if scan_started else "saved",
+            "short_model": short_model_label(setting),
+            "effort": default_effort,
+            "supported_efforts": list(spec.supported_efforts),
+            "target": normalized_target,
+            "role": clean_role or "",
+            "applied": "live" if scan_started else "saved",
         }
 
-    def set_effort(self, effort: str, *, scan_started: bool) -> dict[str, Any]:
+    def set_effort(
+        self,
+        effort: str,
+        *,
+        scan_started: bool,
+        target: str = "orchestrator",
+    ) -> dict[str, Any]:
         if not isinstance(effort, str):
             raise TypeError("effort must be a string")
         normalized = effort.strip().lower()
         if normalized not in EFFORTS:
             choices = ", ".join(EFFORTS)
             raise ValueError(f"effort must be one of: {choices}")
-        save_llm_selection(reasoning_effort=normalized)
+        llm = load_settings().llm
+        normalized_target = (target or "orchestrator").strip().lower()
+        active_model = (
+            (llm.swarm_model or llm.model or "").strip()
+            if normalized_target == "swarm"
+            else (llm.model or "").strip()
+        )
+        if not active_model:
+            raise ValueError("Select a model with /models before setting reasoning effort.")
+        spec = resolve_model_effort_spec(active_model)
+        if spec.supported_efforts and normalized not in spec.supported_efforts:
+            supported = ", ".join(spec.supported_efforts)
+            raise ValueError(
+                f"{short_model_label(active_model)} supports effort levels: {supported}"
+            )
+        if normalized_target == "swarm":
+            save_swarm_llm_selection(swarm_reasoning_effort=normalized)
+        else:
+            save_llm_selection(reasoning_effort=normalized)
+            if not (llm.swarm_model or "").strip():
+                save_swarm_llm_selection(swarm_reasoning_effort=normalized)
         return {
             "effort": normalized,
-            "applied": "next_scan" if scan_started else "saved",
+            "target": normalized_target,
+            "applied": "live" if scan_started else "saved",
         }
+
+    def set_swarm(self, payload: dict[str, Any], *, scan_started: bool) -> dict[str, Any]:
+        action = str(payload.get("action") or "").strip().lower()
+        if action == "inherit":
+            save_swarm_llm_selection(clear_swarm_model=True, clear_role_models=True)
+            return {"status": "inherit", "applied": "live" if scan_started else "saved"}
+        if action == "clear_roles":
+            save_swarm_llm_selection(clear_role_models=True)
+            return {"status": "roles_cleared", "applied": "live" if scan_started else "saved"}
+        if action == "profile" or ("profile" in payload and not action):
+            profile = str(payload.get("profile") or "full").strip().lower()
+            valid_profiles = {
+                "full",
+                "balanced",
+                "fast",
+                "deep",
+                "recon",
+                "exploit",
+                "whitebox",
+                "single",
+            }
+            if profile not in valid_profiles:
+                raise ValueError("Invalid swarm profile")
+            save_swarm_llm_selection(swarm_profile=profile)
+            return {
+                "status": "profile_updated",
+                "swarm_profile": profile,
+                "applied": "live" if scan_started else "saved",
+            }
+        if action == "set_model":
+            model = str(payload.get("model") or "").strip()
+            if not model:
+                raise ValueError("model is required")
+            role = str(payload.get("role") or "").strip().lower() or None
+            spec = resolve_model_effort_spec(model)
+            if role:
+                save_swarm_llm_selection(role=role, role_model=model)
+            else:
+                save_swarm_llm_selection(
+                    swarm_model=model,
+                    swarm_reasoning_effort=spec.default_effort or "high",
+                )
+            return {
+                "status": "model_updated",
+                "model": model,
+                "role": role or "",
+                "applied": "live" if scan_started else "saved",
+            }
+        raise ValueError(f"Unknown swarm action: {action}")
 
     async def _connect_api_key(self, entry: CatalogEntry, api_key: object) -> dict[str, Any]:
         if not isinstance(api_key, str) or not api_key.strip():

@@ -296,16 +296,16 @@ def _first(query: dict[str, list[str]], key: str) -> str | None:
 def _status(console: Console) -> int:
     record = codex.read_record()
     if record is None:
-        console.print("[yellow]Not signed in.[/] Run [cyan]redjohn auth login chatgpt[/] to sign in.")
+        console.print("[#f87171]Not signed in.[/] Run [bold #ef4444]redjohn auth login chatgpt[/] to sign in.")
         return 1
     settings = load_settings()
-    console.print("[green]Signed in[/] with a ChatGPT subscription.")
+    console.print("[#ef4444]Signed in[/] with a ChatGPT subscription.")
     console.print(f"  Account: [bold]{record.get('account_id')}[/]")
     if codex.subscription_model(settings.llm.model):
         console.print(f"  Runs use the subscription (REDJOHN_LLM=[bold]{settings.llm.model}[/]).")
     else:
         console.print(
-            "  [yellow]Note:[/] set [cyan]REDJOHN_LLM[/] to e.g. [cyan]chatgpt/gpt-5.4[/] "
+            "  [#f87171]Note:[/] set [bold #f87171]REDJOHN_LLM[/] to e.g. [bold #f87171]chatgpt/gpt-5.4[/] "
             "to run on the subscription."
         )
     return 0
@@ -313,7 +313,7 @@ def _status(console: Console) -> int:
 
 def _logout(console: Console) -> int:
     codex.logout()
-    console.print("[green]Signed out.[/] Stored subscription credentials removed.")
+    console.print("[#ef4444]Signed out.[/] Stored subscription credentials removed.")
     return 0
 
 
@@ -326,9 +326,9 @@ def _fail(console: Console, exc: codex.CodexAuthError) -> int:
     console.print(
         Panel(
             error_text,
-            title="[bold white]REDJOHN",
+            title="[bold #ef4444]REDJOHN",
             title_align="left",
-            border_style="red",
+            border_style="#ef4444",
             padding=(1, 2),
         )
     )
@@ -337,25 +337,25 @@ def _fail(console: Console, exc: codex.CodexAuthError) -> int:
 
 def _print_success(console: Console) -> None:
     text = Text()
-    text.append("Signed in with your ChatGPT subscription", style="bold #22c55e")
+    text.append("Signed in with your ChatGPT subscription", style="bold #ef4444")
     text.append("\n\n", style="white")
     text.append("Set ", style="white")
     text.append("REDJOHN_LLM", style="bold white")
     text.append(" to a ", style="white")
-    text.append("chatgpt/", style="bold cyan")
+    text.append("chatgpt/", style="bold #f87171")
     text.append(" model (e.g. ", style="white")
-    text.append("chatgpt/gpt-5.4", style="bold cyan")
+    text.append("chatgpt/gpt-5.4", style="bold #f87171")
     text.append(") — runs are billed to your ChatGPT plan.", style="white")
     text.append("\n\n", style="white")
     text.append("Run a scan as usual, e.g. ", style="white")
-    text.append("redjohn --target https://example.com", style="bold cyan")
+    text.append("redjohn --target https://example.com", style="bold #f87171")
     console.print()
     console.print(
         Panel(
             text,
-            title="[bold white]REDJOHN",
+            title="[bold #ef4444]REDJOHN",
             title_align="left",
-            border_style="#22c55e",
+            border_style="#ef4444",
             padding=(1, 2),
         )
     )

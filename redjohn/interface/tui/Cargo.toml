@@ -1,0 +1,23 @@
+[package]
+name = "redjohn-tui"
+version = "0.1.0"
+edition = "2021"
+description = "RedJohn Native Rust TUI Sidecar"
+license = "Apache-2.0"
+
+[[bin]]
+name = "redjohn-tui"
+path = "src/main.rs"
+
+[dependencies]
+crossterm = "0.28"
+ratatui = "0.29"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1.0", features = ["raw_value"] }
+unicode-width = "0.2"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+strip = "symbols"
+codegen-units = 1

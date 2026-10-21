@@ -3,8 +3,8 @@
 # RedJohn — Native Kali Linux Installer (x64 & ARM64)
 # ==============================================================================
 # Usage:
-#   ./scripts/install-kali.sh              # Install CLI + Go TUI + Web Viewer + agent-browser
-#   ./scripts/install-kali.sh --no-apt     # Skip full APT scan-tool check (still ensures chromium/npm if missing)
+#   ./scripts/install-kali.sh              # Install CLI + Rust TUI + Web Viewer + agent-browser
+#   ./scripts/install-kali.sh --no-apt     # Skip full APT scan-tool check (still ensures chromium/npm/cargo if missing)
 # ==============================================================================
 set -euo pipefail
 
@@ -51,6 +51,8 @@ if command -v apt-get >/dev/null 2>&1; then
       libseccomp2
       libseccomp-dev
       build-essential
+      rustc
+      cargo
       ca-certificates
       curl
       git
@@ -87,10 +89,11 @@ if command -v apt-get >/dev/null 2>&1; then
       $SUDO gzip -dk /usr/share/wordlists/rockyou.txt.gz || true
     fi
   else
-    # Even with --no-apt, ensure native ARM64/x64 Chromium and npm are present for agent-browser
+    # Even with --no-apt, ensure native ARM64/x64 Chromium, npm, and cargo are present
     MISSING_BROWSER_PKGS=()
     command -v chromium >/dev/null 2>&1 || MISSING_BROWSER_PKGS+=(chromium fonts-liberation)
     command -v npm >/dev/null 2>&1 || MISSING_BROWSER_PKGS+=(nodejs npm)
+    command -v cargo >/dev/null 2>&1 || MISSING_BROWSER_PKGS+=(rustc cargo)
     if [ "${#MISSING_BROWSER_PKGS[@]}" -gt 0 ]; then
       echo "==> [2/6] Installing native Kali Chromium & Node/NPM (${MISSING_BROWSER_PKGS[*]})..."
       $SUDO apt-get update -qq || true
@@ -119,21 +122,22 @@ unset PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD
 # only the system browser (used by the legacy agent-browser) is not sufficient.
 "$VENV_PY" -m playwright install --with-deps chromium
 
-echo "==> [4/6] Configuring native Go Bubble Tea TUI binary for Linux..."
+echo "==> [4/6] Configuring native Rust TUI binary for Linux..."
 ARCH_RAW="$(uname -m)"
 case "$ARCH_RAW" in
-  x86_64|amd64) GO_ARCH="amd64" ;;
-  aarch64|arm64) GO_ARCH="arm64" ;;
-  *) GO_ARCH="$ARCH_RAW" ;;
+  x86_64|amd64) TUI_ARCH="amd64" ;;
+  aarch64|arm64) TUI_ARCH="arm64" ;;
+  *) TUI_ARCH="$ARCH_RAW" ;;
 esac
 
 mkdir -p "$ROOT_DIR/redjohn/bin"
-PREBUILT_TUI="$ROOT_DIR/redjohn/bin/redjohn-tui-linux-${GO_ARCH}"
-if command -v go >/dev/null 2>&1 && [ -f "$ROOT_DIR/redjohn/interface/tui/go.mod" ]; then
-  echo "    Building redjohn-tui from Go source for linux/${GO_ARCH}..."
+PREBUILT_TUI="$ROOT_DIR/redjohn/bin/redjohn-tui-linux-${TUI_ARCH}"
+if command -v cargo >/dev/null 2>&1 && [ -f "$ROOT_DIR/redjohn/interface/tui/Cargo.toml" ]; then
+  echo "    Building redjohn-tui from Rust source for linux/${TUI_ARCH}..."
   (
     cd "$ROOT_DIR/redjohn/interface/tui"
-    CGO_ENABLED=0 GOOS=linux GOARCH="$GO_ARCH" go build -ldflags="-s -w" -o "$PREBUILT_TUI" ./cmd/redjohn-tui
+    cargo build --release --bin redjohn-tui
+    cp -f target/release/redjohn-tui "$PREBUILT_TUI"
   )
 fi
 
@@ -142,7 +146,7 @@ if [ -f "$PREBUILT_TUI" ]; then
   chmod +x "$PREBUILT_TUI" "$ROOT_DIR/redjohn/bin/redjohn-tui"
   echo "    Active TUI binary: $PREBUILT_TUI"
 else
-  echo "    WARNING: Prebuilt TUI binary not found for linux/${GO_ARCH}. Install 'golang-go' and re-run." >&2
+  echo "    WARNING: Prebuilt TUI binary not found for linux/${TUI_ARCH}. Install 'cargo' / 'rustc' and re-run." >&2
 fi
 
 echo "==> [5/6] Installing agent-browser & configuring Kali native Chromium (${ARCH_RAW})..."

@@ -66,14 +66,14 @@ _CURSOR_HIDE = "\x1b[?25l"
 _CURSOR_SHOW = "\x1b[?25h"
 _CLEAR_BELOW = "\x1b[J"
 
-_GREEN = "#22c55e"
-_AMBER = "#f59e0b"
+_GREEN = "#ef4444"
+_AMBER = "#f87171"
 _STATUS_STYLES = {
     "completed": _GREEN,
     "running": _GREEN,
     "interrupted": _AMBER,
     "stopped": _AMBER,
-    "failed": "#ef4444",
+    "failed": "#dc2626",
 }
 _NO_STATE = "no state"
 _CURSOR = " \u276f "

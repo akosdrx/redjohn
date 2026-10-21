@@ -109,7 +109,7 @@ def run_view(argv: list[str]) -> None:
     console.print(f"Serving [bold white]{run_name}[/] ({state_label}) at:")
     # Print the URL alone on its own line with soft_wrap so Rich never inserts a
     # wrap into the (long, tokened) link -- that keeps it selectable/copyable.
-    console.print(f"  [#60a5fa]{open_url}[/]", soft_wrap=True)
+    console.print(f"  [#f87171]{open_url}[/]", soft_wrap=True)
     console.print("[dim]This link authorizes the browser; anyone you share it with can steer[/]")
     console.print("[dim]a live scan and browse history. Press Ctrl-C to stop the viewer.[/]")
     console.print()
@@ -126,14 +126,14 @@ def run_view(argv: list[str]) -> None:
 
 def _state_label(summary: dict[str, object]) -> str:
     if not summary.get("finished", False):
-        return "[#eab308]live[/]"
+        return "[#f87171]live[/]"
 
     status = summary.get("status")
     if status == "failed":
-        return "[#ef4444]failed[/]"
+        return "[#dc2626]failed[/]"
     if status in {"stopped", "interrupted"}:
-        return f"[#eab308]{status}[/]"
-    return "[#22c55e]finished[/]"
+        return f"[#f87171]{status}[/]"
+    return "[#ef4444]finished[/]"
 
 
 def _resolve_run_dir(run: str | None, console: Console, *, allow_empty: bool = False) -> Path:

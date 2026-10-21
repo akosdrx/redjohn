@@ -6,7 +6,6 @@ node_modules/
 .env
 .DS_Store
 .venv/
-RedJohn/.venv/
 __pycache__/
 *.pyc
 .pytest_cache/
@@ -29,10 +28,10 @@ resources/.tools-build-*/
 .build-linux/
 .bootstrap/
 redjohn_runs/
-RedJohn/.tools/
-RedJohn/build/
 /artifacts/
 /.ci-state/
 
 # Host-local verified optional tool artifacts; not source or full templates.
 .tools/
+redjohn/interface/tui/target/
+/target/

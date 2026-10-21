@@ -428,6 +428,7 @@ async def spawn_child_agent(
         name=name,
         parent_id=parent_id,
         task=task,
+        skills=skills,
         initial_input=child_initial_input(
             name=name,
             child_id=child_id,
@@ -511,6 +512,7 @@ async def respawn_subagents(
                 name=name,
                 parent_id=parent_id,
                 task=str(md.get("task", "")),
+                skills=child_skills,
                 initial_input=[],
                 start_parked=start_parked,
                 event_sink=event_sink,
@@ -1168,6 +1170,7 @@ async def _start_child_runner(
     name: str,
     parent_id: str | None,
     task: str,
+    skills: list[str] | None = None,
     initial_input: Any,
     start_parked: bool = False,
     event_sink: StreamEventSink | None = None,
@@ -1181,6 +1184,10 @@ async def _start_child_runner(
     child_ctx["agent_id"] = child_id
     child_ctx["parent_id"] = parent_id
     child_ctx["task"] = task
+    child_ctx["agent_skills"] = {
+        s.split("/")[-1] for s in ("safety", "sandbox", *(skills or ())) if s
+    }
+    child_ctx["_skill_scan_cursor"] = 0
 
     async def _child_loop() -> None:
         # A budget stop is a clean scan-wide shutdown, not a child failure: the

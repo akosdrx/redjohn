@@ -20,9 +20,10 @@ async def load_skill(ctx: RunContextWrapper, skills: list[str]) -> str:
     ``create_agent`` when spawning a specialist child instead.
 
     Args:
-        skills: List of domain skill names (e.g. ``["injection", "auth"]``).
-            Max 8. Names match the bare files under
-            ``redjohn/skills/<category>/<name>.md``.
+        skills: List of domain or assessment skill names (e.g.
+            ``["injection", "assessment/sql-injection-validation", "auth"]``).
+            Max 8. Names match ``redjohn/skills/<category>/<name>.md`` or
+            ``redjohn/skills/assessment/<name>/SKILL.md``.
     """
     requested = list(skills or [])
     err = validate_requested_skills(requested)
@@ -32,5 +33,8 @@ async def load_skill(ctx: RunContextWrapper, skills: list[str]) -> str:
     contents = load_skills(requested, supports_images=context.get("supports_images", True))
     if not contents:
         return "load_skill: no content loaded for requested skills."
+    agent_skills = context.get("agent_skills")
+    if isinstance(agent_skills, set):
+        agent_skills.update(contents.keys())
     sections = [f"## Skill: {name}\n\n{body}" for name, body in contents.items()]
     return "\n\n---\n\n".join(sections)
