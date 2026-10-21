@@ -19,6 +19,7 @@ profile @REDJOHN_CI_PROFILE@ flags=(attach_disconnected,mediate_deleted) {
   # Read/execute system trees. Writes are limited to the runner's workspace,
   # package caches, temporary files and the delegated cgroup.
   / r,
+  / w,
   /{bin,etc,lib,lib32,lib64,sbin,usr}/** rix,
   # bwrap creates empty mountpoints in its private mount namespace. These
   # directory-only write rules do not grant writes to host files below them.
