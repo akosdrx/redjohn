@@ -66,7 +66,10 @@ hosts without working Linux namespace enforcement. The owned non-loopback Linux
 fixture passed the previous GET/HEAD browser/inventory/authenticated Nuclei/restart
 E2E; [measurements and limits](docs/redjohn-remote-auth-verification.md) retain the
 browser's partial coverage and candidate-only finding status. The legacy
-interactive agent remains a separate workflow.
+interactive agent remains a separate workflow. A local/non-web target that has
+no approved assessment binding is refused unless the operator explicitly passes
+`--unconfined-legacy`; web/API targets continue under the host-bound policy.
+Current remediation evidence: [remediation status](docs/redjohn-remediation-status.md).
 See [audit](docs/redjohn-implementation-audit.md),
 [runbook](docs/redjohn-runbook.md), [POST replay/session refresh](RedJohn/docs/post-refresh-replay.md),
 [remote egress/authenticated replay](RedJohn/docs/remote-egress-auth.md),
@@ -97,6 +100,10 @@ git clone https://github.com/akosdrx/redjohn.git rjkali
 cd rjkali
 ./RedJohn/scripts/install-kali.sh
 ```
+
+The installer uses the repository-root `.venv`, installs the governed
+`[browser]` extra, and downloads Playwright Chromium. The system Chromium is
+kept for the separate legacy `agent-browser` path.
 
 ---
 

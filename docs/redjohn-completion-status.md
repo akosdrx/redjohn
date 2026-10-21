@@ -1,5 +1,11 @@
 # RedJohn — a teljes feladat követett állapota
 
+> **Aktuális állapot (2026-10-21):** a jelenlegi, commit-azonosított javítási
+> állapot a [`redjohn-remediation-status.md`](redjohn-remediation-status.md).
+> Az alábbi dátumozott futások és SHA-k történeti rekordok; nem bizonyítják a
+> jelenlegi `4dbe72c9341ad9b35f30a3db16c7bae6d542f702` forrás állapotát.
+
+
 **2026-10-18, felhasználói pontosítás:** az élő cloud/Kubernetes-hozzáférést
 igénylő ellenőrzések későbbre halasztva; most nem kérünk és nem használunk ilyen
 hozzáférést. Az adapterek, a konfiguráció- és jogosultsághatárok, valamint a

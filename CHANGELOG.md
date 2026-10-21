@@ -1,5 +1,20 @@
 # RedJohn változásnapló
 
+## 2026-10-21 — Source/evidence integrity and assessment hardening
+
+- Restore the canonical `RedJohn/` source tree in Git and require a clean
+  worktree before CI source hashing.
+- Wire the production policy/governor into `hunt`; quarantine browser capacity
+  when Chromium cleanup cannot be proven.
+- Make the viewer pagination-aware, require an explicit legacy boundary for
+  local targets, install the governed Playwright browser, and validate real
+  Chromium health.
+- Add per-test real-integration classification, bounded retention, staged
+  vault publication, a scoped AppArmor profile, and consistent CLI/TUI version
+  and viewer URL handling. See the
+  [commit-bound remediation status](docs/redjohn-remediation-status.md).
+
+
 ## 2026-10-18 — Shared resource admission and Linux containment
 
 - Coordinate active worker/browser/page/context reservations across independent

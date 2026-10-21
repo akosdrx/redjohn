@@ -138,7 +138,10 @@ bypassolja. Session/policy/deploy revision kulcsrészek és explicit invalidál�
 védik a frissességet. A Python callback maga köteles saját I/O deadline-t tartani;
 a timeout nem öl meg tetszőleges threadet, a foglalt slot viszont nem pótolható
 korlátlan új threaddel. Az evidence SQLiteban külön kvótás, immutable, nem LRU.
-Automatikus evidence-retention/GC és auditrotáció még nincs; a quota blokkol.
+Az evidence továbbra is külön kvótás és nem LRU; a finding, audit, terminális
+session/capture/followup és nem hivatkozott surface sorok konfigurálható
+retention-kvótát kapnak. A job-, attempt- és evidence-bizonyíték nem törlődik
+retentionnal, és a report kiírja az aktív limiteket.
 
 A HTTP worker raw encoded bodyt streamel quota mellett, így nem fejt ki előbb
 óriási gzip bodyt. A Nuclei worker külön stdout/stderr drain, outputkvóta,

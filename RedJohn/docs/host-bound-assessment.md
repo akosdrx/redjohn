@@ -38,7 +38,9 @@ Without `--assessment-config`, explicit web/API targets establish a
 performs no DNS resolution or HTTP request and starts no browser or scanner.
 It does not approve IP ranges. Job admission still rejects remote activity
 without the required network configuration. A source-only scan does not invent
-a web engagement or create an approval key.
+a web engagement or create an approval key. Because the legacy SDK/shell path
+has no host policy for such a target, it is refused unless the operator passes
+`--unconfined-legacy`; that flag is never inferred from target content.
 
 ## Authority and private state
 

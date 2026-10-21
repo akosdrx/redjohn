@@ -1,5 +1,12 @@
 # Követelménykövetés — master prompt 2.0
 
+> **Aktuális állapot (2026-10-21):** a jelenlegi javítási és verifikációs rekord
+> [`redjohn-remediation-status.md`](redjohn-remediation-status.md). Az itt
+> szereplő korábbi SHA-k és hosted futások történeti bizonyítékok, nem a
+> `4dbe72c9341ad9b35f30a3db16c7bae6d542f702` commit jelenlegi állapotának
+> bizonyítékai.
+
+
 **Aktuális lezárási kör:** [környezet, globális workload-memóriakorlát,
 memória-attribúció és valódi modelles CLI/TUI](redjohn-resource-closure.md).
 A legfrissebb lezárt forrás a `fc1f70dceffa23db653e3bd24d40e27aa7947b21`:
