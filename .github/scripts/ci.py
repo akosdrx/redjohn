@@ -391,8 +391,7 @@ def require_clean_worktree():
     """
     status = subprocess.run(
         ["git", "status", "--porcelain=v1", "--untracked-files=all"],
-        cwd=ROOT, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-        check=False,
+        cwd=ROOT, text=True, capture_output=True, check=False,
     )
     if status.returncode != 0:
         detail = status.stderr.strip().splitlines()[:1]

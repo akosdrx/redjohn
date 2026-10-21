@@ -26,7 +26,13 @@ from redjohn.assessment.media_type import MediaTypeDenied, parse_media_type, rep
 from redjohn.assessment.models import Surface
 from redjohn.assessment.policy import PolicyDenied, origin_for
 from redjohn.assessment.request_body import ApprovedRequestBody, RequestBodyDenied
-from redjohn.assessment.session_refresh import _atomic_private_json, _fingerprint, _private_json
+from redjohn.assessment.session_refresh import (
+    _activate_staged_private_json,
+    _discard_staged_private_json,
+    _fingerprint,
+    _private_json,
+    _stage_private_json,
+)
 
 
 if TYPE_CHECKING:
@@ -711,11 +717,12 @@ class _CaptureTicket:
                 vault["entries"].append(self.entry)
             vault["version"] = 2
             AuthReplayVault.for_rotation_mapping(vault, service.policy)
-            _atomic_private_json(service.vault_file, vault, expected)
+            _stage_private_json(service.vault_file, vault, expected)
             if not service.store.finish_capture(
                 service.policy, self.reservation["key"], self.reservation["owner"], observed
             ):
                 _deny("browser_capture_commit_uncertain")
+            _activate_staged_private_json(service.vault_file)
             self.context.observed.append(observed)
             self.context.statuses[reference] = status
             self.ended = True
@@ -724,6 +731,8 @@ class _CaptureTicket:
             self.context.failures.add("browser_capture_commit_uncertain")
             self.fail()
         finally:
+            with contextlib.suppress(OSError):
+                _discard_staged_private_json(service.vault_file)
             if descriptor is not None:
                 os.close(descriptor)
 

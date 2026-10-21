@@ -194,6 +194,8 @@ class BrowserDiscoveryService:
         self._playwright: Playwright | None = None
         self._browser: Browser | None = None
         self._browser_lease: ResourceLease | None = None
+        self._browser_closed = False
+        self._driver_stopped = False
         self._lock = asyncio.Lock()
         self._contexts_created = 0
         self._contexts_closed = 0
@@ -231,9 +233,12 @@ class BrowserDiscoveryService:
             from playwright.async_api import async_playwright  # noqa: PLC0415
         except ImportError as exc:
             raise BrowserUnavailableError("Install the RedJohn browser extra and Chromium") from exc
+        self._browser_closed = False
+        self._driver_stopped = False
         self._browser_lease = self.governor.acquire(
             "browser",
             estimated_bytes=self.limits.browser_memory_estimate,
+            cleanup_guard=self._browser_cleanup_verified,
         )
         try:
             self._proxy = BrowserEgressProxy(
@@ -291,19 +296,40 @@ class BrowserDiscoveryService:
             await self.close()
             raise
 
-    async def _close_browser(self) -> None:
+    def _browser_cleanup_verified(self) -> bool:
+        """Only a completed browser/driver shutdown may free the browser slot."""
+        return self._browser_closed and self._driver_stopped
+
+    async def _close_browser(self) -> None:  # noqa: PLR0912 - explicit cleanup branches
+        from redjohn.assessment.resources import ResourceAdmissionError  # noqa: PLC0415
+
+        browser_failed = driver_failed = False
         if self._browser is not None:
-            browser, self._browser = self._browser, None
+            browser = self._browser
             try:
                 await asyncio.wait_for(browser.close(), self.limits.cleanup_timeout_seconds)
             except (Exception, asyncio.CancelledError):  # noqa: BLE001 - cleanup must continue
+                browser_failed = True
                 self._cleanup_errors += 1
+                self._browser_closed = False
+            else:
+                self._browser = None
+                self._browser_closed = True
+        else:
+            self._browser_closed = True
         if self._playwright is not None:
-            driver, self._playwright = self._playwright, None
+            driver = self._playwright
             try:
                 await asyncio.wait_for(driver.stop(), self.limits.cleanup_timeout_seconds)
             except (Exception, asyncio.CancelledError):  # noqa: BLE001 - cleanup must continue
+                driver_failed = True
                 self._cleanup_errors += 1
+                self._driver_stopped = False
+            else:
+                self._playwright = None
+                self._driver_stopped = True
+        else:
+            self._driver_stopped = True
         if self._proxy is not None:
             proxy, self._proxy = self._proxy, None
             try:
@@ -313,8 +339,16 @@ class BrowserDiscoveryService:
                     boundary, self._egress = self._egress, None
                     await boundary.close()
         if self._browser_lease is not None:
-            self._browser_lease.release()
-            self._browser_lease = None
+            lease = self._browser_lease
+            try:
+                lease.release()
+            except ResourceAdmissionError:
+                # Keep the same quarantined reservation. Retrying close() may
+                # later prove cleanup; a new browser must not be admitted yet.
+                if not (browser_failed or driver_failed):
+                    self._cleanup_errors += 1
+            else:
+                self._browser_lease = None
 
     async def close(self) -> None:
         # A cancellation may interrupt a navigation but must not strand Chromium.

@@ -86,6 +86,86 @@ def _fingerprint(info: os.stat_result) -> tuple[int, int, int, int]:
     return info.st_dev, info.st_ino, info.st_mtime_ns, info.st_size
 
 
+_STAGED_SUFFIX = ".commit-staged"
+
+
+def _staged_path(path: Path) -> Path:
+    return path.with_name(path.name + _STAGED_SUFFIX)
+
+
+def _stage_private_json(
+    path: Path, value: dict[str, Any], expected: tuple[int, int, int, int]
+) -> Path:
+    """Write a private replacement beside the active vault without activating it."""
+    raw = json.dumps(value, ensure_ascii=True, allow_nan=False).encode()
+    if len(raw) > _MAX_CONFIG:
+        _deny("session_refresh_rotated_vault_too_large")
+    parent = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    staged = _staged_path(path).name
+    try:
+        parent_info = os.fstat(parent)
+        info = os.stat(path.name, dir_fd=parent, follow_symlinks=False)
+        if (
+            parent_info.st_uid != os.getuid()
+            or stat.S_IMODE(parent_info.st_mode) & 0o022
+            or not stat.S_ISREG(info.st_mode)
+            or info.st_uid != os.getuid()
+            or stat.S_IMODE(info.st_mode) != 0o600
+            or info.st_nlink != 1
+        ):
+            _deny("session_refresh_private_vault_required")
+        if _fingerprint(info) != expected:
+            _deny("session_refresh_vault_changed")
+        with contextlib.suppress(FileNotFoundError):
+            os.unlink(staged, dir_fd=parent)
+        descriptor = os.open(
+            staged, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600, dir_fd=parent
+        )
+        with os.fdopen(descriptor, "wb") as stream:
+            stream.write(raw)
+            stream.flush()
+            os.fsync(stream.fileno())
+        current = os.stat(path.name, dir_fd=parent, follow_symlinks=False)
+        if _fingerprint(info) != _fingerprint(current):
+            os.unlink(staged, dir_fd=parent)
+            _deny("session_refresh_vault_changed")
+        return _staged_path(path)
+    except BaseException:
+        with contextlib.suppress(FileNotFoundError):
+            os.unlink(staged, dir_fd=parent)
+        raise
+    finally:
+        os.close(parent)
+
+
+def _activate_staged_private_json(path: Path) -> None:
+    """Publish a staged vault only after the fenced SQLite commit succeeded."""
+    parent = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    staged = _staged_path(path).name
+    try:
+        info = os.stat(staged, dir_fd=parent, follow_symlinks=False)
+        if (
+            not stat.S_ISREG(info.st_mode)
+            or info.st_uid != os.getuid()
+            or stat.S_IMODE(info.st_mode) != 0o600
+            or info.st_nlink != 1
+        ):
+            _deny("session_refresh_staged_vault_not_private")
+        os.replace(staged, path.name, src_dir_fd=parent, dst_dir_fd=parent)
+        os.fsync(parent)
+    finally:
+        os.close(parent)
+
+
+def _discard_staged_private_json(path: Path) -> None:
+    parent = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    try:
+        with contextlib.suppress(FileNotFoundError):
+            os.unlink(_staged_path(path).name, dir_fd=parent)
+    finally:
+        os.close(parent)
+
+
 def _atomic_private_json(
     path: Path, value: dict[str, Any], expected: tuple[int, int, int, int]
 ) -> None:
@@ -444,11 +524,12 @@ class SessionRefreshService:
                 replacement = self._replacement(
                     vault, surface, provider, body, reservation["next_revision"]
                 )
-                _atomic_private_json(self.vault_file, replacement, expected)
+                _stage_private_json(self.vault_file, replacement, expected)
                 if not self.store.finish_session_refresh(
                     self.policy, job, surface, reservation["refresh_key"]
                 ):
                     _deny("session_refresh_commit_uncertain")
+                _activate_staged_private_json(self.vault_file)
                 invalidated = 0
                 if self.cache is not None:
                     invalidated = self.cache.invalidate(
@@ -543,6 +624,11 @@ class SessionRefreshService:
                 int(sent),
             )
         finally:
+            # Never leave a staged credential active after any failure or
+            # cancellation. On a crash it remains inactive until overwritten;
+            # the old vault stays fail-closed rather than authorizing early.
+            with contextlib.suppress(OSError):
+                _discard_staged_private_json(self.vault_file)
             if lock_descriptor is not None:
                 os.close(lock_descriptor)
 

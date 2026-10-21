@@ -34,6 +34,7 @@ FindingStatus = Literal[
     "reopened",
 ]
 EXECUTION_STATES = frozenset(get_args(ExecutionStatus))
+TERMINAL_EXECUTION_STATES = EXECUTION_STATES - {"queued", "running", "retry_wait"}
 COVERAGE_STATES = frozenset(get_args(CoverageStatus))
 FINDING_STATES = frozenset(get_args(FindingStatus))
 

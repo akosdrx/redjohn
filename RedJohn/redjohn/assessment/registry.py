@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+import os
 import re
 import shutil
 from dataclasses import asdict, dataclass
@@ -34,6 +36,94 @@ class Capability:
 class ExecutionVersions(TypedDict):
     tool_version: str
     template_version: str
+
+
+_ARCHIVE_SUFFIXES = frozenset({".tar", ".gz", ".tgz", ".xz", ".bz2", ".zip", ".7z"})
+
+
+def _usable_binary(path: Path) -> bool:
+    """A configured/managed executable, never an archive or bare data file."""
+    try:
+        return (
+            path.is_file()
+            and path.suffix.lower() not in _ARCHIVE_SUFFIXES
+            and os.access(path, os.X_OK)
+        )
+    except OSError:
+        return False
+
+
+def _archive_present(path: Path) -> bool:
+    try:
+        return path.is_file() and path.suffix.lower() in _ARCHIVE_SUFFIXES
+    except OSError:
+        return False
+
+
+def _playwright_browser_revisions() -> dict[str, str]:
+    spec = find_spec("playwright")
+    if spec is None or not spec.origin:
+        return {}
+    try:
+        manifest = json.loads(
+            (Path(spec.origin).parent / "driver/package/browsers.json").read_text()
+        )
+        return {
+            item["name"]: item["revision"]
+            for item in manifest["browsers"]
+            if item.get("name") in {"chromium", "chromium-headless-shell"}
+            and isinstance(item.get("revision"), str)
+        }
+    except (OSError, ValueError, KeyError, TypeError):
+        return {}
+
+
+def _playwright_cache_root() -> Path:
+    override = os.environ.get("PLAYWRIGHT_BROWSERS_PATH")
+    if override and override != "0":
+        return Path(override)
+    home = Path.home()
+    candidates = [
+        home / "Library/Caches/ms-playwright",
+        Path(os.environ.get("LOCALAPPDATA", str(home))) / "ms-playwright",
+        home / ".cache/ms-playwright",
+    ]
+    return next((path for path in candidates if path.exists()), candidates[-1])
+
+
+def _playwright_chromium_executable() -> Path | None:
+    """Locate the browser Playwright itself will launch, without starting it."""
+    revisions = _playwright_browser_revisions()
+    root = _playwright_cache_root()
+    revision = revisions.get("chromium")
+    shell_revision = revisions.get("chromium-headless-shell")
+    patterns: list[str] = []
+    if revision:
+        patterns.extend((
+            f"chromium-{revision}/chrome-linux/chrome",
+            f"chromium-{revision}/chrome-linux64/chrome",
+            (
+                f"chromium-{revision}/chrome-mac*/Google Chrome for Testing.app/"
+                "Contents/MacOS/Google Chrome for Testing"
+            ),
+            f"chromium-{revision}/chrome-mac*/Chromium.app/Contents/MacOS/Chromium",
+            f"chromium-{revision}/chrome-win*/chrome.exe",
+        ))
+    if shell_revision:
+        patterns.extend((
+            f"chromium_headless_shell-{shell_revision}/chrome-linux/headless_shell",
+            f"chromium_headless_shell-{shell_revision}/chrome-linux64/headless_shell",
+            (
+                f"chromium_headless_shell-{shell_revision}/"
+                "chrome-headless-shell-mac*/chrome-headless-shell"
+            ),
+            f"chromium_headless_shell-{shell_revision}/chrome-win*/chrome-headless-shell.exe",
+        ))
+    for pattern in patterns:
+        for candidate in sorted(root.glob(pattern)):
+            if _usable_binary(candidate):
+                return candidate
+    return None
 
 
 CAPABILITIES = (
@@ -753,7 +843,9 @@ class CapabilityRegistry:
             raise ValueError("host_stdio_registry_binding_already_set")
         self._mcp_target_versions = versions
 
-    def _binary_presence(self, entry: Capability) -> tuple[str | None, str | None]:  # noqa: PLR0911 - explicit pin prevents PATH fallback
+    def _binary_presence(  # noqa: PLR0911 - explicit pin prevents PATH fallback
+        self, entry: Capability
+    ) -> tuple[str | None, str | None, bool]:
         if entry.id in self._artifact_configs:
             selected = self._artifact_configs[entry.id]
             path = (
@@ -761,7 +853,11 @@ class CapabilityRegistry:
                 if entry.id == "trivy_sbom"
                 else selected.runtime.root / "ruby/bin/ruby"
             )
-            return (str(path) if path.is_file() else None, "configured")
+            return (
+                str(path) if _usable_binary(path) else None,
+                "configured",
+                _archive_present(path),
+            )
         configured = (
             self._preparation_configs[entry.id].binary
             if entry.id in self._preparation_configs
@@ -780,24 +876,40 @@ class CapabilityRegistry:
             else None
         )
         if configured is not None:
-            return (str(configured.path) if configured.path.is_file() else None, "configured")
-        if entry.id in self._managed_pd and self._managed_pd[entry.id].is_file():
-            return str(self._managed_pd[entry.id]), "repo_managed"
+            return (
+                str(configured.path) if _usable_binary(configured.path) else None,
+                "configured",
+                _archive_present(configured.path),
+            )
+        archive_present = False
+        if entry.id in self._managed_pd and _usable_binary(self._managed_pd[entry.id]):
+            return str(self._managed_pd[entry.id]), "repo_managed", False
+        if entry.id in self._managed_pd and _archive_present(self._managed_pd[entry.id]):
+            # An archive is not an installed executable, but a separately
+            # installed PATH tool may still be the selected binary.
+            archive_present = True
         if entry.id == "ffuf_discover" and self._ffuf_config is not None:
             ffuf_path = self._ffuf_config.binary_path
-            return (str(ffuf_path) if ffuf_path.is_file() else None, "configured")
-        if entry.id == "ffuf_discover" and self._managed_ffuf.is_file():
-            return str(self._managed_ffuf), "repo_managed"
+            return (
+                str(ffuf_path) if _usable_binary(ffuf_path) else None,
+                "configured",
+                _archive_present(ffuf_path),
+            )
+        if entry.id == "ffuf_discover" and _usable_binary(self._managed_ffuf):
+            return str(self._managed_ffuf), "repo_managed", False
         if entry.id == "nuclei_scan":
             if self._configured_nuclei is not None:
                 return (
-                    str(self._configured_nuclei) if self._configured_nuclei.is_file() else None,
+                    str(self._configured_nuclei)
+                    if _usable_binary(self._configured_nuclei)
+                    else None,
                     "configured",
+                    _archive_present(self._configured_nuclei),
                 )
-            if self._managed_nuclei.is_file():
-                return str(self._managed_nuclei), "repo_managed"
+            if _usable_binary(self._managed_nuclei):
+                return str(self._managed_nuclei), "repo_managed", False
         path = next((path for name in entry.binary_names if (path := shutil.which(name))), None)
-        return path, "PATH" if path is not None else None
+        return path, "PATH" if path is not None else None, archive_present
 
     def get(self, name: str) -> Capability | None:
         return self._capabilities.get(name)
@@ -806,11 +918,28 @@ class CapabilityRegistry:
         rows = []
         for entry in self._capabilities.values():
             row = asdict(entry)
-            row["binary_path"], row["binary_path_source"] = self._binary_presence(entry)
+            (
+                row["binary_path"],
+                row["binary_path_source"],
+                row["archive_present"],
+            ) = self._binary_presence(entry)
             row["binary_presence_only"] = row["binary_path"] is not None
             row["live_verified"] = False  # only run evidence can establish this
-            if entry.id == "browser_discover" and find_spec("playwright") is None:
-                row.update(status="blocked_missing_dependency", reason="playwright_not_installed")
+            if entry.id == "browser_discover":
+                if find_spec("playwright") is None:
+                    row.update(
+                        status="blocked_missing_dependency", reason="playwright_not_installed"
+                    )
+                else:
+                    chromium = _playwright_chromium_executable()
+                    row["binary_path"] = str(chromium) if chromium is not None else None
+                    row["binary_path_source"] = "playwright_cache" if chromium is not None else None
+                    row["binary_presence_only"] = chromium is not None
+                    if chromium is None:
+                        row.update(
+                            status="blocked_missing_dependency",
+                            reason="chromium_executable_missing",
+                        )
             elif entry.id in {"oast_correlate", "oast_poll"} and (
                 find_spec("cryptography") is None or find_spec("httpx") is None
             ):

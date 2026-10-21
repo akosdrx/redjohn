@@ -122,7 +122,10 @@ async def _run(ctx: RunContextWrapper, kind: str, url: str, cve_id: str) -> Any:
         return result_error("unsupported_input", error or "Invalid CVE ID", coverage="unsupported")
     context = ctx.context if isinstance(ctx.context, dict) else {}
     policy = context.get("assessment_policy")
-    governor = context.get("resource_governor")
+    service = context.get("assessment_service")
+    if policy is None and service is not None:
+        policy = getattr(service, "policy", None)
+    governor = context.get("resource_governor") or context.get("assessment_governor")
     if policy is None or not callable(getattr(policy, "check_url", None)):
         return result_error("policy_required", "Explicit engagement policy is required")
     try:

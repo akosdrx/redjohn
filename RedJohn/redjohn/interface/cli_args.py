@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import os
 import sys
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
 from redjohn.config import apply_config_override
@@ -26,7 +27,10 @@ FAIL_ON_SEVERITIES = ("critical", "high", "medium", "low", "info")
 
 
 def get_version() -> str:
-    return "Private"
+    try:
+        return version("redjohn-agent")
+    except PackageNotFoundError:
+        return "unknown"
 
 
 def _positive_budget(value: str) -> float:
@@ -283,6 +287,15 @@ Examples:
         "--assessment-config",
         type=Path,
         help="Host-approved assessment policy and optional adapters; kept out of model prompts",
+    )
+
+    parser.add_argument(
+        "--unconfined-legacy",
+        action="store_true",
+        help=(
+            "Explicitly allow the legacy SDK/shell path without a governed assessment "
+            "binding for local/non-web targets. Ignored when an approved host policy exists."
+        ),
     )
 
     parser.add_argument(

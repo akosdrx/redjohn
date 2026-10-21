@@ -118,6 +118,7 @@ def test_approved_subset_revision_and_policy_enforced():
 def test_health_presence_and_lazy_loading_do_not_execute(tmp_path, monkeypatch):
     binary = tmp_path / "ffuf"
     binary.write_bytes(b"presence fixture")
+    binary.chmod(0o700)
     monkeypatch.setattr("redjohn.assessment.registry.shutil.which", lambda _name: None)
     registry = CapabilityRegistry(ffuf_config=config_document(binary))
     for _ in range(2):
@@ -135,6 +136,7 @@ def test_managed_ffuf_presence_still_requires_approved_configuration(tmp_path, m
     binary = tmp_path / ".tools/ffuf/2.1.0/ffuf"
     binary.parent.mkdir(parents=True)
     binary.write_bytes(b"presence only; never executed by health")
+    binary.chmod(0o700)
     monkeypatch.setattr("redjohn.assessment.registry.shutil.which", lambda _name: None)
     registry = CapabilityRegistry(repository_root=tmp_path)
     row = next(row for row in registry.health() if row["id"] == "ffuf_discover")

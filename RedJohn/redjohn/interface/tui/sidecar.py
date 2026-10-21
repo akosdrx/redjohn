@@ -10,6 +10,7 @@ import platform
 import secrets
 import socket
 import subprocess
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Any
 
@@ -213,4 +214,7 @@ def check_return_code(return_code: int) -> None:
 
 def package_version() -> str:
     """Report the installed package version for the Go splash/stats."""
-    return "Private"
+    try:
+        return version("redjohn-agent")
+    except PackageNotFoundError:
+        return "unknown"

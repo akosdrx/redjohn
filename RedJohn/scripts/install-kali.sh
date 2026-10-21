@@ -9,6 +9,8 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+REPO_ROOT="$(cd "$ROOT_DIR/.." && pwd)"
+VENV_DIR="${REDJOHN_VENV_DIR:-$REPO_ROOT/.venv}"
 cd "$ROOT_DIR"
 
 SKIP_APT=0
@@ -102,17 +104,21 @@ fi
 
 echo "==> [3/6] Setting up Python virtual environment (.venv)..."
 PYTHON_BIN="${PYTHON_BIN:-python3}"
-if [ ! -x "$ROOT_DIR/.venv/bin/python" ]; then
-  "$PYTHON_BIN" -m venv "$ROOT_DIR/.venv"
+if [ ! -x "$VENV_DIR/bin/python" ]; then
+  "$PYTHON_BIN" -m venv "$VENV_DIR"
 fi
 
-VENV_PY="$ROOT_DIR/.venv/bin/python"
-VENV_PIP="$ROOT_DIR/.venv/bin/pip"
+VENV_PY="$VENV_DIR/bin/python"
+VENV_PIP="$VENV_DIR/bin/pip"
 
 "$VENV_PIP" install --upgrade pip wheel setuptools >/dev/null
-echo "    Installing RedJohn..."
+echo "    Installing RedJohn with the governed browser extra..."
 export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
-"$VENV_PIP" install -e "$ROOT_DIR"
+"$VENV_PIP" install -e "${ROOT_DIR}[browser]"
+unset PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD
+# The governed Playwright path launches Playwright's own Chromium. Installing
+# only the system browser (used by the legacy agent-browser) is not sufficient.
+"$VENV_PY" -m playwright install --with-deps chromium
 
 echo "==> [4/6] Configuring native Go Bubble Tea TUI binary for Linux..."
 ARCH_RAW="$(uname -m)"
@@ -146,7 +152,11 @@ SHIM_DIR="$HOME/.redjohn/kali-shims"
 mkdir -p "$NPM_GLOBAL" "$SHIM_DIR" "$HOME/.local/bin"
 
 if command -v npm >/dev/null 2>&1; then
-  NPM_CONFIG_PREFIX="$NPM_GLOBAL" npm install -g agent-browser@0.26.0 @ast-grep/cli@latest js-beautify@latest retire@latest
+  NPM_CONFIG_PREFIX="$NPM_GLOBAL" npm install -g --ignore-scripts \
+    agent-browser@0.26.0 @ast-grep/cli@0.51.0 js-beautify@2.0.3 retire@6.1.0
+# Only the two reviewed packages need a postinstall; do not execute arbitrary
+# scripts from the other globally installed packages.
+NPM_CONFIG_PREFIX="$NPM_GLOBAL" npm rebuild -g agent-browser @ast-grep/cli
   if [ -x "$NPM_GLOBAL/bin/agent-browser" ]; then
     ln -sf "$NPM_GLOBAL/bin/agent-browser" "$HOME/.local/bin/agent-browser"
     if [ -n "$SUDO" ] || [ -w /usr/local/bin ]; then
@@ -186,8 +196,10 @@ export AGENT_BROWSER_EXECUTABLE_PATH="${CHROMIUM_BIN}"
 export CHROME_PATH="${CHROMIUM_BIN}"
 export PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH="${CHROMIUM_BIN}"
 export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
-export AGENT_BROWSER_ARGS="--no-sandbox,--disable-dev-shm-usage,--disable-blink-features=AutomationControlled,--no-first-run,--no-default-browser-check,--lang=en-US"
-exec "$ROOT_DIR/.venv/bin/$cmd_name" "\$@"
+if [ "\${REDJOHN_LEGACY_BROWSER_NO_SANDBOX:-0}" = "1" ]; then
+  export AGENT_BROWSER_ARGS="--no-sandbox,--disable-dev-shm-usage,--disable-blink-features=AutomationControlled,--no-first-run,--no-default-browser-check,--lang=en-US"
+fi
+exec "$VENV_DIR/bin/$cmd_name" "\$@"
 EOF
   chmod +x "$WRAPPER"
   if [ -n "$SUDO" ] || [ -w /usr/local/bin ]; then

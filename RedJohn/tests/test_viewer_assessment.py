@@ -142,3 +142,71 @@ async def test_actual_ffuf_report_web_view_chromium(tmp_path, monkeypatch):  # n
         finally:
             await asyncio.to_thread(httpd.shutdown)
             httpd.server_close()
+
+def _write_report(tmp_path, jobs, pagination):
+    (tmp_path / "assessment-report.json").write_text(
+        json.dumps(
+            {
+                "product": "RedJohn",
+                "schema_version": 1,
+                "engagement_id": "pagination-contract",
+                "jobs_page": jobs,
+                "findings_page": [],
+                "coverage": [],
+                "capabilities": [],
+                "pagination": pagination,
+            }
+        )
+    )
+
+
+def test_paginated_terminal_page_cannot_claim_campaign_completion(tmp_path):
+    jobs = [{"execution_status": "succeeded"} for _ in range(100)]
+    _write_report(
+        tmp_path,
+        jobs,
+        {
+            "page_limit": 100,
+            "jobs_total": 101,
+            "jobs_more": True,
+            "active_jobs": 1,
+            "findings_total": 0,
+            "findings_more": False,
+        },
+    )
+    summary = assessment_summary(tmp_path)
+    assert summary["finished"] is False
+    assert summary["status"] == "running"
+    assert summary["assessment"]["completion_claim"] == "visible_report_page_only"
+    assert summary["assessment"]["jobs_total"] == 101
+    assert summary["assessment"]["jobs_more"] is True
+
+
+def test_fully_terminal_unpaginated_campaign_is_complete(tmp_path):
+    _write_report(
+        tmp_path,
+        [{"execution_status": "succeeded"}, {"execution_status": "failed"}],
+        {
+            "page_limit": 100,
+            "jobs_total": 2,
+            "jobs_more": False,
+            "active_jobs": 0,
+            "findings_total": 0,
+            "findings_more": False,
+        },
+    )
+    summary = assessment_summary(tmp_path)
+    assert summary["finished"] is True
+    assert summary["status"] == "stopped"
+    assert summary["assessment"]["completion_claim"] == "complete"
+
+
+def test_legacy_report_without_pagination_stays_running(tmp_path):
+    _write_report(
+        tmp_path,
+        [{"execution_status": "succeeded"}],
+        {},
+    )
+    summary = assessment_summary(tmp_path)
+    assert summary["finished"] is False
+    assert summary["status"] == "running"

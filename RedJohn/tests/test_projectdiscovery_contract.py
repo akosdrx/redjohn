@@ -140,7 +140,8 @@ async def test_registry_presence_is_lazy_and_configuration_missing_is_blocked(
 
     monkeypatch.setattr("redjohn.assessment.pinned_tools.PinnedToolRunner.execute", forbidden)
     binary = tmp_path / tool
-    binary.write_text("presence only, not an executable")
+    binary.write_text("presence only")
+    binary.chmod(0o700)
     config = intelligence_document(binary) if tool == "vulnx" else document(tool, binary)
     registry = CapabilityRegistry(**{tool + "_config": config})
     row = next(row for row in registry.health() if row["id"] == capability)
@@ -264,6 +265,7 @@ async def test_planner_uses_configured_discovery_but_intelligence_is_explicit(tm
     for tool in ("httpx", "katana"):
         binary = tmp_path / tool
         binary.write_text("presence contract; never executed")
+        binary.chmod(0o700)
         binaries[tool + "_config"] = document(tool, binary)
     with closing(AssessmentStore(tmp_path / "state.db")) as store:
         async with AssessmentRuntime(store, policy(), caller="operator", **binaries) as runtime:

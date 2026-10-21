@@ -13,7 +13,7 @@ import sqlite3
 import threading
 import time
 import uuid
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from dataclasses import asdict, replace
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -96,14 +96,44 @@ class AssessmentStore:
         queue_max_items: int = 128,
         artifact_max_bytes: int = 4 * 1024 * 1024,
         evidence_quota_bytes: int = 128 * 1024 * 1024,
+        max_findings: int = 10000,
+        max_audit_rows: int = 10000,
+        max_sessions: int = 256,
+        max_capture_rows: int = 2048,
+        max_followup_events: int = 4096,
+        max_surfaces: int = 10000,
     ) -> None:
-        if min(queue_max_items, artifact_max_bytes, evidence_quota_bytes) <= 0:
+        if min(
+            queue_max_items,
+            artifact_max_bytes,
+            evidence_quota_bytes,
+            max_findings,
+            max_audit_rows,
+            max_sessions,
+            max_capture_rows,
+            max_followup_events,
+            max_surfaces,
+        ) <= 0:
             raise ValueError("invalid_store_limits")
         path = Path(path)
         path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
         self.path = path
         self.queue_max_items, self.artifact_max_bytes = queue_max_items, artifact_max_bytes
         self.evidence_quota_bytes = evidence_quota_bytes
+        self.max_findings = max_findings
+        self.max_audit_rows = max_audit_rows
+        self.max_sessions = max_sessions
+        self.max_capture_rows = max_capture_rows
+        self.max_followup_events = max_followup_events
+        self.max_surfaces = max_surfaces
+        self._retention_pruned = {
+            "findings": 0,
+            "audit": 0,
+            "sessions": 0,
+            "captures": 0,
+            "followups": 0,
+            "surfaces": 0,
+        }
         self._lock = threading.RLock()
         self.db = sqlite3.connect(path, timeout=10, isolation_level=None, check_same_thread=False)
         self.db.row_factory = sqlite3.Row
@@ -226,6 +256,8 @@ class AssessmentStore:
 
     def close(self) -> None:
         with self._lock:
+            with suppress(sqlite3.Error):
+                self.db.execute("PRAGMA wal_checkpoint(TRUNCATE)")
             self.db.close()
 
     @staticmethod
@@ -693,6 +725,82 @@ class AssessmentStore:
                 self.db.execute("ROLLBACK")
                 raise
 
+    def _prune_engagement(self, db: sqlite3.Connection, engagement: str) -> None:
+        """Bounded retention outside the fenced job/evidence ledgers.
+
+        Jobs, attempts and evidence are deliberately not deleted here: they are
+        the durable proof of what ran. Findings and terminal control rows are
+        capped by insertion order, while pending/in-flight rows are retained.
+        """
+        deleted = db.execute(
+            "DELETE FROM rj_finding WHERE engagement=? AND rowid NOT IN "
+            "(SELECT rowid FROM rj_finding WHERE engagement=? ORDER BY rowid DESC LIMIT ?)",
+            (engagement, engagement, self.max_findings),
+        ).rowcount
+        self._retention_pruned["findings"] += max(0, deleted)
+        deleted = db.execute(
+            "DELETE FROM rj_audit WHERE engagement=? AND sequence NOT IN "
+            "(SELECT sequence FROM rj_audit WHERE engagement=? ORDER BY sequence DESC LIMIT ?)",
+            (engagement, engagement, self.max_audit_rows),
+        ).rowcount
+        self._retention_pruned["audit"] += max(0, deleted)
+        deleted = db.execute(
+            "DELETE FROM rj_session_refresh WHERE engagement=? AND state!='inflight' "
+            "AND rowid NOT IN (SELECT rowid FROM rj_session_refresh WHERE engagement=? "
+            "AND state!='inflight' ORDER BY created_at DESC, rowid DESC LIMIT ?)",
+            (engagement, engagement, self.max_sessions),
+        ).rowcount
+        self._retention_pruned["sessions"] += max(0, deleted)
+        deleted = db.execute(
+            "DELETE FROM rj_request_capture WHERE engagement=? AND state!='inflight' "
+            "AND rowid NOT IN (SELECT rowid FROM rj_request_capture WHERE engagement=? "
+            "AND state!='inflight' ORDER BY created_at DESC, rowid DESC LIMIT ?)",
+            (engagement, engagement, self.max_capture_rows),
+        ).rowcount
+        self._retention_pruned["captures"] += max(0, deleted)
+        deleted = db.execute(
+            "DELETE FROM rj_followup_event WHERE engagement=? AND state!='pending' "
+            "AND rowid NOT IN (SELECT rowid FROM rj_followup_event WHERE engagement=? "
+            "AND state!='pending' ORDER BY created_at DESC, rowid DESC LIMIT ?)",
+            (engagement, engagement, self.max_followup_events),
+        ).rowcount
+        self._retention_pruned["followups"] += max(0, deleted)
+        # A surface is only removable when no job, inventory link, capture or
+        # follow-up still references it. Referenced inventory remains intact.
+        deleted = db.execute(
+            "DELETE FROM rj_surface WHERE engagement=? AND id NOT IN "
+            "(SELECT surface_id FROM rj_job WHERE engagement=? "
+            "UNION SELECT surface_id FROM rj_inventory_surface WHERE engagement=? "
+            "UNION SELECT completed_surface_id FROM rj_request_capture "
+            "WHERE engagement=? AND completed_surface_id IS NOT NULL) "
+            "AND id NOT IN (SELECT id FROM rj_surface WHERE engagement=? "
+            "ORDER BY observed_at DESC, id DESC LIMIT ?)",
+            (engagement, engagement, engagement, engagement, engagement, self.max_surfaces),
+        ).rowcount
+        self._retention_pruned["surfaces"] += max(0, deleted)
+
+    def retention_status(self) -> dict[str, Any]:
+        return {
+            "limits": {
+                "max_findings": self.max_findings,
+                "max_audit_rows": self.max_audit_rows,
+                "max_sessions": self.max_sessions,
+                "max_capture_rows": self.max_capture_rows,
+                "max_followup_events": self.max_followup_events,
+                "max_surfaces": self.max_surfaces,
+            },
+            "pruned_this_process": dict(self._retention_pruned),
+            "protected": ["jobs", "attempts", "evidence", "pending_control_rows"],
+        }
+
+    def checkpoint(self) -> None:
+        with self._lock:
+            self.db.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+
+    def vacuum(self) -> None:
+        with self._lock:
+            self.db.execute("VACUUM")
+
     def _audit(
         self,
         db: sqlite3.Connection,
@@ -708,6 +816,7 @@ class AssessmentStore:
             ),
             (engagement, event_key, action, time.time(), json_text(redact(payload))),
         )
+        self._prune_engagement(db, engagement)
 
     def register(self, policy: EngagementPolicy) -> EngagementPolicy:
         with self.transaction() as db:
@@ -1880,6 +1989,25 @@ class AssessmentStore:
             value["result"] = json.loads(value["result"]) if value["result"] else None
             result.append(value)
         return result
+
+    def job_page_metadata(self, engagement: str) -> dict[str, int]:
+        """Counts over the full engagement, independent of the report page."""
+        with self._lock:
+            row = self.db.execute(
+                "SELECT count(*) AS total, COALESCE(sum(CASE WHEN execution_status NOT IN "
+                "('succeeded','failed','cancelled','timed_out','resource_exhausted') "
+                "THEN 1 ELSE 0 END), 0) AS active FROM rj_job WHERE engagement=?",
+                (engagement,),
+            ).fetchone()
+        return {"jobs_total": int(row["total"]), "active_jobs": int(row["active"])}
+
+    def findings_total(self, engagement: str) -> int:
+        with self._lock:
+            return int(
+                self.db.execute(
+                    "SELECT count(*) FROM rj_finding WHERE engagement=?", (engagement,)
+                ).fetchone()[0]
+            )
 
     def coverage(self, engagement: str) -> list[dict[str, Any]]:
         with self._lock:

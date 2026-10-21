@@ -39,6 +39,12 @@ class ResourceEnvelope:
     max_workers: int = 2
     max_pages: int = 2
     max_contexts: int = 2
+    max_findings: int = 10000
+    max_audit_rows: int = 10000
+    max_sessions: int = 256
+    max_capture_rows: int = 2048
+    max_followup_events: int = 4096
+    max_surfaces: int = 10000
     soft_watermark: float = 0.80
     high_watermark: float = 0.90
     resume_watermark: float = 0.65
@@ -55,6 +61,12 @@ class ResourceEnvelope:
             "max_workers",
             "max_pages",
             "max_contexts",
+            "max_findings",
+            "max_audit_rows",
+            "max_sessions",
+            "max_capture_rows",
+            "max_followup_events",
+            "max_surfaces",
         ):
             if type(getattr(self, name)) is not int or getattr(self, name) <= 0:
                 raise ValueError(f"{name} must be a positive integer")

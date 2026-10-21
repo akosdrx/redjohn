@@ -34,17 +34,30 @@ def build_report(
             raise TypeError("report_typed_owned_lab_validation_required")
         if lab_validation.store is not store or lab_validation.policy.engagement_id != engagement:
             raise ValueError("report_exact_owned_lab_store_required")
+    jobs_page = store.jobs(engagement, limit=100)
+    findings_page = store.findings(engagement, limit=100)
+    job_metadata = store.job_page_metadata(engagement)
+    findings_total = store.findings_total(engagement)
     return public_view(
         {
             "product": "RedJohn",
             "schema_version": 1,
             "engagement_id": engagement,
             "coverage": store.coverage(engagement),
-            "findings_page": store.findings(engagement, limit=100),
-            "jobs_page": store.jobs(engagement, limit=100),
-            "pagination": {"page_limit": 100, "more_data": "use_control_api_keyset_pagination"},
+            "findings_page": findings_page,
+            "jobs_page": jobs_page,
+            "pagination": {
+                "page_limit": 100,
+                "jobs_total": job_metadata["jobs_total"],
+                "jobs_more": job_metadata["jobs_total"] > len(jobs_page),
+                "active_jobs": job_metadata["active_jobs"],
+                "findings_total": findings_total,
+                "findings_more": findings_total > len(findings_page),
+                "more_data": "use_control_api_keyset_pagination",
+            },
             "capabilities": (registry or CapabilityRegistry()).health(),
             "metrics": metrics or {},
+            "retention": store.retention_status(),
             "rce_regression": "not_reproduced_missing_fixture",
             "owned_lab": owned_lab_status(lab_validation),
             "limitations": [

@@ -61,10 +61,23 @@ def assessment_summary(run_dir: Path) -> dict[str, Any] | None:
         assert isinstance(jobs, list) and isinstance(findings, list)
         capabilities = collections["capabilities"]
         assert isinstance(capabilities, list)
+        pagination = report.get("pagination")
+        if not isinstance(pagination, dict):
+            pagination = {}
+        jobs_more = pagination.get("jobs_more")
+        active_jobs = pagination.get("active_jobs")
+        if type(jobs_more) is not bool or type(active_jobs) is not int or active_jobs < 0:
+            # Older/foreign reports cannot prove whole-campaign completion.
+            jobs_more, active_jobs = True, 1
         terminal = {"succeeded", "failed", "cancelled", "timed_out", "resource_exhausted"}
-        finished = bool(jobs) and all(job.get("execution_status") in terminal for job in jobs)
-        # This is a bounded report snapshot, not a live SQLite query. Report
-        # pagination can hide queued jobs: never infer full campaign completion.
+        finished = (
+            bool(jobs)
+            and not jobs_more
+            and active_jobs == 0
+            and all(job.get("execution_status") in terminal for job in jobs)
+        )
+        # This is a bounded report snapshot, not a live SQLite query. A full
+        # page with more rows (or an unknown pagination state) stays running.
         status = "stopped" if finished else "running"
         stamp = datetime.fromtimestamp(path.stat().st_mtime, UTC).isoformat()
         summary.update(status=status, finished=finished, end_time=stamp if finished else None)
@@ -83,7 +96,12 @@ def assessment_summary(run_dir: Path) -> dict[str, Any] | None:
             ],
             "rce_regression": report.get("rce_regression"),
             "page_limit": 100,
-            "completion_claim": "visible_report_page_only",
+            "jobs_total": pagination.get("jobs_total"),
+            "jobs_more": jobs_more,
+            "active_jobs": active_jobs,
+            "findings_total": pagination.get("findings_total"),
+            "findings_more": pagination.get("findings_more"),
+            "completion_claim": "complete" if finished else "visible_report_page_only",
         }
     except (OSError, ValueError, TypeError, KeyError):
         # Never turn an unreadable/oversized/malformed report into a clean scan.

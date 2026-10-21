@@ -557,3 +557,57 @@ async def test_actual_capture_preserves_distinct_existing_per_endpoint_credentia
             await proxy.close()
             capture.end_context()
             store.close()
+
+
+async def test_failed_fenced_capture_never_activates_staged_vault(tmp_path, monkeypatch):
+    observed = []
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_POST(self):
+            observed.append(self.rfile.read(int(self.headers.get("Content-Length", "0"))))
+            self.send_response(200)
+            self.send_header("Content-Length", "2")
+            self.end_headers()
+            self.wfile.write(b"ok")
+
+        def log_message(self, *_args):
+            pass
+
+    with TLSFixtureServer() as fixture:
+        fixture.server.RequestHandlerClass = Handler
+        policy, store, capture, vault_file, _rules_file = configured_capture(
+            tmp_path, fixture.origin
+        )
+        initial = json.loads(vault_file.read_text())
+        capture.bind_context("alice", "tenant-a", "7")
+        monkeypatch.setattr(store, "finish_capture", lambda *_args: False)
+        proxy = BrowserEgressProxy(
+            policy,
+            tls_config=BrowserTLSConfig(fixture.ca_file),
+            request_headers=capture.headers_for_request,
+            request_capture=capture.before_request,
+        )
+        await proxy.start()
+        try:
+            async with httpx.AsyncClient(
+                proxy=proxy.url, verify=proxy.client_tls_context, trust_env=False
+            ) as client:
+                response = await client.post(
+                    fixture.origin + "/json",
+                    content=json.dumps({"value": VALUE, "csrf": CSRF}).encode(),
+                    headers={"Content-Type": "application/json"},
+                )
+                assert response.status_code == 200
+                await proxy.drain_captures(2)
+            assert observed
+            assert json.loads(vault_file.read_text()) == initial
+            assert not (tmp_path / "vault.json.commit-staged").exists()
+            assert "browser_capture_commit_uncertain" in capture.failure_codes()
+            assert (
+                store.db.execute("SELECT state FROM rj_request_capture").fetchone()[0]
+                == "uncertain"
+            )
+        finally:
+            await proxy.close()
+            capture.end_context()
+            store.close()

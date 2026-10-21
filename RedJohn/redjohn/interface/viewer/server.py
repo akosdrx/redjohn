@@ -686,6 +686,11 @@ def authorized_url(base_url: str, token: str) -> str:
     return f"{base_url}/?{urlencode({'token': token})}"
 
 
+def _viewer_base_url(host: str, port: int) -> str:
+    display_host = f"[{host}]" if ":" in host else host
+    return f"http://{display_host}:{port}"
+
+
 def serve(
     run_dir: Path,
     *,
@@ -728,7 +733,7 @@ def serve(
     httpd.daemon_threads = True
     bound_port = int(httpd.server_address[1])
     state.cookie_name = f"{SESSION_COOKIE_PREFIX}_{bound_port}"
-    url = f"http://{host}:{bound_port}"
+    url = _viewer_base_url(host, bound_port)
 
     thread = threading.Thread(target=httpd.serve_forever, name="redjohn-viewer", daemon=True)
     thread.start()

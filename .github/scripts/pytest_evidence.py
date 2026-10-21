@@ -1,7 +1,8 @@
 """Classify existing tests without changing their assertions or dependencies.
 
-Only the reviewed native suites below receive real-integration status. All
-remaining cases are reported as unit/contract/mixed, never as scanner E2E.
+Only explicit test names in the reviewed manifest receive real-integration
+status. A real-looking filename grants nothing; remaining cases are reported
+as unit/contract/mixed, never as scanner E2E.
 """
 
 import json
@@ -11,64 +12,23 @@ from pathlib import Path
 
 import pytest
 
+_MANIFEST_PATH = Path(__file__).with_name("pytest-real-integration.json")
 
-REAL_FILES = {
-    "test_assessment_browser_https.py",
-    "test_assessment_browser_proxy_https.py",
-    "test_assessment_egress.py",
-    "test_assessment_https_e2e.py",
-    "test_assessment_https_pipeline_failures.py",
-    "test_authenticated_schema_oast_live.py",
-    "test_authenticated_schema_oast_recovery_live.py",
-    "test_automatic_session_recovery_pipeline.py",
-    "test_browser_token_pipeline.py",
-    "test_continuous_refresh_pipeline.py",
-    "test_ffuf_cli_live.py",
-    "test_ffuf_live.py",
-    "test_host_assessment_live.py",
-    "test_host_lifecycle_live.py",
-    "test_host_resources_live.py",
-    "test_host_scheduler_live.py",
-    "test_mime_replay_live.py",
-    "test_nuclei_auth_live.py",
-    "test_nuclei_live.py",
-    "test_nuclei_post_live.py",
-    "test_nuclei_replay_redaction_live.py",
-    "test_os_memory_live.py",
-    "test_post_refresh_pipeline.py",
-    "test_projectdiscovery_live.py",
-    "test_remote_authenticated_pipeline.py",
-    "test_resource_crash_recovery_live.py",
-    "test_schema_oast_live.py",
-    "test_specialists_live.py",
-    "test_viewer_assessment.py",
-    "test_legacy_cache_live.py",
-    "test_legacy_shell_boundary_live.py",
-    "test_legacy_shell_darwin_live.py",
-    "test_nuclei_cli_live.py",
-    "test_tui_terminal_live.py",
-    "test_viewer_steering_live.py",
-    "test_soak_limits_live.py",
-    "test_mcp_authorization_live.py",
-    "test_source_tools_live.py",
-    "test_trivy_sbom_live.py",
-    "test_wpscan_observe_live.py",
-    "test_inventory_workflows_live.py",
-    "test_workflow_execution_failures_live.py",
-    "test_extended_wire_replay_live.py",
-    "test_network_tools_live.py",
-    "test_mcp_target_live.py",
-    "test_browser_auth_flow_live.py",
-    "test_mcp_stdio_bounded_live.py",
-    "test_graphql_workflow_live.py",
-    "test_extended_input_replay_live.py",
-    "test_owned_memory_live.py",
-    "test_service_tools_live.py",
-    "test_preparation_native.py",
-    "test_preparation_scheduler.py",
-    "test_cleanup_quarantine_live.py",
-    "test_lab_validation_live.py",
-}
+
+def _load_real_integration_manifest() -> dict[str, frozenset[str]]:
+    """Explicit test-level allowlist; a filename alone grants nothing."""
+    try:
+        data = json.loads(_MANIFEST_PATH.read_text())
+        return {
+            str(filename): frozenset(str(name) for name in names)
+            for filename, names in data.items()
+            if isinstance(names, list)
+        }
+    except (OSError, ValueError, TypeError, AttributeError):
+        return {}
+
+
+REAL_TESTS = _load_real_integration_manifest()
 
 REAL_CASES = {
     "test_real_chromium_spa_traffic_identity_repetition_and_cleanup",
@@ -115,6 +75,7 @@ PLATFORM_FILES = {"test_legacy_shell_darwin_live.py": "Darwin", "test_owned_memo
 KERNEL_ONLY_FILES = {"test_owned_memory_live.py"}
 NAMESPACE_CGROUP_FILES = {"test_lab_validation_live.py", "test_trivy_sbom_live.py", "test_wpscan_observe_live.py"}
 LOCAL_PROCESS_CASES = {
+    "test_failed_fenced_capture_never_activates_staged_vault",
     "test_real_stdio_unknown_mutation_is_never_replayed",
     "test_real_stdio_cancellation_terminates_worker_and_releases_lease",
     "test_real_sdk_pty_keeps_lease_until_polled_completion_and_closes",
@@ -140,7 +101,7 @@ def pytest_collection_modifyitems(config, items):
     for item in items:
         filename = Path(str(item.path)).name
         name = item.originalname or item.name
-        real = filename in REAL_FILES or name in REAL_CASES
+        real = name in REAL_CASES or name in REAL_TESTS.get(filename, frozenset())
         if filename in PLATFORM_FILES and platform.system() != PLATFORM_FILES[filename]:
             if suite == "all" or (suite == "integration") == real:
                 non_applicable.append({"nodeid": item.nodeid, "required_platform": PLATFORM_FILES[filename],

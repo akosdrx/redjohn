@@ -302,6 +302,15 @@ async def run_redjohn_scan(
         config_path=assessment_config_path,
         caller=assessment_caller,
     )
+    if (
+        prepared_assessment is None
+        and (scan_config.get("targets") or [])
+        and scan_config.get("unconfined_legacy") is not True
+    ):
+        raise ValueError(
+            "legacy_unconfined_assessment_required: local/non-web target has no approved "
+            "host policy; pass --unconfined-legacy to accept the legacy SDK boundary explicitly"
+        )
     if prepared_assessment is not None:
         prepared_assessment.check_workspace_authority(local_sources or [])
         configured = prepared_assessment.host.configured
@@ -619,8 +628,13 @@ async def run_redjohn_scan(
             "assessment_governor": shared_governor,
         }
         if prepared_assessment is not None:
+            configured = prepared_assessment.host.configured
             context["assessment_service"] = prepared_assessment.host.control
-            context["assessment_governor"] = prepared_assessment.host.configured.runtime.governor
+            context["assessment_governor"] = configured.runtime.governor
+            # Existing tools use these names. They must be the same approved
+            # policy and shared governor, never a prompt-derived replacement.
+            context["assessment_policy"] = configured.policy
+            context["resource_governor"] = shared_governor
 
         root_session = open_agent_session(root_id, agents_db)
         sessions_to_close.append(root_session)

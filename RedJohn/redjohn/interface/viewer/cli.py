@@ -53,7 +53,7 @@ def run_view(argv: list[str]) -> None:
     parser.add_argument(
         "--host",
         default="127.0.0.1",
-        help="Host to bind to (default: 127.0.0.1; use 0.0.0.0 for all IPv4 interfaces).",
+        help="Loopback host to bind to: 127.0.0.1, localhost, or ::1 (default: 127.0.0.1).",
     )
     parser.add_argument(
         "--no-open",

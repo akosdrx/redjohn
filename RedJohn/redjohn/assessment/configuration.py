@@ -536,6 +536,12 @@ class ConfiguredAssessment:
             self.output / ".state" / "agents.db",
             queue_max_items=envelope.queue_max_items,
             artifact_max_bytes=envelope.artifact_max_bytes,
+            max_findings=envelope.max_findings,
+            max_audit_rows=envelope.max_audit_rows,
+            max_sessions=envelope.max_sessions,
+            max_capture_rows=envelope.max_capture_rows,
+            max_followup_events=envelope.max_followup_events,
+            max_surfaces=envelope.max_surfaces,
         )
         native_session = None
         try:

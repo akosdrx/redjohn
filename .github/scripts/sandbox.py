@@ -2,11 +2,12 @@
 """Manage one non-attached, enforcing CI profile; never disable host protection."""
 
 import argparse
+import contextlib
 import hashlib
-import json
 import os
 import re
 import subprocess
+import sys
 from pathlib import Path
 
 from ci import identity, write
@@ -20,13 +21,27 @@ def profile_name():
 
 
 def command(*argv):
-    result = subprocess.run(argv, text=True, capture_output=True, timeout=30)
+    result = subprocess.run(argv, check=False, text=True, capture_output=True, timeout=30)
     return {"exit_code": result.returncode, "stdout": result.stdout[-12000:], "stderr": result.stderr[-12000:]}
 
 
 def restrictions():
     return {key: Path("/proc/sys/kernel", key).read_text().strip() for key in (
         "apparmor_restrict_unprivileged_userns", "apparmor_restrict_unprivileged_unconfined")}
+
+
+def outside_write_negative_control(name):
+    """A user-writable path outside the profile allowlist must be denied."""
+    probe = Path.home() / f".redjohn-apparmor-probe-{os.getpid()}"
+    result = command(
+        "aa-exec", "-p", name, "--", sys.executable, "-c",
+        "import pathlib,sys; pathlib.Path(sys.argv[1]).write_text('x')", str(probe),
+    )
+    with contextlib.suppress(OSError):
+        probe.unlink()
+    if result["exit_code"] == 0:
+        raise RuntimeError("profile_outside_write_not_denied")
+    return result
 
 
 def prepare():
@@ -59,6 +74,7 @@ def prepare():
         result["unprivileged_profile_namespace"] = command("aa-exec", "-p", name, "--", "unshare", "-Urn", "/usr/bin/true")
         if result["unprivileged_profile_namespace"]["exit_code"] == 0:
             raise RuntimeError("unprivileged_profile_entry_bypassed_restriction")
+        result["outside_write_negative_control"] = outside_write_negative_control(name)
         result["restrictions_after"] = restrictions()
         if set(result["restrictions_after"].values()) != {"1"}:
             raise RuntimeError("host_restrictions_changed")

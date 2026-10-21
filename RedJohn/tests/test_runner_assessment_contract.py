@@ -16,6 +16,7 @@ from redjohn.assessment.os_memory import MemoryLimitUnavailableError
 from redjohn.assessment.policy import EngagementPolicy
 from redjohn.config.settings import LlmSettings, Settings
 from redjohn.core import execution, runner
+from redjohn.tools.hunt.tool import _run as run_hunt
 from redjohn.tools.mcp import McpConnectionConfig, McpConnectionRequest
 from tests.test_host_assessment_live import invoke
 from tests.test_host_binding_contract import scan_for
@@ -64,6 +65,14 @@ async def test_root_binds_actual_service_and_keeps_configured_mcps_inert(
         service = context["assessment_service"]
         seen.append(service)
         assert context["assessment_governor"] is service.governor
+        assert context["assessment_policy"] is service.policy
+        assert context["resource_governor"] is service.governor
+        # The hunt tool is invoked from the same real production context. It
+        # must reach the sandbox/admission checks, not fail at policy_required.
+        hunt = await run_hunt(
+            SimpleNamespace(context=context), "cve", "https://example.invalid", ""
+        )
+        assert hunt["error"]["code"] != "policy_required"
         assert context["mcp_registry"].statuses()[0].state == "configured"
         health = await invoke(service, "system_health")
         assert health["ok"] is True
@@ -313,3 +322,29 @@ async def test_valid_root_resume_preserves_sdk_history_and_the_same_queue(
             "code"
         ] == "engagement_runtime_closed"
     assert root_environment.logging_closed == [True, True]
+
+async def test_local_target_requires_explicit_unconfined_legacy_flag(
+    root_environment, monkeypatch, tmp_path
+):
+    model_loop = AsyncMock()
+    monkeypatch.setattr(runner, "run_agent_loop", model_loop)
+    source = tmp_path / "source"
+    source.mkdir()
+    scan = {
+        "targets": [
+            {
+                "type": "local_code",
+                "original": str(source),
+                "details": {"source_path": str(source)},
+            }
+        ]
+    }
+    with pytest.raises(ValueError, match="legacy_unconfined_assessment_required"):
+        await runner.run_redjohn_scan(
+            scan_config=scan,
+            image="startup-double",
+            scan_id="legacy-boundary",
+            mcp_connection_requests=[],
+        )
+    model_loop.assert_not_awaited()
+    root_environment.create.assert_not_awaited()

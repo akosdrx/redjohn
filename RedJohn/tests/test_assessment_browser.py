@@ -19,7 +19,12 @@ from redjohn.assessment.browser import (
     BrowserLimits,
 )
 from redjohn.assessment.policy import EngagementPolicy, PolicyDenied
-from redjohn.assessment.resources import ResourceEnvelope, ResourceGovernor, process_tree_memory
+from redjohn.assessment.resources import (
+    ResourceAdmissionError,
+    ResourceEnvelope,
+    ResourceGovernor,
+    process_tree_memory,
+)
 
 
 _SPA = b"""<!doctype html><html><body>
@@ -393,4 +398,38 @@ async def test_real_chromium_crash_reports_lost_coverage_and_releases_context():
                 for f in result.failures
             )
             assert service.healthcheck()["active_contexts"] == 0
+        assert resources.snapshot()["active"] == {}
+
+@pytest.mark.asyncio
+async def test_failed_chromium_close_quarantines_the_browser_lease():
+    class FailingBrowser:
+        contexts: list[object] = []
+        version = "synthetic"
+
+        def is_connected(self) -> bool:
+            return True
+
+        async def close(self) -> None:
+            raise TimeoutError("synthetic browser close timeout")
+
+    with local_spa() as (origin, _, _):
+        resources = governor()
+        service = BrowserDiscoveryService(policy_for(origin), resources)
+        service._browser_lease = resources.acquire(
+            "browser", 1, cleanup_guard=service._browser_cleanup_verified
+        )
+        service._browser = FailingBrowser()  # type: ignore[assignment]
+        await service.close()
+        snapshot = resources.snapshot()
+        assert snapshot["active"] == {"browser": 1}
+        assert snapshot["cleanup_quarantined"] == 1
+        assert service.healthcheck()["cleanup_errors"] == 1
+        with pytest.raises(ResourceAdmissionError, match="resource_cleanup_unverified"):
+            resources.acquire("browser", 1)
+
+        # A later close that observes no browser can prove cleanup and recover
+        # the same reservation; no new admission is needed.
+        service._browser_closed = True
+        service._browser = None
+        await service.close()
         assert resources.snapshot()["active"] == {}

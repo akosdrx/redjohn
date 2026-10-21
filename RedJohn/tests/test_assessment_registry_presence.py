@@ -17,13 +17,17 @@ def _nuclei_health(registry: CapabilityRegistry) -> dict:
 def test_repo_managed_nuclei_presence_is_not_binary_or_live_verification(tmp_path, monkeypatch):
     binary = tmp_path / ".tools/nuclei/3.11.1/nuclei"
     binary.parent.mkdir(parents=True)
-    binary.write_bytes(b"presence fixture, deliberately not executable")
+    binary.write_bytes(b"presence fixture")
+    binary.chmod(0o700)
     monkeypatch.setattr("redjohn.assessment.registry.shutil.which", lambda _name: None)
     registry = CapabilityRegistry(repository_root=tmp_path)
 
     def forbidden(*_args, **_kwargs):
         raise AssertionError("health must neither read/launch nor hash a binary")
 
+    monkeypatch.setattr(
+        "redjohn.assessment.registry._playwright_chromium_executable", lambda: None
+    )
     monkeypatch.setattr(Path, "read_bytes", forbidden)
     monkeypatch.setattr(Path, "open", forbidden)
     monkeypatch.setattr(subprocess, "run", forbidden)
@@ -63,6 +67,7 @@ def test_explicit_binary_path_presence_is_configurable_and_has_no_fallback(tmp_p
     registry = CapabilityRegistry(repository_root=tmp_path, nuclei_binary_path=selected)
     assert _nuclei_health(registry)["binary_path"] is None
     selected.write_bytes(b"explicit engine presence")
+    selected.chmod(0o700)
     row = _nuclei_health(registry)
     assert row["binary_path"] == str(selected)
     assert row["binary_path_source"] == "configured"
@@ -76,6 +81,7 @@ def test_explicit_lock_supplies_binary_presence_and_execution_identity(tmp_path,
     monkeypatch.setattr("redjohn.assessment.registry.shutil.which", lambda _name: None)
     binary = tmp_path / "locked-nuclei"
     binary.write_bytes(b"file presence is sufficient for the catalogue")
+    binary.chmod(0o700)
     registry = CapabilityRegistry(
         repository_root=tmp_path,
         nuclei_lock={
@@ -126,3 +132,46 @@ def test_default_registry_execution_identity_retains_existing_job_defaults(tmp_p
 def test_registry_rejects_malformed_explicit_metadata_without_launching(tmp_path, lock):
     with pytest.raises(TypeError, match="invalid_nuclei_registry_lock_metadata"):
         CapabilityRegistry(repository_root=tmp_path, nuclei_lock=lock)
+
+
+def test_archive_on_managed_path_is_not_an_installed_executable(tmp_path, monkeypatch):
+    monkeypatch.setattr("redjohn.assessment.registry.shutil.which", lambda _name: None)
+    archive = tmp_path / ".tools/arjun/2.2.7/arjun.tar"
+    archive.parent.mkdir(parents=True)
+    archive.write_bytes(b"not an executable")
+    registry = CapabilityRegistry(repository_root=tmp_path)
+    row = next(item for item in registry.health() if item["id"] == "arjun_parameters")
+    assert row["binary_path"] is None
+    assert row["archive_present"] is True
+    assert row["status"] == "blocked_missing_dependency"
+
+
+def test_browser_health_requires_the_playwright_chromium_executable(tmp_path, monkeypatch):
+    root = tmp_path / "ms-playwright"
+    executable = root / "chromium_headless_shell-999/chrome-linux/headless_shell"
+    executable.parent.mkdir(parents=True)
+    executable.write_bytes(b"fixture")
+    executable.chmod(0o700)
+    monkeypatch.setenv("PLAYWRIGHT_BROWSERS_PATH", str(root))
+    monkeypatch.setattr(
+        "redjohn.assessment.registry._playwright_browser_revisions",
+        lambda: {"chromium-headless-shell": "999"},
+    )
+    registry = CapabilityRegistry(repository_root=tmp_path)
+    row = next(item for item in registry.health() if item["id"] == "browser_discover")
+    assert row["binary_path"] == str(executable)
+    assert row["binary_path_source"] == "playwright_cache"
+    assert row["status"] != "blocked_missing_dependency"
+
+
+def test_browser_health_blocks_missing_chromium_without_launching(tmp_path, monkeypatch):
+    monkeypatch.setenv("PLAYWRIGHT_BROWSERS_PATH", str(tmp_path / "empty"))
+    monkeypatch.setattr(
+        "redjohn.assessment.registry._playwright_browser_revisions",
+        lambda: {"chromium": "999", "chromium-headless-shell": "999"},
+    )
+    registry = CapabilityRegistry(repository_root=tmp_path)
+    row = next(item for item in registry.health() if item["id"] == "browser_discover")
+    assert row["binary_path"] is None
+    assert row["status"] == "blocked_missing_dependency"
+    assert row["reason"] == "chromium_executable_missing"

@@ -5,21 +5,49 @@
 abi <abi/4.0>,
 include <tunables/global>
 profile @REDJOHN_CI_PROFILE@ flags=(attach_disconnected,mediate_deleted) {
-  # bwrap's namespace setup plus setpriv's initial UID/GID drop only.
+  # bwrap's namespace setup plus setpriv's initial UID/GID drop. sys_admin,
+  # net_admin and sys_ptrace are intentionally absent; user namespaces and
+  # the delegated cgroup provide the required isolation instead.
   capability setuid,
   capability setgid,
   capability setpcap,
   capability sys_chroot,
-  capability sys_ptrace,
-  capability sys_admin,
-  capability net_admin,
 
-  # Existing DAC, private mounts, kernel network namespaces and cgroups
-  # continue to restrict these operations. No px/ux or change_profile escape.
-  /{,**} mrwlkix,
+  # Read/execute system trees. Writes are limited to the runner's workspace,
+  # package caches, temporary files and the delegated cgroup.
+  / r,
+  /{bin,etc,lib,lib32,lib64,sbin,usr}/** rix,
+  /opt/** rix,
+  /home/*/work/** rwklix,
+  /home/*/go/** rwklix,
+  /home/*/.gitconfig r,
+  /home/*/.bashrc r,
+  /home/*/.profile r,
+  /home/*/.cache/** rwklix,
+  /home/*/.local/** rwklix,
+  /home/*/.config/** rwklix,
+  /home/*/.npm/** rwklix,
+  /home/*/.yarn/** rwklix,
+  /home/*/.pnpm-store/** rwklix,
+  /home/*/.cargo/** rwklix,
+  /home/*/.rustup/** rwklix,
+  /home/*/.redjohn/** rwklix,
+  /home/*/.m2/** rwklix,
+  /home/*/.gradle/** rwklix,
+  /home/*/.nuget/** rwklix,
+  /home/*/.dotnet/** rwklix,
+  /home/*/.gem/** rwklix,
+  /tmp/** rwklix,
+  /var/tmp/** rwklix,
+  /run/** rwklix,
+  /dev/** rwklix,
+  /proc/** r,
+  /proc/sys/** r,
+  /sys/** r,
+  /sys/fs/cgroup/redjohn-ci-*/** rwklix,
+
   network,
   unix,
-  ptrace,
   signal,
   userns,
   mount,

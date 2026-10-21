@@ -11,6 +11,14 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 
+def register_synthetic_real_tests(plugin, *pairs):
+    """Test-only manifest entries; do not add these names to production evidence."""
+    merged = {key: set(value) for key, value in plugin.REAL_TESTS.items()}
+    for filename, name in pairs:
+        merged.setdefault(filename, set()).add(name)
+    plugin.REAL_TESTS = {key: frozenset(value) for key, value in merged.items()}
+
+
 SPEC = importlib.util.spec_from_file_location("ci", Path(__file__).parents[1] / "scripts/ci.py")
 ci = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(ci)
@@ -464,6 +472,11 @@ class EvidenceContract(unittest.TestCase):
         spec = importlib.util.spec_from_file_location("evidence", Path(__file__).parents[1] / "scripts/pytest_evidence.py")
         plugin = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(plugin)
+        register_synthetic_real_tests(
+            plugin,
+            ("test_nuclei_live.py", "test_live_pinned_nuclei_native_marker_then_fixed_control"),
+            ("test_os_memory_live.py", "test_actual_kernel_memory_max_kills_oversized_tree"),
+        )
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
             capability = root / "capabilities.json"
@@ -538,6 +551,11 @@ class EvidenceContract(unittest.TestCase):
         spec = importlib.util.spec_from_file_location("evidence", Path(__file__).parents[1] / "scripts/pytest_evidence.py")
         plugin = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(plugin)
+        register_synthetic_real_tests(
+            plugin,
+            ("test_legacy_shell_darwin_live.py", "test_real"),
+            ("test_source_tools_live.py", "test_real"),
+        )
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
             capability = root / "capabilities.json"
@@ -567,6 +585,11 @@ class EvidenceContract(unittest.TestCase):
         spec = importlib.util.spec_from_file_location("evidence", Path(__file__).parents[1] / "scripts/pytest_evidence.py")
         plugin = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(plugin)
+        register_synthetic_real_tests(
+            plugin,
+            ("test_network_tools_live.py", "test_real"),
+            ("test_mcp_target_live.py", "test_real"),
+        )
         self.assertIn("network-scanner-install", ci.REQUIRED)
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
@@ -617,6 +640,14 @@ class EvidenceContract(unittest.TestCase):
                 self.assertIn(("evidence_kind", "real_integration"), item.user_properties)
                 self.assertIn(("required_runner_capabilities", ""), item.user_properties)
 
+    def test_ci_apparmor_profile_has_no_global_write_or_privileged_capabilities(self):
+        policy = (Path(__file__).parents[1] / "policies/redjohn-ci.apparmor").read_text()
+        assert "/{,**} mrwlkix" not in policy
+        for capability in ("sys_admin", "net_admin", "sys_ptrace"):
+            assert f"capability {capability}," not in policy
+        assert "/home/*/work/** rwklix" in policy
+        assert "/sys/fs/cgroup/redjohn-ci-*/** rwklix" in policy
+
     def test_dirty_or_untracked_source_blocks_snapshot_and_preflight(self):
         dirty = SimpleNamespace(returncode=0, stdout="?? untracked-probe.py\n", stderr="")
         clean = SimpleNamespace(returncode=0, stdout="", stderr="")
@@ -634,6 +665,7 @@ class EvidenceContract(unittest.TestCase):
         spec = importlib.util.spec_from_file_location("evidence", Path(__file__).parents[1] / "scripts/pytest_evidence.py")
         plugin = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(plugin)
+        register_synthetic_real_tests(plugin, ("test_lab_validation_live.py", "test_actual"))
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
             path = root / "test_lab_validation_live.py"
@@ -658,6 +690,7 @@ class EvidenceContract(unittest.TestCase):
         spec = importlib.util.spec_from_file_location("evidence", Path(__file__).parents[1] / "scripts/pytest_evidence.py")
         plugin = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(plugin)
+        register_synthetic_real_tests(plugin, ("test_owned_memory_live.py", "test_real"))
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
             path = root / "test_owned_memory_live.py"
@@ -684,6 +717,23 @@ class EvidenceContract(unittest.TestCase):
                     self.assertEqual(items, [item])
                     self.assertIn(("required_runner_capabilities", "cgroup_available"), item.user_properties)
                     self.assertEqual(len(markers), int(not kernel))
+
+
+    def test_real_integration_status_is_per_test_not_per_filename(self):
+        spec = importlib.util.spec_from_file_location(
+            "evidence", Path(__file__).parents[1] / "scripts/pytest_evidence.py"
+        )
+        plugin = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(plugin)
+        assert "test_actual_ffuf_report_web_view_chromium" in plugin.REAL_TESTS[
+            "test_viewer_assessment.py"
+        ]
+        assert "test_invalid_assessment_report_never_looks_like_clean_completion" not in (
+            plugin.REAL_TESTS["test_viewer_assessment.py"]
+        )
+        assert "test_never_seen_contract" not in plugin.REAL_TESTS.get(
+            "test_viewer_assessment.py", frozenset()
+        )
 
 
 if __name__ == "__main__":
