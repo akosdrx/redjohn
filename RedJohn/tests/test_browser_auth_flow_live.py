@@ -104,7 +104,9 @@ async def test_actual_chromium_mfa_private_input_restart_two_actors_capture_and_
 ):
     monkeypatch.setenv("REDJOHN_HOST_RESOURCE_DB", str(tmp_path / "host-pool.db"))
     passwords = {actor: secrets.token_urlsafe(24) for actor in ("alice", "bob")}
-    codes = {actor: str(secrets.randbelow(900000) + 100000) for actor in passwords}
+    # A 6-digit OTP can occur by chance inside a long hex/hash dump. Use a
+    # 12-digit test OTP so the leak assertion tests the DB, not entropy.
+    codes = {actor: f"{secrets.randbelow(10**12):012d}" for actor in passwords}
     nonces, challenges, sessions, used_codes = {}, {}, {}, set()
     seen = Counter()
     oracle = {"fixed": False}
