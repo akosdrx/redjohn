@@ -20,6 +20,11 @@ on:
         required: false
         default: false
         type: boolean
+      controller_profile_only:
+        description: 'Run only controlled controller memory attribution; not full validation'
+        required: false
+        default: false
+        type: boolean
       model:
         description: 'Explicit OpenAI model for live_model_only; empty records blocked evidence'
         required: false
@@ -38,6 +43,9 @@ defaults:
     shell: bash
 
 jobs:
+  controller-memory:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.controller_profile_only && !inputs.live_model_only }}
+    uses: ./.github/workflows/redjohn-controller-memory.yml
   live-model:
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.live_model_only }}
     uses: ./.github/workflows/redjohn-live-model.yml
@@ -45,7 +53,7 @@ jobs:
       model: ${{ inputs.model }}
     secrets: inherit
   ubuntu:
-    if: ${{ github.event_name != 'workflow_dispatch' || !inputs.live_model_only }}
+    if: ${{ github.event_name != 'workflow_dispatch' || (!inputs.live_model_only && !inputs.controller_profile_only) }}
     name: Ubuntu 24.04 ${{ matrix.arch }} / Python ${{ matrix.python }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 120

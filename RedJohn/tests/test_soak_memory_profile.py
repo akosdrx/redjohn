@@ -14,6 +14,43 @@ def helpers(monkeypatch):
     return importlib.import_module("memory_profile")
 
 
+def test_controller_mapping_counters_do_not_publish_paths_or_addresses(tmp_path, monkeypatch):
+    helpers(monkeypatch)
+    module = importlib.import_module("controller_diagnostics")
+    path = tmp_path / "smaps"
+    path.write_text(
+        "1000-2000 rw-p 00000000 00:00 0 [heap]\n"
+        "Size: 8 kB\nRss: 4 kB\nPss: 4 kB\nPrivate_Dirty: 3 kB\n"
+        "2000-3000 r--p 00000000 00:00 0 /private/sensitive/library.so\n"
+        "Size: 4 kB\nRss: 2 kB\nPss: 1 kB\nPrivate_Clean: 1 kB\n"
+    )
+    value = module.mapping_counters(path)
+    assert value["status"] == "observed"
+    assert value["groups"]["brk_heap"]["Private_Dirty_bytes"] == 3072
+    assert value["groups"]["file_backed"]["Rss_bytes"] == 2048
+    assert "sensitive" not in str(value) and "1000-2000" not in str(value)
+
+
+def test_controller_mapping_missing_or_invalid_data_is_blocked(tmp_path, monkeypatch):
+    helpers(monkeypatch)
+    module = importlib.import_module("controller_diagnostics")
+    assert module.mapping_counters(tmp_path / "absent")["status"] == "blocked"
+    path = tmp_path / "smaps"
+    path.write_text("1000-2000 rw-p 00000000 00:00 0\nRss: 4 bytes\n")
+    assert module.mapping_counters(path)["status"] == "blocked"
+
+
+def test_controller_live_object_probe_tolerates_nonstring_module_descriptors(monkeypatch):
+    helpers(monkeypatch)
+    module = importlib.import_module("controller_diagnostics")
+    class Odd:
+        __module__ = property(lambda _self: "secret")
+    monkeypatch.setattr(module.gc, "get_objects", lambda: [Odd()])
+    value = module.ControllerDiagnostics().capture()
+    assert value["gc_tracked_objects"] == 1
+    assert value["live_component_types"] == {}
+
+
 def write_process(root, pid, parent, name, *, identity=123, rss_pages=10, smaps=True):
     directory = root / str(pid)
     directory.mkdir()

@@ -126,6 +126,12 @@ def cache_pressure(cache, cycle: int) -> dict:
 
 
 def heap_sample() -> dict:
+    if not tracemalloc.is_tracing():
+        return {
+            "status": "not_requested", "controller_traced_bytes": None,
+            "controller_traced_peak_bytes": None, "tracer_metadata_bytes": None,
+            "gc_generation_counts": list(gc.get_count()), "largest_allocations": [],
+        }
     current, peak = tracemalloc.get_traced_memory()
     top = tracemalloc.take_snapshot().statistics("lineno")[:12]
     return {
@@ -142,7 +148,10 @@ def heap_sample() -> dict:
 def benchmark_sources() -> dict:
     return {
         name: hashlib.sha256(Path(__file__).with_name(name).read_bytes()).hexdigest()
-        for name in ("mixed_soak.py", "browser_soak.py", "limit_pressure.py", "memory_profile.py")
+        for name in (
+            "mixed_soak.py", "browser_soak.py", "limit_pressure.py", "memory_profile.py",
+            "controller_diagnostics.py",
+        )
     }
 
 
@@ -243,7 +252,7 @@ async def workload(  # noqa: PLR0915 - actual ordered scheduler stages and clean
                 require(queue["ok"], "persistent_queue_pressure_failed")
                 cycle = 0
                 warmup_heap = heap_sample()
-                warmup_snapshot = tracemalloc.take_snapshot()
+                warmup_snapshot = tracemalloc.take_snapshot() if tracemalloc.is_tracing() else None
                 progress["heap_after_warmup"] = warmup_heap
                 loop_started = time.monotonic()
                 timing["loop_started_monotonic"] = loop_started
@@ -275,6 +284,8 @@ async def workload(  # noqa: PLR0915 - actual ordered scheduler stages and clean
                             policy_revision=policy.revision,
                         ),
                     )
+                    if cycle == 0 and memory.controller_diagnostics is not None:
+                        memory.checkpoint("first_browser_job_completed")
                     fixture.fixed = bool(cycle % 2)
                     probe = Surface(
                         fixture.origin + "/api/items",
@@ -297,6 +308,8 @@ async def workload(  # noqa: PLR0915 - actual ordered scheduler stages and clean
                         ),
                     )
                     require(probed["coverage"] == "completed", "httpx_incomplete")
+                    if cycle == 0 and memory.controller_diagnostics is not None:
+                        memory.checkpoint("first_httpx_job_completed")
                     # The actual httpx response must have committed observed inventory.
                     inventory = next(
                         row
@@ -317,6 +330,8 @@ async def workload(  # noqa: PLR0915 - actual ordered scheduler stages and clean
                     )
                     memory.set_phase("nuclei", cycle)
                     scanned = await _job(app, surface, spec)
+                    if cycle == 0 and memory.controller_diagnostics is not None:
+                        memory.checkpoint("first_nuclei_job_completed")
                     expected = 0 if fixture.fixed else 1
                     require(
                         scanned["coverage"] == "completed" and scanned["findings"] == expected,
@@ -344,7 +359,9 @@ async def workload(  # noqa: PLR0915 - actual ordered scheduler stages and clean
                     require(caches[-1]["ok"], "cache_pressure_failed")
                     if cycle + 1 == warmup:
                         warmup_heap = heap_sample()
-                        warmup_snapshot = tracemalloc.take_snapshot()
+                        warmup_snapshot = (
+                            tracemalloc.take_snapshot() if tracemalloc.is_tracing() else None
+                        )
                         progress["heap_after_warmup"] = warmup_heap
                         memory.checkpoint("after_warmup")
                     print(  # noqa: T201 - bounded standalone progress, no target/session data
@@ -384,7 +401,10 @@ async def workload(  # noqa: PLR0915 - actual ordered scheduler stages and clean
             memory.set_phase("closed")
             memory.checkpoint("after_runtime_close")
             progress["cache_after_close"] = app.control.cache.stats()
-            differences = tracemalloc.take_snapshot().compare_to(warmup_snapshot, "lineno")
+            differences = (
+                tracemalloc.take_snapshot().compare_to(warmup_snapshot, "lineno")
+                if warmup_snapshot is not None else []
+            )
             progress["allocation_changes_after_warmup"] = [
                 {
                     "location": str(item.traceback),
@@ -450,6 +470,8 @@ async def run(  # noqa: PLR0915 - benchmark evidence retained even on workload f
     warmup: int = 3,
     interval: float = 10,
     minimum: float = 300,
+    trace_allocations: bool = True,
+    controller_details: bool = False,
 ) -> dict:
     deadline = validate(cycles, warmup, interval, minimum)
     output = output.resolve()
@@ -477,6 +499,8 @@ async def run(  # noqa: PLR0915 - benchmark evidence retained even on workload f
         "model_tokens": 0,
         "model_cost": 0,
         "baseline": "baseline_unavailable",
+        "allocation_tracing_requested": trace_allocations,
+        "controller_details_requested": controller_details,
         "coverage_limits": [
             "owned_loopback_fixture_only",
             "controller_tracemalloc_excludes_native_children",
@@ -490,7 +514,7 @@ async def run(  # noqa: PLR0915 - benchmark evidence retained even on workload f
     }
     stop = asyncio.Event()
     samples, observation_errors = [], Counter()
-    memory = MemoryAttribution(started)
+    memory = MemoryAttribution(started, controller_details=controller_details)
     result["memory_attribution"] = memory.report
 
     async def observe():
@@ -522,7 +546,8 @@ async def run(  # noqa: PLR0915 - benchmark evidence retained even on workload f
     os.environ["REDJOHN_RESOURCE_POOL_PATH"] = str(pool)
     observer = None
     try:
-        tracemalloc.start(5)
+        if trace_allocations:
+            tracemalloc.start(5)
         memory.checkpoint("before_synthetic_pressure")
         observer = asyncio.create_task(observe())
         async with asyncio.timeout(deadline):
@@ -613,7 +638,8 @@ async def run(  # noqa: PLR0915 - benchmark evidence retained even on workload f
                 "controller_traced_growth_after_warmup_bytes": metrics["heap_after_close"][
                     "controller_traced_bytes"
                 ]
-                - metrics["heap_after_warmup"]["controller_traced_bytes"],
+                - metrics["heap_after_warmup"]["controller_traced_bytes"]
+                if trace_allocations else None,
                 "retained_cycle_cache_result_json_bytes": len(
                     json.dumps(
                         {"cycles": metrics["cycles"], "cache_pressure": metrics["cache_pressure"]}
@@ -683,6 +709,8 @@ def main() -> None:
     parser.add_argument("--warmup", type=int, default=3)
     parser.add_argument("--interval-seconds", type=float, default=10)
     parser.add_argument("--minimum-seconds", type=float, default=300)
+    parser.add_argument("--allocation-tracing", choices=("on", "off"), default="on")
+    parser.add_argument("--controller-details", action="store_true")
     args = parser.parse_args()
     receipt = json.loads(args.httpx_receipt.read_text())
     httpx = {
@@ -701,6 +729,8 @@ def main() -> None:
             warmup=args.warmup,
             interval=args.interval_seconds,
             minimum=args.minimum_seconds,
+            trace_allocations=args.allocation_tracing == "on",
+            controller_details=args.controller_details,
         )
     )
     print(  # noqa: T201 - standalone CLI summary
