@@ -3,6 +3,7 @@
 
 import hashlib
 import json
+import os
 import xml.etree.ElementTree as ET
 
 from ci import OUT, SOAK_CHECKS, identity, validate_soak_owner, write
@@ -53,6 +54,11 @@ def summarize():
     sha = result["commit_sha"]
     for case in CASES:
         test = ET.SubElement(suite, "testcase", classname="controller_attribution", name=case)
+        properties = ET.SubElement(test, "properties")
+        ET.SubElement(properties, "property", name="evidence_kind",
+                      value="real_integration" if case in {"traced", "compact", "untraced"}
+                      else "diagnostic_control")
+        ET.SubElement(properties, "property", name="commit_sha", value=sha)
         try:
             command = json.loads((OUT / f"controller-{case}.json").read_text())
             if (command["commit_sha"] != sha or command["exit_code"] != 0
@@ -65,9 +71,12 @@ def summarize():
             value = json.loads((OUT / f"controller-{case}" / name).read_text())
             if value.get("commit_sha") != sha or value.get("ok") is not True:
                 raise ValueError("diagnostic_failed_or_unbound")
+            long_window = os.environ.get("REDJOHN_CONTROLLER_PROFILE_LONG") == "1" and case != "compact"
+            expected_cycles = 120 if long_window else 2
             if mixed and (set(value.get("checks", {})) != SOAK_CHECKS
                           or not all(value["checks"].values())
-                          or len(value["workload"]["cycles"]) != 2
+                          or len(value["workload"]["cycles"]) != expected_cycles
+                          or (long_window and value["workload"]["timing"]["loop_elapsed_seconds"] < 1200)
                           or value.get("allocation_tracing_requested") != (case != "untraced")
                           or value.get("snapshot_summary_mode") != (
                               "compact" if case == "compact" else "legacy")):
@@ -81,7 +90,11 @@ def summarize():
                 for key in ("before_asyncio_run", "after_asyncio_run")
             ):
                 raise ValueError("blocked_cpython_allocator_diagnostic")
-            result["cases"][case] = {"success": True, "scanner_evidence": mixed}
+            result["cases"][case] = {
+                "success": True, "scanner_evidence": mixed,
+                "actual_cycles": len(value["workload"]["cycles"]) if mixed else 0,
+                "minimum_loop_seconds": 1200 if mixed and long_window else 0,
+            }
         except (OSError, ValueError, KeyError, TypeError) as exc:
             message = case + ":" + type(exc).__name__ + ":" + str(exc)
             result["blockers"].append(message)

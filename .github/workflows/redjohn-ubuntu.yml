@@ -25,6 +25,11 @@ on:
         required: false
         default: false
         type: boolean
+      controller_profile_long:
+        description: 'Require 120 cycles / 1200 seconds for legacy and untraced attribution controls'
+        required: false
+        default: false
+        type: boolean
       model:
         description: 'Explicit OpenAI model for live_model_only; empty records blocked evidence'
         required: false
@@ -35,7 +40,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: redjohn-ubuntu-${{ github.event.pull_request.head.repo.full_name || github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}
+  group: redjohn-ubuntu-${{ github.event.pull_request.head.repo.full_name || github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}${{ inputs.controller_profile_only && '-controller-profile' || '' }}
   cancel-in-progress: false
 
 defaults:
@@ -46,6 +51,8 @@ jobs:
   controller-memory:
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.controller_profile_only && !inputs.live_model_only }}
     uses: ./.github/workflows/redjohn-controller-memory.yml
+    with:
+      long_window: ${{ inputs.controller_profile_long }}
   live-model:
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.live_model_only }}
     uses: ./.github/workflows/redjohn-live-model.yml

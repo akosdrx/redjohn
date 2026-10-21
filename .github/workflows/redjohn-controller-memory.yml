@@ -2,7 +2,15 @@ name: RedJohn controller memory attribution
 
 on:
   workflow_call:
+    inputs:
+      long_window:
+        type: boolean
+        default: false
   workflow_dispatch:
+    inputs:
+      long_window:
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -11,7 +19,7 @@ jobs:
   controller:
     name: Controller memory Ubuntu 24.04 ${{ matrix.arch }}
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 35
+    timeout-minutes: 80
     strategy:
       fail-fast: false
       max-parallel: 2
@@ -39,6 +47,7 @@ jobs:
       REDJOHN_RESOURCE_POOL_PATH: ${{ github.workspace }}/.ci-state/controller-profile-resources.sqlite3
       REDJOHN_NUCLEI_LOCK: ${{ github.workspace }}/RedJohn/.tools/nuclei/3.11.1/fixture-lock.json
       GOMAXPROCS: '2'
+      REDJOHN_CONTROLLER_PROFILE_LONG: ${{ inputs.long_window && '1' || '0' }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:

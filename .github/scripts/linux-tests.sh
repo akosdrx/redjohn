@@ -121,7 +121,8 @@ if test "$task_suite" = soak; then
     --nuclei-lock "$REDJOHN_NUCLEI_LOCK" \
     --httpx-receipt "$task_workspace/RedJohn/.tools/httpx/1.12.0/receipt.json" \
     --cycles "${REDJOHN_SOAK_CYCLES:?}" --warmup 1 --interval-seconds 10 \
-    --minimum-seconds "${REDJOHN_SOAK_MINIMUM_SECONDS:?}"
+    --minimum-seconds "${REDJOHN_SOAK_MINIMUM_SECONDS:?}" \
+    --controller-details --snapshot-mode compact
 fi
 exec "${task_profile[@]}" /usr/bin/setpriv --reuid="$SUDO_UID" --regid="$SUDO_GID" --init-groups \
   env USER="$SUDO_USER" LOGNAME="$SUDO_USER" \
