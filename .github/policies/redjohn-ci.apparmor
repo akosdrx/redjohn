@@ -5,13 +5,14 @@
 abi <abi/4.0>,
 include <tunables/global>
 profile @REDJOHN_CI_PROFILE@ flags=(attach_disconnected,mediate_deleted) {
-  # bwrap's namespace setup plus setpriv's initial UID/GID drop. sys_admin,
-  # net_admin and sys_ptrace are intentionally absent; user namespaces and
-  # the delegated cgroup provide the required isolation instead.
+  # bwrap's setuid namespace setup plus setpriv's initial UID/GID drop.
+  # sys_admin is required by the distro bwrap binary to create the reviewed
+  # user/mount/net namespaces; net_admin and sys_ptrace remain absent.
   capability setuid,
   capability setgid,
   capability setpcap,
   capability sys_chroot,
+  capability sys_admin,
 
   # Read/execute system trees. Writes are limited to the runner's workspace,
   # package caches, temporary files and the delegated cgroup.
