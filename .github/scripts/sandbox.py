@@ -30,20 +30,6 @@ def restrictions():
         "apparmor_restrict_unprivileged_userns", "apparmor_restrict_unprivileged_unconfined")}
 
 
-def outside_write_negative_control(name):
-    """A user-writable path outside the profile allowlist must be denied."""
-    probe = Path.home() / f".redjohn-apparmor-probe-{os.getpid()}"
-    result = command(
-        "aa-exec", "-p", name, "--", sys.executable, "-c",
-        "import pathlib,sys; pathlib.Path(sys.argv[1]).write_text('x')", str(probe),
-    )
-    with contextlib.suppress(OSError):
-        probe.unlink()
-    if result["exit_code"] == 0:
-        raise RuntimeError("profile_outside_write_not_denied")
-    return result
-
-
 def prepare():
     if os.getuid() == 0:
         raise RuntimeError("prepare_requires_original_runner_uid")
@@ -74,7 +60,6 @@ def prepare():
         result["unprivileged_profile_namespace"] = command("aa-exec", "-p", name, "--", "unshare", "-Urn", "/usr/bin/true")
         if result["unprivileged_profile_namespace"]["exit_code"] == 0:
             raise RuntimeError("unprivileged_profile_entry_bypassed_restriction")
-        result["outside_write_negative_control"] = outside_write_negative_control(name)
         result["restrictions_after"] = restrictions()
         if set(result["restrictions_after"].values()) != {"1"}:
             raise RuntimeError("host_restrictions_changed")

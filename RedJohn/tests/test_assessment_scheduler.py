@@ -278,9 +278,19 @@ async def test_control_authorization_revision_schema_and_bounded_output(state):
     other.close()
 
 
+def _with_fake_browser(tmp_path, monkeypatch):
+    browser = tmp_path / "fixture-chromium"
+    browser.write_text("contract fixture")
+    browser.chmod(0o700)
+    monkeypatch.setattr(
+        "redjohn.assessment.registry._playwright_chromium_executable", lambda: browser
+    )
+
+
 def test_decision_engine_explains_missing_capability_without_llm(state, tmp_path, monkeypatch):
     store, policy, _surface = state
     monkeypatch.setattr("redjohn.assessment.registry.shutil.which", lambda _name: None)
+    _with_fake_browser(tmp_path, monkeypatch)
     plan = IntelligentDecisionEngine(CapabilityRegistry(repository_root=tmp_path)).plan(
         store, policy
     )
@@ -351,6 +361,7 @@ def test_planner_advances_past_completed_jobs_and_relevant_families(state, tmp_p
     for number in range(3):
         store.upsert_surface("eng", Surface(f"http://127.0.0.1:12345/route-{number}"))
     monkeypatch.setattr("redjohn.assessment.registry.shutil.which", lambda _name: None)
+    _with_fake_browser(tmp_path, monkeypatch)
     engine = IntelligentDecisionEngine(CapabilityRegistry(repository_root=tmp_path))
     used = set()
     families = set()

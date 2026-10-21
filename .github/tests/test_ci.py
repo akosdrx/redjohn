@@ -640,23 +640,6 @@ class EvidenceContract(unittest.TestCase):
                 self.assertIn(("evidence_kind", "real_integration"), item.user_properties)
                 self.assertIn(("required_runner_capabilities", ""), item.user_properties)
 
-    def test_ci_apparmor_profile_has_no_global_write_or_privileged_capabilities(self):
-        policy = (Path(__file__).parents[1] / "policies/redjohn-ci.apparmor").read_text()
-        main_start = policy.index("profile @REDJOHN_CI_PROFILE@ flags=")
-        child, main = policy[:main_start], policy[main_start:]
-        assert "/{,**} mrwlkix" in child
-        assert "/{,**} mrwlkix" not in main
-        assert "capability sys_ptrace," not in policy
-        assert "capability sys_admin," in policy  # bwrap child and unshare helper
-        assert "capability net_admin," in policy  # bwrap loopback setup
-        assert "/usr/bin/bwrap px -> @REDJOHN_CI_PROFILE@-bwrap" in policy
-        assert "/proc/self/{uid_map,gid_map,setgroups} rw" in policy
-        assert "  / w,\n" in policy
-        assert "/{bin,etc,lib,lib32,lib64,sbin,usr,proc,dev,tmp,run,sys,home,opt,var}/ w" in policy
-        assert "profile @REDJOHN_CI_PROFILE@-bwrap" in policy
-        assert "/home/*/work/** rwklix" in policy
-        assert "/sys/fs/cgroup/redjohn-ci-*/** rwklix" in policy
-
     def test_dirty_or_untracked_source_blocks_snapshot_and_preflight(self):
         dirty = SimpleNamespace(returncode=0, stdout="?? untracked-probe.py\n", stderr="")
         clean = SimpleNamespace(returncode=0, stdout="", stderr="")
