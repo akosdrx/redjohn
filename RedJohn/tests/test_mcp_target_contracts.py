@@ -153,7 +153,30 @@ async def test_unsupported_replay_shape_is_explicit_and_not_a_negative_observati
         assert entry.session is None and not runtime.governor.snapshot()["active"]
 
 
-async def test_prepare_heartbeat_shared_deadline_and_cleanup_with_one_worker(tmp_path):
+def _capture_dispatch_timeout(monkeypatch, adapter_type, times):
+    original = asyncio.wait_for
+
+    async def observe(awaitable, timeout):
+        if (
+            isinstance(awaitable, asyncio.Task)
+            and awaitable.get_coro().__qualname__ == adapter_type.run.__qualname__
+        ):
+            times["dispatch_timeout"] = timeout
+        # Observe the real scheduler timer argument without altering its clock,
+        # task, timeout, cancellation or returned result.
+        return await original(awaitable, timeout)
+
+    monkeypatch.setattr(asyncio, "wait_for", observe)
+
+
+def _assert_shared_dispatch_budget(times, budget):
+    # Timer delivery can be delayed by a busy event loop. The actual remaining
+    # budget passed to wait_for must still deduct the completed preparation.
+    assert 0 < times["dispatch_timeout"] < 0.7
+    assert times["dispatch_timeout"] <= budget - times["prepare"]
+
+
+async def _shared_deadline_probe(tmp_path, monkeypatch, *, callback_delay=0):
     async with bound(tmp_path) as (runtime, _owner, _entry, _ctx):
         surface_id = runtime.store.upsert_surface(
             runtime.policy.engagement_id, Surface("https://127.0.0.1:443/observed")
@@ -166,6 +189,7 @@ async def test_prepare_heartbeat_shared_deadline_and_cleanup_with_one_worker(tmp
             dispatch_memory_bytes = 4 * 1024**2
 
             async def prepare(self, _job, _surface, _spec):
+                started = time.monotonic()
                 lease = runtime.governor.acquire("context", estimated_bytes=1024)
                 initial = runtime.store.jobs(runtime.policy.engagement_id)[0]["lease_until"]
                 try:
@@ -175,6 +199,7 @@ async def test_prepare_heartbeat_shared_deadline_and_cleanup_with_one_worker(tmp
                     later = runtime.store.jobs(runtime.policy.engagement_id)[0]["lease_until"]
                     assert later > initial
                 finally:
+                    times["prepare"] = time.monotonic() - started
                     lease.release()
 
             async def run(self, *_args):
@@ -182,6 +207,10 @@ async def test_prepare_heartbeat_shared_deadline_and_cleanup_with_one_worker(tmp
                 assert runtime.governor.snapshot()["active"] == {"worker": 1}
                 assert runtime.governor.snapshot()["reserved_bytes"] == 4 * 1024**2
                 started = time.monotonic()
+                if callback_delay:
+                    # A deliberately delayed timeout callback reproduces the
+                    # old wall-clock oracle's failure deterministically.
+                    asyncio.get_running_loop().call_soon(time.sleep, callback_delay)
                 try:
                     await asyncio.sleep(2)
                 finally:
@@ -193,6 +222,7 @@ async def test_prepare_heartbeat_shared_deadline_and_cleanup_with_one_worker(tmp
             async def cleanup(self):
                 phases.append("cleanup")
 
+        _capture_dispatch_timeout(monkeypatch, Prepared, times)
         runtime.scheduler.adapters["mcp_target_read"] = Prepared()
         spec = JobSpec(
             surface_id,
@@ -206,13 +236,48 @@ async def test_prepare_heartbeat_shared_deadline_and_cleanup_with_one_worker(tmp
         started = time.monotonic()
         await runtime.scheduler.run_batch(max_jobs=1)
         elapsed = time.monotonic() - started
+        times["elapsed"] = elapsed
         row = runtime.store.jobs(runtime.policy.engagement_id)[0]
         assert row["execution_status"] == "timed_out"
         assert row["coverage_status"] == "inconclusive"
         assert phases == ["prepare", "dispatch", "cancel", "cleanup"]
         assert elapsed < 1.5
-        assert times["dispatch"] < 0.7
+        _assert_shared_dispatch_budget(times, spec.timeout_seconds)
         assert runtime.governor.snapshot()["active"] == {}
+        return times
+
+
+async def test_prepare_heartbeat_shared_deadline_and_cleanup_with_one_worker(
+    tmp_path, monkeypatch, record_property
+):
+    times = await _shared_deadline_probe(tmp_path, monkeypatch)
+    for name, measured in times.items():
+        record_property("deadline_probe_" + name, measured)
+
+
+async def test_delayed_timeout_callback_keeps_the_original_shared_dispatch_budget(
+    tmp_path, monkeypatch, record_property
+):
+    times = await _shared_deadline_probe(tmp_path, monkeypatch, callback_delay=0.71)
+    assert times["dispatch"] >= 0.7  # The former oracle fails despite the correct timer budget.
+    for name, measured in times.items():
+        record_property("deadline_probe_" + name, measured)
+
+
+async def test_dispatch_timeout_probe_rejects_reset_budget_mutation(monkeypatch, record_property):
+    class Prepared:
+        async def run(self):
+            await asyncio.sleep(0)
+
+    times = {"prepare": 0.2}
+    _capture_dispatch_timeout(monkeypatch, Prepared, times)
+    # Model a reset-at-dispatch regression at the timer seam only. Production
+    # scheduler code stays unchanged and the probe delegates to real wait_for.
+    await asyncio.wait_for(asyncio.create_task(Prepared().run()), timeout=0.8)
+    assert times["dispatch_timeout"] == 0.8
+    with pytest.raises(AssertionError):
+        _assert_shared_dispatch_budget(times, 0.8)
+    record_property("reset_timeout_mutation_rejected", "true")
 
 
 async def test_failed_prepare_cleans_partial_context_and_never_dispatches(tmp_path):
