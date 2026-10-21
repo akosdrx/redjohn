@@ -647,7 +647,7 @@ class EvidenceContract(unittest.TestCase):
         assert "/{,**} mrwlkix" in child
         assert "/{,**} mrwlkix" not in main
         assert "capability sys_ptrace," not in policy
-        assert "capability sys_admin," in policy  # bwrap child profile only
+        assert "capability sys_admin," in policy  # bwrap child and unshare helper
         assert "capability net_admin," in policy  # bwrap loopback setup
         assert "/usr/bin/bwrap px -> @REDJOHN_CI_PROFILE@-bwrap" in policy
         assert "/proc/self/{uid_map,gid_map,setgroups} rw" in policy

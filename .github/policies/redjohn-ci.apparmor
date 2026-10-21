@@ -30,12 +30,13 @@ profile @REDJOHN_CI_PROFILE@-bwrap flags=(attach_disconnected,mediate_deleted) {
 }
 
 profile @REDJOHN_CI_PROFILE@ flags=(attach_disconnected,mediate_deleted) {
-  # setpriv's initial UID/GID drop. sys_admin/net_admin are not available to
-  # the main profile; only the bwrap child receives them.
+  # setpriv's initial UID/GID drop. sys_admin is needed by the reviewed
+  # unshare helper; net_admin remains confined to the bwrap child profile.
   capability setuid,
   capability setgid,
   capability setpcap,
   capability sys_chroot,
+  capability sys_admin,
 
   # Read/execute system trees. Writes are limited to the runner's workspace,
   # package caches, temporary files and the delegated cgroup.
@@ -83,6 +84,7 @@ profile @REDJOHN_CI_PROFILE@ flags=(attach_disconnected,mediate_deleted) {
 
   network,
   unix,
+  ptrace,
   signal,
   userns,
   mount,
