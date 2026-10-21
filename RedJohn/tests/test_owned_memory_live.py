@@ -217,7 +217,9 @@ async def test_actual_owner_and_setsid_children_share_one_kernel_memory_budget(
         measured = result["os_memory"]
         assert result["outcome"] == "resource_exhausted"
         assert result["process_cleanup_verified"] is True
+        assert result["owner_cgroup_removed"] is True
         assert measured["memory_max_bytes"] == 64 * MIB
+        assert measured["memory_oom_group"] == 1
         assert measured["oom_kills"] >= 1 and measured["swap_max_bytes"] == 0
         guard = measured["owner_namespace"]
         assert guard["verified"] and guard["capabilities_zero"]
@@ -267,8 +269,11 @@ async def test_actual_two_owners_share_immutable_aggregate_kernel_budget(
     for result in results:
         measured = result["os_memory"]
         assert result["process_cleanup_verified"] is True
+        assert result["owner_cgroup_removed"] is True
+        assert measured["memory_oom_group"] == 1
         assert measured["memory_max_bytes"] == 96 * MIB
         assert measured["aggregate"]["memory_max_bytes"] == 128 * MIB
+        assert measured["aggregate"]["memory_oom_group"] == 0
         assert measured["aggregate"]["swap_max_bytes"] == 0
         assert 0 < measured["aggregate"]["memory_peak_bytes"] <= 144 * MIB
     pool = private_delegation / "redjohn-aggregate-v1"
@@ -322,9 +327,64 @@ async def test_actual_supervisor_deadline_or_signal_cleans_setsid_descendant(
     result = json.loads(receipt.read_text())
     assert result["outcome"] == ("cancelled" if cancel else "timed_out")
     assert result["process_cleanup_verified"] is True
+    assert result["owner_cgroup_removed"] is True
     assert result["os_memory"]["oom_kills"] == 0
     assert all(process_identity(pid) is None for pid in json.loads(marker.read_text()))
     _save("cancel" if cancel else "deadline", result)
+
+
+async def test_actual_missing_delegation_blocks_before_owner_exec(private_delegation, tmp_path):
+    receipt, marker = tmp_path / "blocked.json", tmp_path / "must-not-start"
+    process = await _start(
+        private_delegation,
+        *_argv(
+            private_delegation / "not-delegated",
+            tmp_path / "state",
+            receipt,
+            f"from pathlib import Path;Path({str(marker)!r}).touch()",
+        ),
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    stdout, stderr = await asyncio.wait_for(process.communicate(), 10)
+    assert process.returncode == 2, (stdout, stderr)
+    result = json.loads(receipt.read_text())
+    assert result["outcome"] == "blocked"
+    assert result["reason"] == "os_memory_delegation_unavailable"
+    assert result["os_memory"]["enforced"] is False
+    assert result["owner_cgroup_removed"] is False
+    assert result["process_cleanup_verified"] is False
+    assert not marker.exists() and not (private_delegation / "not-delegated").exists()
+    _save("missing-delegation", result)
+
+
+async def test_actual_contained_startup_failure_preserves_kernel_and_cleanup_receipt(
+    private_delegation, tmp_path
+):
+    receipt = tmp_path / "startup-failure.json"
+    process = await _start(
+        private_delegation,
+        *_argv(
+            private_delegation,
+            tmp_path / "state",
+            receipt,
+            "raise RuntimeError('controlled_owner_startup_failure')",
+        ),
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    stdout, stderr = await asyncio.wait_for(process.communicate(), 10)
+    assert process.returncode == 1, (stdout, stderr)
+    assert b"controlled_owner_startup_failure" in stderr
+    result = json.loads(receipt.read_text())
+    assert result["outcome"] == "owner_exited" and result["owner_returncode"] == 1
+    assert result["process_cleanup_verified"] is True and result["owner_cgroup_removed"] is True
+    measured = result["os_memory"]
+    assert measured["enforced"] is True and measured["owner_namespace"]["verified"] is True
+    assert measured["memory_max_bytes"] == 96 * MIB and measured["memory_oom_group"] == 1
+    assert measured["oom_kills"] == 0 and measured["aggregate"]["oom_kills"] == 0
+    assert measured["aggregate"]["memory_max_bytes"] == 128 * MIB
+    _save("startup-failure", result)
 
 
 async def test_actual_browser_sdk_mcp_and_native_worker_inherit_the_owner_hard_fence(
@@ -367,6 +427,7 @@ async def test_actual_browser_sdk_mcp_and_native_worker_inherit_the_owner_hard_f
     value, outcome = json.loads(report.read_text()), json.loads(receipt.read_text())
     assert outcome["outcome"] == "owner_exited"
     assert outcome["process_cleanup_verified"] is True
+    assert outcome["owner_cgroup_removed"] is True
     assert outcome["os_memory"]["oom_kills"] == 0
     assert all(process_identity(pid) is None for pid in value["pids"])
     assert all(
@@ -403,6 +464,7 @@ async def test_actual_owner_preserves_inherited_terminal_io(private_delegation, 
         result = json.loads(receipt.read_text())
         assert result["os_memory"]["owner_namespace"]["verified"] is True
         assert result["process_cleanup_verified"] is True
+        assert result["owner_cgroup_removed"] is True
         _save("terminal", result)
     finally:
         os.close(master)

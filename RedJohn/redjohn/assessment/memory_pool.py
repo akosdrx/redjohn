@@ -157,6 +157,7 @@ class LinuxMemoryPool:
             "memory_current_bytes": int((self.group / "memory.current").read_text()),
             "memory_peak_bytes": int(peak.read_text()) if peak.is_file() else None,
             "swap_max_bytes": int((self.group / "memory.swap.max").read_text()),
+            "memory_oom_group": int((self.group / "memory.oom.group").read_text()),
             "pids_max": int((self.group / "pids.max").read_text()),
             "oom_events": int(events["oom"]),
             "oom_kills": int(events["oom_kill"]),

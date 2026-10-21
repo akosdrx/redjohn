@@ -75,6 +75,20 @@ def _final_outcome(result: dict[str, Any], code: int) -> int:
     return code
 
 
+def _save_final(
+    receipt: Path, result: dict[str, Any], started: float, owner_group: Path | None
+) -> None:
+    # rmdir is possible only after the owned subtree has no surviving
+    # processes. Keep this separate from the last pre-cleanup counters.
+    result["owner_cgroup_removed"] = owner_group is not None and not owner_group.exists()
+    result["duration_seconds"] = time.monotonic() - started
+    result["supervisor_peak_rss_bytes"] = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * (
+        1024 if os.uname().sysname == "Linux" else 1
+    )
+    result["supervisor_rss_method"] = "getrusage_maxrss_not_inside_owner_budget"
+    _save(receipt, result)
+
+
 def supervise(
     command: list[str],
     config: dict[str, Any],
@@ -100,11 +114,13 @@ def supervise(
     }
     _save(receipt, result)  # Resolve receipt permission failures before launching.
     process: subprocess.Popen[bytes] | None = None
+    owner_group: Path | None = None
     started = time.monotonic()
     previous = {s: signal.signal(s, _cancel) for s in (signal.SIGINT, signal.SIGTERM)}
     code = 2
     try:
         with boundary:
+            owner_group = boundary.group
             process = subprocess.Popen(  # noqa: S603 - operator argv, never a shell string
                 boundary.wrap_argv([executable, *command[1:]]),
             )
@@ -137,12 +153,7 @@ def supervise(
                 process.wait(timeout=3)
         result.setdefault("os_memory", boundary.snapshot() or {"enforced": False})
         code = _final_outcome(result, code)
-        result["duration_seconds"] = time.monotonic() - started
-        result["supervisor_peak_rss_bytes"] = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * (
-            1024 if os.uname().sysname == "Linux" else 1
-        )
-        result["supervisor_rss_method"] = "getrusage_maxrss_not_inside_owner_budget"
-        _save(receipt, result)
+        _save_final(receipt, result, started, owner_group)
     return code
 
 

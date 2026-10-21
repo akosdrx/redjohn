@@ -88,6 +88,13 @@ class LlmSettings(BaseSettings):
         ge=0,
         alias="LLM_MAX_TOOL_CALLS_PER_TURN",
     )
+    max_output_tokens: int | None = Field(
+        default=None,
+        ge=1,
+        le=65536,
+        alias="LLM_MAX_OUTPUT_TOKENS",
+        description="Optional provider-enforced output token cap for every agent model call",
+    )
 
     @field_validator("api_type", "reasoning_effort", mode="before")
     @classmethod

@@ -440,6 +440,7 @@ async def run_redjohn_scan(
             request_timeout=settings.llm.timeout,
             prompt_cache=settings.llm.prompt_cache,
             extra_headers=settings.llm.extra_headers,
+            max_output_tokens=settings.llm.max_output_tokens,
         )
         run_config = RunConfig(
             model=resolved_model,

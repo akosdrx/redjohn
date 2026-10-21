@@ -173,7 +173,7 @@ class NativeEvidenceContracts(unittest.TestCase):
         self.assertFalse(result["full_project_validated"])
         self.assertEqual(result["out_of_scope_not_executed"], [native.EXCLUDED_BROWSER])
         self.assertEqual(
-            sum(row["counts"]["passed"] for row in result["suites"].values()), 24
+            sum(row["counts"]["passed"] for row in result["suites"].values()), 26
         )
         self.assertEqual(result["python_regression"]["counts"]["passed"], 1)
         self.assertIn("mock_contract", result["python_regression"]["evidence_kinds"])

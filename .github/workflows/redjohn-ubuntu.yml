@@ -15,6 +15,16 @@ on:
         required: true
         default: '300'
         type: string
+      live_model_only:
+        description: 'Run only the separate real-model CLI/TUI capability job'
+        required: false
+        default: false
+        type: boolean
+      model:
+        description: 'Explicit OpenAI model for live_model_only; empty records blocked evidence'
+        required: false
+        default: ''
+        type: string
 
 permissions:
   contents: read
@@ -28,7 +38,14 @@ defaults:
     shell: bash
 
 jobs:
+  live-model:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.live_model_only }}
+    uses: ./.github/workflows/redjohn-live-model.yml
+    with:
+      model: ${{ inputs.model }}
+    secrets: inherit
   ubuntu:
+    if: ${{ github.event_name != 'workflow_dispatch' || !inputs.live_model_only }}
     name: Ubuntu 24.04 ${{ matrix.arch }} / Python ${{ matrix.python }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 120

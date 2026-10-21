@@ -109,7 +109,14 @@ if test "$task_suite" = soak; then
     env USER="$SUDO_USER" LOGNAME="$SUDO_USER" \
     PYTHONPATH="$task_workspace/RedJohn:$task_workspace/.github/scripts" \
     "$task_python" .github/scripts/ci.py run --name mixed-soak -- \
-    timeout --signal=TERM --kill-after=20s 70m "$task_python" RedJohn/benchmarks/mixed_soak.py \
+    timeout --signal=TERM --kill-after=20s 70m \
+    "$task_python" -m redjohn.assessment.memory_exec \
+    --delegated-root "$REDJOHN_TEST_CGROUP_ROOT" \
+    --memory-budget-mib 2048 --aggregate-budget-mib 4096 \
+    --pool-state-directory "$RUNNER_TEMP/redjohn-soak-memory-pool" \
+    --receipt "$task_workspace/artifacts/mixed-soak-owner/receipt.json" \
+    --timeout-seconds 4140 -- \
+    "$task_python" RedJohn/benchmarks/mixed_soak.py \
     --output "$task_workspace/artifacts/mixed-soak" \
     --nuclei-lock "$REDJOHN_NUCLEI_LOCK" \
     --httpx-receipt "$task_workspace/RedJohn/.tools/httpx/1.12.0/receipt.json" \

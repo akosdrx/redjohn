@@ -71,10 +71,12 @@ dev = [
   "pyright>=1.1.401",
   "bandit>=1.8.3",
   "pre-commit>=4.2.0",
-  "pyinstaller>=6.17.0; python_version >= '3.12' and python_version < '3.15'",
   "pytest>=8.3",
   "pytest-asyncio>=0.24",
   "types-requests>=2.32",
+]
+packaging = [
+  "pyinstaller>=6.17.0; python_version >= '3.12' and python_version < '3.15'",
 ]
 
 [tool.pytest.ini_options]

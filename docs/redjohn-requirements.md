@@ -1,5 +1,14 @@
 # Követelménykövetés — master prompt 2.0
 
+**Aktuális lezárási kör:** [környezet, globális workload-memóriakorlát,
+memória-attribúció és valódi modelles CLI/TUI](redjohn-resource-closure.md).
+A legfrissebb lezárt baseline a `3cc92d2` x64/ARM64 teljes/hosszú futás;
+az alábbi eredeti táblázat történeti számai és akkori hiányai nem az aktuális
+registry hiánylistája. A mai kódkatalógus 31 megírt capabilityt és 3 hiányzó
+opcionális adaptert tartalmaz. A reviewed auth/MFA/logout, GraphQL/CRUD,
+charset/XML/multipart, inventory és bounded legacy lifecycle bővítések már
+implementáltak és a későbbi hosted integrációs csomagban szerepelnek.
+
 
 **2026-10-20 runtime-pontosítás:** a `wordpress_observe` és `trivy_sbom` most
 explicit közös konfigurációval/registryvel/tartós schedulerrel választható.

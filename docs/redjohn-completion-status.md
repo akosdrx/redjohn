@@ -38,6 +38,18 @@ Mind a 15 invariant igaz; a teljes csomag platformonként 1558 regresszió +
 
 ## Aktuális fejlesztési és igazolási határ
 
+A következő végrehajtott változtatások és az új igazolás követése:
+[teljes terhelés memóriakorlátja és tiszta Python-környezet](redjohn-resource-closure.md).
+Az alábbi régi baseline-táblák nyitott soraiból **nem aktuális hiány** a reviewed
+login/MFA/logout, GraphQL/CRUD workflow, inventory lifecycle, bővített charset/XML/
+multipart replay, bounded legacy cache és helyi anonim target-MCP. Ezek már
+implementáltak; a `3cc92d2` teljes x64/ARM64 integrációs JUnitja például 5 auth,
+1 GraphQL, 2 wire-replay, 45 input-replay és 4 target-MCP esetet igazol
+platformonként. A generált registry feltételes kódstátusza nem írja felül a
+konkrét SHA-hoz kötött natív jegyzőkönyvet, és nem állít minden új hoston készséget.
+Az aktuális core lezárás: globális workload-kernelkorlát, memória-attribúció,
+valódi modelles CLI/TUI igazolás, valamint az alábbi történeti listák pontosítása.
+
 A korábbi, teljesen lezárt és mindkét architektúrán (`Ubuntu 24.04 x64 / Python 3.13.16`
 és `Ubuntu 24.04 arm64 / Python 3.12.3`) **sikeres (`conclusion: success`)** forrás a
 `fd7c0d41df9204e57d8136194336bee2e2378a93` commit:

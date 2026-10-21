@@ -251,6 +251,7 @@ def make_model_settings(
     prompt_cache: bool = True,
     extra_headers: dict[str, str] | None = None,
     has_tools: bool = True,
+    max_output_tokens: int | None = None,
 ) -> ModelSettings:
     headers = _request_headers(model_name, extra_headers)
     model_settings = ModelSettings(
@@ -259,6 +260,7 @@ def make_model_settings(
         include_usage=True,
         extra_args=request_timeout_extra_args(request_timeout),
         extra_headers=headers,
+        max_tokens=max_output_tokens,
     )
     if (
         reasoning_effort is not None

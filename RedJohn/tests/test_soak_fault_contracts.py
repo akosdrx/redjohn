@@ -69,3 +69,29 @@ async def test_failed_later_cycle_preserves_partial_receipt_and_original_error(
     assert receipt["final_observation_error"]["message"] == "final_observation_unavailable"
     assert os.environ["REDJOHN_RESOURCE_POOL_PATH"] == "/original/owned/pool"
     assert not tracemalloc.is_tracing()
+
+
+async def test_initial_memory_checkpoint_failure_restores_lifetime_and_saves_error(
+    tmp_path, monkeypatch
+):
+    monkeypatch.syspath_prepend(str(Path(__file__).parents[1] / "benchmarks"))
+    soak = importlib.import_module("mixed_soak")
+    monkeypatch.setenv("REDJOHN_RESOURCE_POOL_PATH", "/original/owned/pool")
+    original = soak.MemoryAttribution.checkpoint
+
+    def checkpoint(recorder, name):
+        if name == "before_synthetic_pressure":
+            raise ValueError("initial_profile_checkpoint_failed")
+        return original(recorder, name)
+
+    monkeypatch.setattr(soak.MemoryAttribution, "checkpoint", checkpoint)
+    monkeypatch.setattr(
+        soak, "sample", lambda: {"process_count": 1, "file_descriptors": 7, "tcp_listeners": 0}
+    )
+    with pytest.raises(ValueError, match="initial_profile_checkpoint_failed"):
+        await soak.run(tmp_path / "evidence", {}, {}, cycles=2, warmup=1, minimum=0)
+    receipt = json.loads((tmp_path / "evidence/mixed-soak.json").read_text())
+    assert receipt["error"]["message"] == "initial_profile_checkpoint_failed"
+    assert not receipt["ok"]
+    assert os.environ["REDJOHN_RESOURCE_POOL_PATH"] == "/original/owned/pool"
+    assert not tracemalloc.is_tracing()

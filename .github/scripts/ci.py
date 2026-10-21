@@ -6,9 +6,11 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import os
 import platform
 import signal
+import stat
 import subprocess
 import sys
 import threading
@@ -27,6 +29,204 @@ FRONTEND_TRANSPORT_CASES = frozenset({
     "report sending encodes requested run and surfaces non-JSON failures",
     "run loading encodes scope and does not hide a failed primary run fetch",
 })
+SOAK_OWNER_RECEIPT = "mixed-soak-owner/receipt.json"
+KERNEL_CONTROL_CASES = frozenset({
+    ("test_owned_memory_live.py", name) for name in (
+        "test_actual_manually_entered_writable_group_cannot_authorize_inline_profile",
+        "test_actual_owner_and_setsid_children_share_one_kernel_memory_budget",
+        "test_actual_two_owners_share_immutable_aggregate_kernel_budget",
+        "test_actual_supervisor_deadline_or_signal_cleans_setsid_descendant[False]",
+        "test_actual_supervisor_deadline_or_signal_cleans_setsid_descendant[True]",
+        "test_actual_missing_delegation_blocks_before_owner_exec",
+        "test_actual_contained_startup_failure_preserves_kernel_and_cleanup_receipt",
+        "test_actual_browser_sdk_mcp_and_native_worker_inherit_the_owner_hard_fence",
+        "test_actual_owner_preserves_inherited_terminal_io",
+    )
+}) | frozenset({("test_os_memory_live.py",
+                "test_actual_orphan_is_killed_before_crashed_owner_capacity_is_reclaimed")})
+SOAK_CHECKS = frozenset({
+    "synthetic_limits_enforced", "all_cycles_completed", "minimum_duration_observed",
+    "closed_cache_payload_released", "no_owned_process_reservations",
+    "process_count_returns_to_baseline", "listeners_return_to_baseline",
+    "descriptors_return_to_baseline", "native_session_empty", "pages_contexts_closed",
+    "no_browser_cleanup_errors", "actual_budget_matches_requests", "both_actors_observed",
+    "no_forbidden_mutations", "no_observation_errors", "source_identity_preserved",
+})
+
+
+def soak_owner_reference():
+    """Digest the private supervisor receipt, never substitute sampled RSS."""
+    path = OUT / SOAK_OWNER_RECEIPT
+    if path.is_symlink():
+        raise ValueError("mixed_soak_owner_receipt_not_regular")
+    descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    with os.fdopen(descriptor, "rb") as handle:
+        if not stat.S_ISREG(os.fstat(handle.fileno()).st_mode):
+            raise ValueError("mixed_soak_owner_receipt_not_regular")
+        raw = handle.read(65537)
+    if len(raw) > 65536:
+        raise ValueError("mixed_soak_owner_receipt_byte_limit")
+    value = json.loads(raw)
+    if not isinstance(value, dict):
+        raise ValueError("mixed_soak_owner_receipt_not_mapping")
+    return value, {"path": SOAK_OWNER_RECEIPT,
+                   "sha256": hashlib.sha256(raw).hexdigest(), "bytes": len(raw)}
+
+
+def validate_soak_owner(value):
+    """Validate actual owner/pool controls without changing cooperative ledgers."""
+    if (value.get("product") != "RedJohn"
+        or value.get("mode") != "owned_local_process_tree_hard_memory"
+        or value.get("outcome") != "owner_exited"
+        or type(value.get("owner_returncode")) is not int or value["owner_returncode"] != 0
+        or value.get("supervisor_outside_budget") is not True
+        or value.get("external_daemon_or_remote_workers_included") is not False
+        or value.get("process_cleanup_verified") is not True
+        or value.get("owner_cgroup_removed") is not True
+        or type(value.get("supervisor_peak_rss_bytes")) is not int
+        or value["supervisor_peak_rss_bytes"] < 1):
+        raise ValueError("mixed_soak_owner_execution_or_cleanup_unverified")
+    memory = value.get("os_memory")
+    if not isinstance(memory, dict):
+        raise ValueError("mixed_soak_owner_kernel_receipt_missing")
+    if (memory.get("method") != "linux_cgroup_v2_before_controller_exec"
+        or memory.get("scope") != "fresh_exec_local_owner_and_inherited_descendants"):
+        raise ValueError("mixed_soak_owner_preexec_fence_unverified")
+    aggregate = memory.get("aggregate")
+    if not isinstance(aggregate, dict):
+        raise ValueError("mixed_soak_aggregate_kernel_receipt_missing")
+    for scope, measured, maximum, pids, oom_group in (
+        ("owner", memory, 2048 * 1024**2, 512, 1),
+        ("aggregate", aggregate, 4096 * 1024**2, 4096, 0),
+    ):
+        expected = {"memory_max_bytes": maximum, "swap_max_bytes": 0,
+                    "pids_max": pids, "memory_oom_group": oom_group,
+                    "oom_events": 0, "oom_kills": 0}
+        if (measured.get("enforced") is not True
+            or any(type(measured.get(key)) is not int or measured[key] != number
+                   for key, number in expected.items())
+            or type(measured.get("memory_peak_bytes")) is not int
+            or measured["memory_peak_bytes"] < 1):
+            raise ValueError("mixed_soak_" + scope + "_kernel_limits_or_oom_invalid")
+    namespace = memory.get("owner_namespace")
+    if not isinstance(namespace, dict) or any(namespace.get(key) is not True for key in (
+        "verified", "capabilities_zero", "no_new_privileges", "direct_control_open_denied",
+        "supervisor_proc_root_open_denied",
+    )):
+        raise ValueError("mixed_soak_owner_namespace_unverified")
+    return {"owner": memory, "supervisor_peak_rss_bytes": value["supervisor_peak_rss_bytes"],
+            "supervisor_outside_budget": True, "owner_cgroup_removed": True,
+            "process_cleanup_verified": True}
+
+
+def validate_kernel_control_cases(path):
+    """A green partial suite cannot omit the actual kernel fault controls."""
+    found = set()
+    for case in ET.parse(path).getroot().iter("testcase"):
+        key = (Path(case.get("file", "")).name, case.get("name"))
+        if key not in KERNEL_CONTROL_CASES:
+            continue
+        props = {item.get("name"): item.get("value")
+                 for item in case.findall("properties/property")}
+        capabilities = set(props.get("required_runner_capabilities", "").split(","))
+        if (key in found or any(case.find(tag) is not None for tag in ("error", "failure", "skipped"))
+            or props.get("evidence_kind") != "real_integration"
+            or "cgroup_available" not in capabilities):
+            raise ValueError("invalid_actual_kernel_control_case:" + str(key[1]))
+        found.add(key)
+    if found != KERNEL_CONTROL_CASES:
+        raise ValueError("missing_actual_kernel_control_cases:" + ",".join(
+            name for _, name in sorted(KERNEL_CONTROL_CASES - found)))
+    return [name for _, name in sorted(found)]
+
+
+def _finite_nonnegative(value):
+    return type(value) in (int, float) and math.isfinite(value) and value >= 0
+
+
+def _validate_memory_observation(value):
+    if not isinstance(value, dict) or value.get("status") not in {"complete", "partial"}:
+        raise ValueError("mixed_soak_memory_observation_unavailable")
+    rows = value.get("processes")
+    if (not isinstance(rows, list) or not 1 <= len(rows) <= 512
+        or value.get("process_limit_exceeded") is not False):
+        raise ValueError("mixed_soak_process_observation_bounds_invalid")
+    controllers = [row for row in rows if isinstance(row, dict) and row.get("role") == "controller"]
+    if (len(controllers) != 1 or controllers[0].get("status") != "complete"
+        or any(type(controllers[0].get(key)) is not int or controllers[0][key] < 0
+               for key in ("rss_bytes", "pss_bytes", "private_bytes"))):
+        raise ValueError("mixed_soak_controller_memory_attribution_unavailable")
+    measured = value.get("kernel_memory")
+    expected = {"memory_max_bytes": 2048 * 1024**2, "swap_max_bytes": 0,
+                "pids_max": 512, "memory_oom_group": 1, "oom_events": 0, "oom_kills": 0}
+    if (not isinstance(measured, dict) or measured.get("enforced") is not True
+        or any(type(measured.get(key)) is not int or measured[key] != number
+               for key, number in expected.items())):
+        raise ValueError("mixed_soak_observed_controller_kernel_fence_invalid")
+
+
+def validate_soak_observations(value):
+    """Require the explicit loop window and bounded, usable diagnostic evidence."""
+    checks = value.get("checks", {})
+    if not isinstance(checks, dict) or any(checks.get(name) is not True for name in SOAK_CHECKS):
+        raise ValueError("mixed_soak_required_invariants_incomplete")
+    requested, minimum = value.get("requested_cycles"), value.get("minimum_elapsed_seconds")
+    if (type(requested) is not int or not 2 <= requested <= 1000
+        or not _finite_nonnegative(minimum)
+        or (os.environ.get("REDJOHN_SOAK_CYCLES") is not None
+            and requested != int(os.environ["REDJOHN_SOAK_CYCLES"]))
+        or (os.environ.get("REDJOHN_SOAK_MINIMUM_SECONDS") is not None
+            and minimum != float(os.environ["REDJOHN_SOAK_MINIMUM_SECONDS"]))):
+        raise ValueError("mixed_soak_requested_window_mismatch")
+    workload = value.get("workload", {})
+    timing, cycles = workload.get("timing", {}), workload.get("cycles")
+    if (not isinstance(cycles, list) or not requested <= len(cycles) <= 1000
+        or timing.get("loop_returned_normally") is not True
+        or type(timing.get("completed_cycles")) is not int
+        or timing["completed_cycles"] != len(cycles)
+        or any(not _finite_nonnegative(timing.get(key)) for key in (
+            "loop_started_monotonic", "loop_ended_monotonic", "loop_elapsed_seconds",
+            "loop_nonpacing_seconds", "pacing_seconds", "runtime_setup_elapsed_seconds"))
+        or timing["loop_elapsed_seconds"] < minimum
+        or not math.isclose(timing["loop_ended_monotonic"] - timing["loop_started_monotonic"],
+                            timing["loop_elapsed_seconds"], rel_tol=0, abs_tol=1e-6)
+        or not math.isclose(timing["loop_nonpacing_seconds"] + timing["pacing_seconds"],
+                            timing["loop_elapsed_seconds"], rel_tol=0, abs_tol=1e-6)):
+        raise ValueError("mixed_soak_explicit_workload_window_incomplete")
+    profile = value.get("memory_attribution")
+    if (not isinstance(profile, dict) or value.get("observation_errors") != {}
+        or profile.get("observation_errors") != {}
+        or "initial_observation_error" in value or "final_observation_error" in value
+        or profile.get("maximum_retained_samples") != 2048
+        or profile.get("maximum_processes_per_sample") != 512
+        or profile.get("retention_limit_reached") is not False):
+        raise ValueError("mixed_soak_memory_profile_missing_or_failed")
+    samples, checkpoints = profile.get("samples"), profile.get("checkpoints")
+    if (not isinstance(samples, list) or not 1 <= len(samples) <= 2048
+        or type(profile.get("sample_count")) is not int
+        or profile["sample_count"] < len(samples)
+        or not isinstance(checkpoints, list) or len(checkpoints) != 9):
+        raise ValueError("mixed_soak_memory_profile_retention_invalid")
+    names = {item.get("checkpoint") for item in checkpoints if isinstance(item, dict)}
+    if names != {"before_synthetic_pressure", "after_synthetic_pressure",
+                 "runtime_ready_before_loop", "after_warmup", "before_runtime_close",
+                 "after_runtime_close", "after_workload_return_before_gc",
+                 "after_diagnostic_gc", "after_tracemalloc_stop"}:
+        raise ValueError("mixed_soak_memory_checkpoints_incomplete")
+    phases, roles = profile.get("phase_peaks"), profile.get("role_peaks")
+    if (not isinstance(phases, dict) or not 1 <= len(phases) <= 12
+        or not isinstance(roles, dict) or not 1 <= len(roles) <= 8):
+        raise ValueError("mixed_soak_phase_or_role_peaks_incomplete")
+    for observed in (*samples, *checkpoints, *phases.values(), *roles.values()):
+        _validate_memory_observation(observed)
+    allocation = value.get("allocation_observations", {})
+    if (allocation.get("closed_cache_payload_bytes") != 0
+        or not _finite_nonnegative(allocation.get("retained_memory_observation_json_bytes"))):
+        raise ValueError("mixed_soak_allocation_attribution_incomplete")
+    return {"timing": timing, "actual_cycles": len(cycles), "sample_count": profile["sample_count"],
+            "retained_samples": len(samples), "checkpoints": sorted(names),
+            "observed_phases": sorted(phases), "observed_roles": sorted(roles),
+            "allocation_observations": allocation}
 
 
 def write(name, value):
@@ -135,6 +335,11 @@ def run(name, cwd, argv):
             "samples": samples, "leaked_descendant_pids_before_cleanup": leaked,
             "rss_method": "external /proc RSS sum; shared pages may be counted more than once; not a hard OS limit",
         }
+        if name == "mixed-soak":
+            try:
+                _, value["kernel_owner_receipt"] = soak_owner_reference()
+            except (OSError, ValueError) as exc:
+                value["kernel_owner_receipt_error"] = type(exc).__name__
         write(name + ".json", value)
         return code or (1 if leaked or reader.is_alive() else 0)
     finally:
@@ -204,6 +409,22 @@ def summarize():
             ("commit_sha", "ok", "elapsed_seconds", "requested_cycles", "checks", "error")}
         if value.get("commit_sha") != result["commit_sha"] or value.get("ok") is not True:
             result["blockers"].append("incomplete_mixed_soak")
+        try:
+            result["mixed_soak_observations"] = validate_soak_observations(value)
+        except (TypeError, ValueError, AttributeError) as exc:
+            result["blockers"].append("incomplete_mixed_soak_observations:" + str(exc))
+    try:
+        value, reference = soak_owner_reference()
+        command = result["commands"].get("mixed-soak", {})
+        if command.get("kernel_owner_receipt") != reference:
+            raise ValueError("mixed_soak_owner_receipt_not_bound_to_command_commit")
+        result["mixed_soak_kernel_memory"] = {**validate_soak_owner(value), **reference}
+    except (OSError, ValueError) as exc:
+        result["blockers"].append("invalid_mixed_soak_kernel_memory:" + str(exc))
+    try:
+        result["kernel_control_cases"] = validate_kernel_control_cases(OUT / "integration.junit.xml")
+    except (OSError, ValueError, ET.ParseError) as exc:
+        result["blockers"].append("incomplete_kernel_control_evidence:" + str(exc))
     cap = OUT / "capabilities.json"
     if not cap.is_file() or not json.loads(cap.read_text()).get("available"):
         result["blockers"].append("blocked_runner_capability")

@@ -305,4 +305,10 @@ class SmartCache:
         with self._lock:
             self._closed = True
             self._generation += 1
+            # A closed runtime can remain referenced by diagnostic/scheduler
+            # owners. Release serialized payloads now, without relying on GC.
+            # Keep active flights/slots owned until their existing done callback
+            # runs; generation and _closed still fence late publications.
+            self._items.clear()
+            self._bytes = 0
         self._executor.shutdown(wait=False, cancel_futures=True)

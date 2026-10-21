@@ -180,6 +180,40 @@ class CacheTest(unittest.TestCase):
             release.set()
             bounded.close()
 
+    def test_close_releases_retained_payloads_even_while_cache_is_referenced(self) -> None:
+        self.assertTrue(self.cache.set("retained", "payload", 10))
+        self.assertEqual(self.cache.stats()["bytes"], 9)
+        self.cache.close()
+        self.assertEqual(self.cache.stats()["bytes"], 0)
+        self.assertEqual(self.cache.stats()["items"], 0)
+        self.assertIsNone(self.cache.get("retained"))
+        self.assertFalse(self.cache.set("new", "payload", 10))
+        self.cache.close()  # Existing owners can close repeatedly.
+
+    def test_close_fences_inflight_publication_without_releasing_running_slot(self) -> None:
+        entered, release = threading.Event(), threading.Event()
+
+        def load() -> str:
+            entered.set()
+            self.assertTrue(release.wait(2))
+            return "late"
+
+        try:
+            with concurrent.futures.ThreadPoolExecutor() as pool:
+                future = pool.submit(self.cache.get_or_compute, "inflight", load, 10)
+                self.assertTrue(entered.wait(2))
+                self.assertTrue(self.cache.set("retained", "payload", 10))
+                self.cache.close()
+                self.assertEqual(self.cache.stats()["inflight"], 1)
+                self.assertEqual(self.cache.stats()["bytes"], 0)
+                release.set()
+                self.assertEqual(future.result(timeout=2), "late")
+            self.assertIsNone(self.cache.get("inflight"))
+            self.assertEqual(self.cache.stats()["bytes"], 0)
+            self.assertEqual(self.cache.stats()["inflight"], 0)
+        finally:
+            release.set()
+
 
 class ResourceTest(unittest.TestCase):
     def setUp(self) -> None:
