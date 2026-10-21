@@ -26,6 +26,24 @@ MALLINFO_FIELDS = (
     "uordblks", "fordblks", "keepcost",
 )
 COUNTERS = {"Size", "Rss", "Pss", "Private_Clean", "Private_Dirty"}
+BENCHMARK_ROOT = Path(__file__).resolve().parent
+RUNTIME_ROOT = BENCHMARK_ROOT.parent / "redjohn"
+
+
+def allocation_category(filename):
+    """Classify actual source roots independently of the checkout directory name."""
+    path = Path(filename)
+    if path.is_relative_to(BENCHMARK_ROOT):
+        return "benchmark"
+    if path.is_relative_to(RUNTIME_ROOT):
+        return "redjohn_runtime"
+    if "/playwright/" in filename:
+        return "playwright"
+    if filename.startswith("<frozen importlib"):
+        return "imports"
+    if filename.endswith("/linecache.py"):
+        return "source_cache"
+    return "other_python"
 
 
 class Mallinfo(ctypes.Structure):
@@ -131,14 +149,7 @@ class ControllerDiagnostics:
                 rows = ((item.traceback[0].filename, item.size)
                         for item in snapshot.statistics("filename"))
             for name, size in rows:
-                category = (
-                    "playwright" if "/playwright/" in name else
-                    "redjohn_runtime" if "/redjohn/" in name.lower() else
-                    "benchmark" if "/benchmarks/" in name else
-                    "imports" if name.startswith("<frozen importlib") else
-                    "source_cache" if name.endswith("/linecache.py") else
-                    "other_python"
-                )
+                category = allocation_category(name)
                 groups[category] += size
             value["traced_allocation_groups_bytes"] = dict(groups)
         objects = gc.get_objects()

@@ -6,45 +6,16 @@ import json
 import os
 import xml.etree.ElementTree as ET
 
-from ci import OUT, SOAK_CHECKS, identity, validate_soak_owner, write
+from ci import (
+    OUT, RELEASED_TYPES as RELEASED_TYPES, SOAK_CHECKS, identity,
+    validate_controller_details as validate_details,
+    validate_controller_pymalloc, validate_soak_owner, write,
+)
 
 
 CASES = (
     "idle", "playwright_import", "tls_fixture", "synthetic_pressure", "traced", "compact", "untraced",
 )
-RELEASED_TYPES = (
-    "redjohn.assessment.runtime.AssessmentRuntime",
-    "redjohn.assessment.browser.BrowserDiscoveryService",
-    "playwright._impl._connection.Connection",
-    "playwright._impl._browser.Browser",
-    "playwright._impl._browser_context.BrowserContext",
-    "playwright._impl._page.Page",
-)
-
-
-def validate_details(observations, *, mixed):
-    if not isinstance(observations, list) or not observations:
-        raise ValueError("missing_controller_checkpoint_details")
-    names = []
-    for observation in observations:
-        details = observation.get("controller_details" if mixed else "details", {})
-        names.append(observation.get("checkpoint"))
-        if (details.get("mappings", {}).get("status") != "observed"
-                or not details["mappings"].get("groups")
-                or details.get("glibc_allocator", {}).get("status") != "observed"
-                or details.get("new_modules_truncated") is not False
-                or type(details.get("python_allocated_blocks")) is not int):
-            raise ValueError("blocked_controller_counter_capability")
-        if mixed and observation.get("checkpoint") == "after_diagnostic_gc":
-            counts = details.get("live_component_types")
-            if not isinstance(counts, dict) or any(counts.get(name, 0) != 0 for name in RELEASED_TYPES):
-                raise ValueError("controller_components_retained_after_gc")
-    required = {"before_synthetic_pressure", "first_browser_job_completed",
-                "first_httpx_job_completed", "first_nuclei_job_completed",
-                "after_warmup", "after_diagnostic_gc", "after_allocator_trim"} if mixed else {
-                    "before", "after", "after_gc", "after_trim"}
-    if not required <= set(names) or len(set(names)) != len(names):
-        raise ValueError("incomplete_or_duplicate_controller_phases")
 
 
 def summarize():
@@ -85,11 +56,8 @@ def summarize():
                 value["memory_attribution"]["controller_diagnostics"] if mixed
                 else value["observations"], mixed=mixed,
             )
-            if mixed and any(
-                value.get("python_allocator_diagnostic", {}).get(key, {}).get("status") != "observed"
-                for key in ("before_asyncio_run", "after_asyncio_run")
-            ):
-                raise ValueError("blocked_cpython_allocator_diagnostic")
+            if mixed:
+                validate_controller_pymalloc(value.get("python_allocator_diagnostic"))
             result["cases"][case] = {
                 "success": True, "scanner_evidence": mixed,
                 "actual_cycles": len(value["workload"]["cycles"]) if mixed else 0,

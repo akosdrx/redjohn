@@ -52,6 +52,95 @@ SOAK_CHECKS = frozenset({
     "no_browser_cleanup_errors", "actual_budget_matches_requests", "both_actors_observed",
     "no_forbidden_mutations", "no_observation_errors", "source_identity_preserved",
 })
+RELEASED_TYPES = (
+    "redjohn.assessment.runtime.AssessmentRuntime",
+    "redjohn.assessment.browser.BrowserDiscoveryService",
+    "playwright._impl._connection.Connection",
+    "playwright._impl._browser.Browser",
+    "playwright._impl._browser_context.BrowserContext",
+    "playwright._impl._page.Page",
+)
+CONTROLLER_MIXED_PHASES = frozenset({
+    "before_synthetic_pressure", "after_synthetic_pressure", "runtime_ready_before_loop",
+    "first_browser_job_completed", "first_httpx_job_completed", "first_nuclei_job_completed",
+    "after_warmup", "before_runtime_close", "after_runtime_close",
+    "after_workload_return_before_gc", "after_diagnostic_gc", "after_tracemalloc_stop",
+    "after_allocator_trim",
+})
+PYMALLOC_COUNTERS = (
+    "arenas_current", "arenas_reclaimed", "arenas_highwater", "arena_size_bytes",
+    "allocated_block_bytes", "available_block_bytes", "unused_pool_bytes",
+)
+
+
+def _nonnegative_counters(value, fields):
+    return isinstance(value, dict) and all(
+        type(value.get(key)) is int and value[key] >= 0 for key in fields
+    )
+
+
+def validate_controller_details(observations, *, mixed):
+    """Shared gate for complete numeric controller observations, not RSS accounting."""
+    if not isinstance(observations, list) or not 1 <= len(observations) <= 16:
+        raise ValueError("missing_controller_checkpoint_details")
+    names = []
+    for observation in observations:
+        if not isinstance(observation, dict):
+            raise ValueError("malformed_controller_checkpoint_details")
+        name = observation.get("checkpoint")
+        details = observation.get("controller_details" if mixed else "details")
+        if not isinstance(name, str) or not isinstance(details, dict):
+            raise ValueError("malformed_controller_checkpoint_details")
+        names.append(name)
+        mappings, allocator = details.get("mappings"), details.get("glibc_allocator")
+        groups = mappings.get("groups") if isinstance(mappings, dict) else None
+        modules, counts = details.get("new_modules"), details.get("live_component_types")
+        if (not isinstance(mappings, dict) or mappings.get("status") != "observed"
+            or not _nonnegative_counters(mappings, ("mapping_count",))
+            or mappings["mapping_count"] < 1
+            or not isinstance(groups, dict) or not 1 <= len(groups) <= 16
+            or any(not _nonnegative_counters(row, (
+                "mappings", "Size_bytes", "Rss_bytes", "Pss_bytes",
+                "Private_Clean_bytes", "Private_Dirty_bytes"))
+                or row["mappings"] < 1 for row in groups.values())
+            or not isinstance(allocator, dict) or allocator.get("status") != "observed"
+            or not _nonnegative_counters(allocator, (
+                "arena", "ordblks", "smblks", "hblks", "hblkhd", "usmblks", "fsmblks",
+                "uordblks", "fordblks", "keepcost"))
+            or not _nonnegative_counters(details, (
+                "python_allocated_blocks", "module_count", "linecache_files",
+                "linecache_source_bytes", "gc_tracked_objects"))
+            or details.get("new_modules_truncated") is not False
+            or not isinstance(modules, list) or len(modules) > 2048
+            or any(not isinstance(module, str) for module in modules)
+            or len(set(modules)) != len(modules)
+            # The producer truncates to 512. Reaching that boundary cannot
+            # prove absence of a released type outside the retained prefix.
+            or not isinstance(counts, dict) or len(counts) >= 512
+            or any(not isinstance(key, str) or type(count) is not int or count < 0
+                   for key, count in counts.items())):
+            raise ValueError("blocked_controller_counter_capability")
+        if mixed and name == "after_diagnostic_gc" and any(
+            counts.get(component, 0) != 0 for component in RELEASED_TYPES
+        ):
+            raise ValueError("controller_components_retained_after_gc")
+    required = CONTROLLER_MIXED_PHASES if mixed else {"before", "after", "after_gc", "after_trim"}
+    if not required <= set(names) or len(set(names)) != len(names):
+        raise ValueError("incomplete_or_duplicate_controller_phases")
+    return {"checkpoints": names, "released_component_types_checked": list(RELEASED_TYPES) if mixed else []}
+
+
+def validate_controller_pymalloc(value):
+    """Require real CPython counters; reservations do not represent resident pages."""
+    if not isinstance(value, dict):
+        raise ValueError("blocked_cpython_allocator_diagnostic")
+    for phase in ("before_asyncio_run", "after_asyncio_run"):
+        counters = value.get(phase)
+        if (not isinstance(counters, dict) or counters.get("status") != "observed"
+            or not _nonnegative_counters(counters, PYMALLOC_COUNTERS)
+            or counters["arena_size_bytes"] < 1):
+            raise ValueError("blocked_cpython_allocator_diagnostic")
+    return value
 
 
 def soak_owner_reference():
@@ -210,7 +299,7 @@ def validate_allocator_diagnostic(value, checkpoints):
             "scope": "controller_allocator_only", "runtime_policy_changed": False}
 
 
-def validate_soak_observations(value):
+def validate_soak_observations(value, *, require_controller_details=False):
     """Require the explicit loop window and bounded, usable diagnostic evidence."""
     checks = value.get("checks", {})
     if not isinstance(checks, dict) or any(checks.get(name) is not True for name in SOAK_CHECKS):
@@ -270,10 +359,22 @@ def validate_soak_observations(value):
     if (allocation.get("closed_cache_payload_bytes") != 0
         or not _finite_nonnegative(allocation.get("retained_memory_observation_json_bytes"))):
         raise ValueError("mixed_soak_allocation_attribution_incomplete")
+    controller = None
+    requested_details = value.get("controller_details_requested", False)
+    if type(requested_details) is not bool:
+        raise ValueError("mixed_soak_controller_details_request_invalid")
+    if require_controller_details or requested_details:
+        if requested_details is not True:
+            raise ValueError("mixed_soak_requested_controller_details_missing")
+        controller = validate_controller_details(profile.get("controller_diagnostics"), mixed=True)
+        controller["python_allocator_diagnostic"] = validate_controller_pymalloc(
+            value.get("python_allocator_diagnostic")
+        )
     return {"timing": timing, "actual_cycles": len(cycles), "sample_count": profile["sample_count"],
             "retained_samples": len(samples), "checkpoints": sorted(names),
             "observed_phases": sorted(phases), "observed_roles": sorted(roles),
-            "allocation_observations": allocation, "allocation_diagnostic": diagnostic}
+            "allocation_observations": allocation, "allocation_diagnostic": diagnostic,
+            "controller_diagnostics": controller}
 
 
 def write(name, value):
@@ -457,7 +558,12 @@ def summarize():
         if value.get("commit_sha") != result["commit_sha"] or value.get("ok") is not True:
             result["blockers"].append("incomplete_mixed_soak")
         try:
-            result["mixed_soak_observations"] = validate_soak_observations(value)
+            command = result["commands"].get("mixed-soak", {}).get("command", [])
+            if not isinstance(command, list) or any(not isinstance(arg, str) for arg in command):
+                raise ValueError("mixed_soak_command_arguments_invalid")
+            result["mixed_soak_observations"] = validate_soak_observations(
+                value, require_controller_details="--controller-details" in command,
+            )
         except (TypeError, ValueError, AttributeError) as exc:
             result["blockers"].append("incomplete_mixed_soak_observations:" + str(exc))
     try:

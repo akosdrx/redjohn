@@ -43,10 +43,13 @@ live/free blocks, not resident-page counts to be added to RSS.
 
 The controller loaded 67 additional modules; 56 were reproduced by importing
 the Playwright API alone. Source cache retention was 2,614,139 / 2,601,100 bytes
-above baseline. Mapped cryptography private pages grew 2,629,632 / 2,170,880 bytes.
+above baseline. This counter sums `sys.getsizeof` for cached Python source-line
+strings, including string-object overhead; it excludes cache list/dict overhead
+and is not an encoded source-file byte count. Mapped cryptography private pages grew 2,629,632 / 2,170,880 bytes.
 The same extra modules/source-cache counts appeared in all three mixed cases.
-No live AssessmentRuntime, BrowserDiscoveryService, Playwright Connection,
-Browser, BrowserContext or Page remained after diagnostic GC. Global import/API
+No named GC-tracked AssessmentRuntime, BrowserDiscoveryService, Playwright
+Connection, Browser, BrowserContext or Page remained after diagnostic GC.
+This probe does not enumerate every opaque native allocation. Global import/API
 singletons remain intentionally available. None of these counters or separate
 controls is summed into an invented byte-exact causal decomposition.
 
@@ -59,12 +62,25 @@ releasing the complete snapshot immediately. Public-API streaming avoids the
 stdlib grouping's cache of complete stack keys. Tests compare every allocation
 site and positive/negative count delta with actual stdlib snapshot statistics.
 
-The profiler still costs memory and CPU. Whole two-cycle benchmark times were
+The profiler still costs memory and CPU. Reported two-cycle `elapsed_seconds` were
 35.475 / 35.549 seconds legacy, 67.993 / 56.696 compact, and 7.655 / 6.987
-untraced. This diagnostic runs only in the benchmark, not the RedJohn runtime.
+without allocation tracing. These times exclude final report serialization and
+post-event-loop allocator probing; the owner receipt and CI command duration
+record the complete external envelope. The runs without allocation tracing still
+contain mapping/object/process observers, so they are not uninstrumented
+production measurements. This diagnostic runs only in the benchmark, not the
+RedJohn runtime.
 Natural cleanup is recorded before GC, tracer stop and the explicitly labelled
 one-call trim. No allocator policy or protection is changed in normal runtime.
 Supplemental controller counters do not change historical observation fields.
+
+The original allocation-group classifier matched the checkout directory name
+`/redjohn/` before the benchmark directory. It therefore mislabeled benchmark
+and other checkout allocations as `redjohn_runtime`. Classification now uses
+explicit source roots, with a regression using the hosted checkout path. The
+historical grouped field is not evidence of product-code retention. The CI
+summary also enforces supplemental counters and released component types when
+the actual soak command requests controller diagnostics.
 
 The long acceptance gate must complete on its own new commit before this short
 experiment is called long E2E verification. It requires all project checks and

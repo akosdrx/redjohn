@@ -15,6 +15,30 @@ def helpers(monkeypatch):
     return importlib.import_module("memory_profile")
 
 
+def test_controller_allocation_categories_use_source_roots_not_checkout_name(monkeypatch):
+    helpers(monkeypatch)
+    module = importlib.import_module("controller_diagnostics")
+    checkout = Path("/home/runner/work/redjohn/redjohn")
+    monkeypatch.setattr(module, "BENCHMARK_ROOT", checkout / "RedJohn/benchmarks", raising=False)
+    monkeypatch.setattr(module, "RUNTIME_ROOT", checkout / "RedJohn/redjohn", raising=False)
+    cases = {
+        str(checkout / "RedJohn/benchmarks/mixed_soak.py"): "benchmark",
+        str(checkout / "RedJohn/redjohn/assessment/runtime.py"): "redjohn_runtime",
+        str(checkout / ".venv/lib/python3.13/site-packages/playwright/api.py"): "playwright",
+        str(checkout / "RedJohn/tests/test_soak_memory_profile.py"): "other_python",
+        "/other/redjohn/assessment/runtime.py": "other_python",
+        "<frozen importlib._bootstrap>": "imports",
+        "/opt/python3.13/linecache.py": "source_cache",
+    }
+    sites = {(filename, 1): [1, 1] for filename in cases}
+    monkeypatch.setattr(module, "allocation_sites", lambda: sites)
+    monkeypatch.setattr(module.tracemalloc, "is_tracing", lambda: True)
+    monkeypatch.setattr(module.gc, "get_objects", list)
+    value = module.ControllerDiagnostics().capture()
+    expected = {category: list(cases.values()).count(category) for category in cases.values()}
+    assert value["traced_allocation_groups_bytes"] == expected
+
+
 def test_controller_mapping_counters_do_not_publish_paths_or_addresses(tmp_path, monkeypatch):
     helpers(monkeypatch)
     module = importlib.import_module("controller_diagnostics")

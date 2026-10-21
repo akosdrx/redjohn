@@ -25,16 +25,20 @@ with patch.dict(sys.modules, {"ci": ci}):
 class ControllerLauncherContracts(unittest.TestCase):
     def observations(self):
         return [{"checkpoint": name, "controller_details": {
-            "mappings": {"status": "observed", "groups": {"synthetic": {}}},
-            "glibc_allocator": {"status": "observed"}, "new_modules_truncated": False,
-            "python_allocated_blocks": 1, "live_component_types": {},
-        }} for name in (
-            "before_synthetic_pressure", "first_browser_job_completed",
-            "first_httpx_job_completed", "first_nuclei_job_completed", "after_warmup",
-            "after_diagnostic_gc", "after_allocator_trim",
-        )]
+            "mappings": {"status": "observed", "mapping_count": 1, "groups": {
+                "synthetic": {"mappings": 1, "Size_bytes": 1, "Rss_bytes": 1,
+                              "Pss_bytes": 1, "Private_Clean_bytes": 0, "Private_Dirty_bytes": 1}}},
+            "glibc_allocator": {"status": "observed", **dict.fromkeys((
+                "arena", "ordblks", "smblks", "hblks", "hblkhd", "usmblks", "fsmblks",
+                "uordblks", "fordblks", "keepcost"), 0)}, "new_modules_truncated": False,
+            "python_allocated_blocks": 1, "live_component_types": {}, "module_count": 1,
+            "new_modules": [], "linecache_files": 0, "linecache_source_bytes": 0,
+            "gc_tracked_objects": 0,
+        }} for name in sorted(ci.CONTROLLER_MIXED_PHASES)]
 
     def test_complete_synthetic_controller_counter_contract_is_accepted(self):
+        self.assertIs(controller.validate_details, ci.validate_controller_details)
+        self.assertIs(controller.RELEASED_TYPES, ci.RELEASED_TYPES)
         controller.validate_details(self.observations(), mixed=True)
 
     def test_missing_counters_truncated_modules_and_retained_components_are_rejected(self):
@@ -46,9 +50,34 @@ class ControllerLauncherContracts(unittest.TestCase):
             ("live_component_types", {controller.RELEASED_TYPES[0]: 1}),
         ):
             value = copy.deepcopy(self.observations())
-            value[-2]["controller_details"][field] = replacement
+            after_gc = next(item for item in value if item["checkpoint"] == "after_diagnostic_gc")
+            after_gc["controller_details"][field] = replacement
             with self.subTest(field=field), self.assertRaises(ValueError):
                 controller.validate_details(value, mixed=True)
+
+    def test_observed_status_without_numeric_allocator_or_mapping_counters_is_rejected(self):
+        for field, replacement in (
+            ("mappings", {"status": "observed", "groups": {"synthetic": {}}}),
+            ("glibc_allocator", {"status": "observed"}),
+            ("python_allocated_blocks", True),
+            ("new_modules", ["repeated", "repeated"]),
+            ("live_component_types", {"synthetic.Type": -1}),
+        ):
+            value = self.observations()
+            value[0]["controller_details"][field] = replacement
+            with self.subTest(field=field), self.assertRaises(ValueError):
+                controller.validate_details(value, mixed=True)
+
+    def test_pymalloc_gate_requires_both_actual_numeric_counter_sets(self):
+        valid = {phase: {"status": "observed", **dict.fromkeys(ci.PYMALLOC_COUNTERS, 1)}
+                 for phase in ("before_asyncio_run", "after_asyncio_run")}
+        ci.validate_controller_pymalloc(valid)
+        for replacement in (None, {"status": "blocked"}, {"status": "observed"},
+                            {**valid["after_asyncio_run"], "arena_size_bytes": 0}):
+            value = copy.deepcopy(valid)
+            value["after_asyncio_run"] = replacement
+            with self.subTest(replacement=replacement), self.assertRaises(ValueError):
+                controller.validate_controller_pymalloc(value)
         for value in (self.observations()[:-1], self.observations() * 2, []):
             with self.assertRaises(ValueError):
                 controller.validate_details(value, mixed=True)

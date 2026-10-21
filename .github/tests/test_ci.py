@@ -104,6 +104,30 @@ def synthetic_soak_receipt():
     return result
 
 
+def synthetic_controller_soak_receipt():
+    """Controller counter schema only, never evidence of allocator behavior."""
+    result = synthetic_soak_receipt()
+    result["controller_details_requested"] = True
+    result["memory_attribution"]["controller_diagnostics"] = [
+        {"checkpoint": name, "controller_details": {
+            "mappings": {"status": "observed", "mapping_count": 1, "groups": {
+                "synthetic": {"mappings": 1, "Size_bytes": 1, "Rss_bytes": 1,
+                              "Pss_bytes": 1, "Private_Clean_bytes": 0, "Private_Dirty_bytes": 1}}},
+            "glibc_allocator": {"status": "observed", **dict.fromkeys((
+                "arena", "ordblks", "smblks", "hblks", "hblkhd", "usmblks", "fsmblks",
+                "uordblks", "fordblks", "keepcost"), 0)},
+            "python_allocated_blocks": 1, "module_count": 1, "new_modules": [],
+            "new_modules_truncated": False, "linecache_files": 0,
+            "linecache_source_bytes": 0, "gc_tracked_objects": 0, "live_component_types": {},
+        }} for name in sorted(ci.CONTROLLER_MIXED_PHASES)
+    ]
+    result["python_allocator_diagnostic"] = {
+        phase: {"status": "observed", **dict.fromkeys(ci.PYMALLOC_COUNTERS, 1)}
+        for phase in ("before_asyncio_run", "after_asyncio_run")
+    }
+    return result
+
+
 class EvidenceContract(unittest.TestCase):
     def setUp(self):
         # Keep synthetic rejection cases out of the real runner's step summary.
@@ -360,6 +384,81 @@ class EvidenceContract(unittest.TestCase):
                 self.assertEqual(summary["returncode"], returned)
                 self.assertEqual(summary["controller_after_minus_before"],
                                  {"rss_bytes": 0, "pss_bytes": 0, "private_bytes": 0})
+
+    def test_controller_gate_preserves_unrequested_historical_receipts(self):
+        value = synthetic_soak_receipt()
+        self.assertIsNone(ci.validate_soak_observations(value)["controller_diagnostics"])
+        with self.assertRaisesRegex(ValueError, "requested_controller_details_missing"):
+            ci.validate_soak_observations(value, require_controller_details=True)
+        value = synthetic_controller_soak_receipt()
+        checked = ci.validate_soak_observations(value, require_controller_details=True)
+        self.assertEqual(set(checked["controller_diagnostics"]["checkpoints"]),
+                         ci.CONTROLLER_MIXED_PHASES)
+
+    def test_requested_controller_gate_rejects_missing_truncated_or_retained_evidence(self):
+        for fault in ("missing-details", "missing-phase", "duplicate-phase", "truncated-modules",
+                      "missing-live-types", "truncated-live-types", "retained-component",
+                      "missing-allocator", "blocked-allocator", "missing-counter", "boolean-counter"):
+            with self.subTest(fault=fault):
+                value = synthetic_controller_soak_receipt()
+                details = value["memory_attribution"]["controller_diagnostics"]
+                after_gc = next(item["controller_details"] for item in details
+                                if item["checkpoint"] == "after_diagnostic_gc")
+                if fault == "missing-details":
+                    del value["memory_attribution"]["controller_diagnostics"]
+                elif fault == "missing-phase":
+                    details.pop()
+                elif fault == "duplicate-phase":
+                    details.append(details[0])
+                elif fault == "truncated-modules":
+                    after_gc["new_modules_truncated"] = True
+                elif fault == "missing-live-types":
+                    del after_gc["live_component_types"]
+                elif fault == "truncated-live-types":
+                    after_gc["live_component_types"] = {str(number): 1 for number in range(512)}
+                elif fault == "retained-component":
+                    after_gc["live_component_types"][ci.RELEASED_TYPES[0]] = 1
+                elif fault == "missing-allocator":
+                    del value["python_allocator_diagnostic"]
+                elif fault == "blocked-allocator":
+                    value["python_allocator_diagnostic"]["after_asyncio_run"]["status"] = "blocked"
+                elif fault == "missing-counter":
+                    del value["python_allocator_diagnostic"]["after_asyncio_run"]["arenas_current"]
+                else:
+                    value["python_allocator_diagnostic"]["after_asyncio_run"]["arenas_current"] = True
+                with self.assertRaises(ValueError):
+                    ci.validate_soak_observations(value, require_controller_details=True)
+
+    def test_actual_command_details_flag_cannot_be_omitted_from_full_summary_evidence(self):
+        for requested in (False, True):
+            with self.subTest(command_requests_details=requested), tempfile.TemporaryDirectory() as folder, \
+                    patch.object(ci, "OUT", Path(folder)), \
+                    patch.object(ci, "identity", return_value={"commit_sha": "abc", "machine": "contract"}):
+                root = Path(folder)
+                for name in ci.REQUIRED:
+                    (root / (name + ".json")).write_text(json.dumps({"commit_sha": "abc", "exit_code": 0,
+                        "leaked_descendant_pids_before_cleanup": [], "command": (
+                            ["python", "mixed_soak.py", "--controller-details"]
+                            if name == "mixed-soak" and requested else ["synthetic"])}))
+                (root / "capabilities.json").write_text('{"available":true}')
+                (root / "cgroup-cleanup.json").write_text('{"removed":true,"leaked_processes":false}')
+                (root / "apparmor-cleanup.json").write_text('{"success":true}')
+                (root / "go-tests.log").write_text('{"Package":"fixture","Test":"TestContract","Action":"pass"}\n')
+                for name in ("regression", "integration", "frontend"):
+                    (root / (name + ".junit.xml")).write_text('<testsuite><testcase name="fixture"/></testsuite>')
+                put_synthetic_kernel_cases(root / "integration.junit.xml")
+                (root / "mixed-soak").mkdir()
+                (root / "mixed-soak/mixed-soak.json").write_text(json.dumps(synthetic_soak_receipt()))
+                bind_synthetic_owner(root)
+                self.assertEqual(ci.summarize(), int(requested))
+                blockers = json.loads((root / "summary.json").read_text())["blockers"]
+                if requested:
+                    self.assertIn("incomplete_mixed_soak_observations:"
+                                  "mixed_soak_requested_controller_details_missing", blockers)
+                    (root / "mixed-soak/mixed-soak.json").write_text(
+                        json.dumps(synthetic_controller_soak_receipt())
+                    )
+                    self.assertEqual(ci.summarize(), 0)
 
     def test_missing_browser_does_not_hide_supported_native_or_kernel_cases(self):
         spec = importlib.util.spec_from_file_location("evidence", Path(__file__).parents[1] / "scripts/pytest_evidence.py")
