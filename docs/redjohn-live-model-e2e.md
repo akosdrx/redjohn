@@ -25,6 +25,17 @@ completed commit-bound run contains both interface proofs, its model, scanner,
 display, stop/resume and cleanup assertions remain **unverified**. Missing
 credentials do not prove that those assertions work or fail.
 
+Actual hosted preflight evidence on source
+`fc1f70dceffa23db653e3bd24d40e27aa7947b21` is
+[run 39526571218](https://github.com/akosdrx/redjohn/actions/runs/39526571218),
+completed with `conclusion: failure` and explicit capability `status: blocked`
+on both x64 and ARM64. Each artifact contains one preflight JUnit case with
+one error, zero failures and zero skips, and **zero actual model/interface
+executions**. Both model and dedicated secret were absent. Installation,
+scanner, cgroup and real-model steps did not run. Both ZIP digests and all
+813 recorded source hashes were independently verified. This expected missing
+capability outcome is not a successful real CLI/TUI model assessment.
+
 ## What a successful run must prove
 
 * A private loopback HTTPS fixture and approved metadata-only seed surfaces;

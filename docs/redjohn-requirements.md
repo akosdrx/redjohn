@@ -2,12 +2,26 @@
 
 **Aktuális lezárási kör:** [környezet, globális workload-memóriakorlát,
 memória-attribúció és valódi modelles CLI/TUI](redjohn-resource-closure.md).
-A legfrissebb lezárt baseline a `3cc92d2` x64/ARM64 teljes/hosszú futás;
+A legfrissebb lezárt forrás a `fc1f70dceffa23db653e3bd24d40e27aa7947b21`:
+[teljes x64/ARM64 futás](https://github.com/akosdrx/redjohn/actions/runs/39526474772),
+platformonként 1585 regresszió (ebből 208 mock), 456 valódi integráció,
+14 frontend és 21 Go; nulla fail/error/skip. A valódi közös 2 GiB/4 GiB
+kernelhatárral mindkét architektúrán 120 ciklus és külön mért >1200 s ciklusablak
+sikeres, cleanup és 813 forrás-/377 bizonyítékhash igazolva. A `3cc92d2` saját
+SHA-jához kötött történeti baseline megmarad;
 az alábbi eredeti táblázat történeti számai és akkori hiányai nem az aktuális
 registry hiánylistája. A mai kódkatalógus 31 megírt capabilityt és 3 hiányzó
 opcionális adaptert tartalmaz. A reviewed auth/MFA/logout, GraphQL/CRUD,
 charset/XML/multipart, inventory és bounded legacy lifecycle bővítések már
 implementáltak és a későbbi hosted integrációs csomagban szerepelnek.
+
+A teljes, modellt használó CLI/TUI E2E külön workflow-ja elkészült, de a
+[valódi hozzáférési próbája](https://github.com/akosdrx/redjohn/actions/runs/39526571218)
+mindkét platformon blokkolt (modell és dedikált secret hiányzik), nem sikeres
+modellteszt. A memóriadiagnosztika valódi visszaadható allocator-oldalakat
+igazolt, de 44,724,224 / 50,884,608 B controller-private maradvány teljes
+attribúciója nyitott; ez nem bizonyított memóriaszivárgás. A teljes mérési és
+függőség-eltávolítási jegyzőkönyv a fenti aktuális lezárási dokumentumban található.
 
 
 **2026-10-20 runtime-pontosítás:** a `wordpress_observe` és `trivy_sbom` most

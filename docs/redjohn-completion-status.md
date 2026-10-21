@@ -38,6 +38,28 @@ Mind a 15 invariant igaz; a teljes csomag platformonként 1558 regresszió +
 
 ## Aktuális fejlesztési és igazolási határ
 
+**2026-10-21: új, közös kernelhatárral lezárt teljes kör.** A
+[`39526474772` Actions-futás](https://github.com/akosdrx/redjohn/actions/runs/39526474772)
+`fc1f70dceffa23db653e3bd24d40e27aa7947b21` forrásán mindkét hosted Ubuntu 24.04
+architektúrán **1585 Python-regresszió + 456 valódi integráció + 14 frontend +
+21 Go** sikeres, nulla fail/error/skip. A regresszióból 208 explicit mock;
+a frontendből 6 fetch-dublőr. A 3 Darwin-eset Linuxon nem alkalmazható.
+Platformonként **120 ciklus / 360 scheduler-job / 720 kérés**, kifejezetten mért
+ciklusablak x64 **1200.156791 s**, ARM64 **1200.326945 s**; valódi pre-exec
+**2 GiB owner / 4 GiB aggregált cgroup**, nulla swap és igazolt cleanup.
+Minden korábbi aktív teszteset megmaradt. A kernelkorlát és ez a hosszú Ubuntu-kör
+lezárt; az alábbi történeti táblák ezeket nem nyithatják újra hiányként.
+
+A memóriafeltárás eredménye részleges, számszerű: a lezárt cache 6,291,462 bájtos
+payloadja nullára csökken; a külön glibc-diagnosztika x64-en 48,861,184,
+ARM64-en 30,728,192 resident bájtot adott vissza. A fennmaradó controller-private
+emelkedés **44,724,224 / 50,884,608 B**, teljes oka továbbra sincs igazolva;
+általános szivárgásmentességet nem állítunk.
+A [külön modelles futás](https://github.com/akosdrx/redjohn/actions/runs/39526571218)
+mindkét platformon hozzáféréshiány miatt **blokkolt**: nincs kijelölt modell és
+dedikált CI-secret; platformonként egy JUnit error, nulla valódi modellhívás.
+[Teljes fájllista, parancsok, rollback, nyers mérések és artifact-hashek](redjohn-resource-closure.md).
+
 A következő végrehajtott változtatások és az új igazolás követése:
 [teljes terhelés memóriakorlátja és tiszta Python-környezet](redjohn-resource-closure.md).
 Az alábbi régi baseline-táblák nyitott soraiból **nem aktuális hiány** a reviewed
@@ -47,8 +69,9 @@ implementáltak; a `3cc92d2` teljes x64/ARM64 integrációs JUnitja például 5 
 1 GraphQL, 2 wire-replay, 45 input-replay és 4 target-MCP esetet igazol
 platformonként. A generált registry feltételes kódstátusza nem írja felül a
 konkrét SHA-hoz kötött natív jegyzőkönyvet, és nem állít minden új hoston készséget.
-Az aktuális core lezárás: globális workload-kernelkorlát, memória-attribúció,
-valódi modelles CLI/TUI igazolás, valamint az alábbi történeti listák pontosítása.
+Az aktuális nyitott core igazolás a valódi modelles CLI/TUI-hozzáférés és a
+fennmaradó controller-memória teljes attribúciója. A globális workload-kernelkorlát,
+a hosszú hosted kör és a dokumentációs hiánylisták pontosítása elkészült.
 
 A korábbi, teljesen lezárt és mindkét architektúrán (`Ubuntu 24.04 x64 / Python 3.13.16`
 és `Ubuntu 24.04 arm64 / Python 3.12.3`) **sikeres (`conclusion: success`)** forrás a
@@ -122,7 +145,7 @@ A teljes megvalósított és célzottan igazolt műszaki terjedelem:
   a felhasználói döntés szerint halasztott, Prowler teljes immutable függőségpillanatkép hiányában blokkolt.
 
 Az alábbi táblák történeti baseline-ok. A legfrissebb teljes és hosszú igazolás a fenti
-`3cc92d20ee37fe54663dc7c25a73aeb802f98ef1` forrás; a régebbi hosszú soak
+`fc1f70dceffa23db653e3bd24d40e27aa7947b21` forrás; a régebbi hosszú soak
 adatai a saját SHA-jukhoz tartoznak. A külön mérési dokumentumok rögzítik a hatókört.
 
 ## Korábbi közös-runtime baseline

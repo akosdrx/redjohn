@@ -163,9 +163,9 @@ SmartCache kept its stored values. The original real pressure payload retained
 forcing GC. Serialized payload bytes are not an equal RSS reduction.
 Clearing closed cache storage must
 preserve existing in-flight ownership and late-publication fences. This explains
-a measured subset, not the complete historic RSS increase. The new long run
-must establish the remaining attribution boundary without a universal leak-free
-claim.
+a measured subset, not the complete historic RSS increase. The completed long
+run below records the remaining attribution boundary without a universal
+leak-free claim.
 
 ## Live model and wider capability boundaries
 
@@ -257,7 +257,144 @@ docs/redjohn-requirements.md
 docs/redjohn-resource-closure.md
 ```
 
-## New hosted results
+## Completed hosted verification — source fc1f70dc
+
+The [complete Ubuntu run 39526474772](https://github.com/akosdrx/redjohn/actions/runs/39526474772)
+finished with `conclusion: success` for both required jobs on exact source
+`fc1f70dceffa23db653e3bd24d40e27aa7947b21`.
+[The tested workflow](https://github.com/akosdrx/redjohn/blob/fc1f70dceffa23db653e3bd24d40e27aa7947b21/.github/workflows/redjohn-ubuntu.yml)
+ran on GitHub-hosted Ubuntu 24.04, x64/Python 3.13.16 and ARM64/Python 3.12.3.
+Images: x64 `20261012.334.1`, ARM64 `20261018.154.1`;
+kernels: x64 `Linux-6.17.0-1022-azure-x86_64-with-glibc2.39`, ARM64 `Linux-7.0.0-1017-azure-aarch64-with-glibc2.39`.
+
+| Platform | Python regression | Real integration | Frontend | Go race-tested | Failed / errors / skipped |
+|---|---:|---:|---:|---:|---|
+| x64 | 1585 | 456 | 14 | 21 | 0 / 0 / 0 |
+| ARM64 | 1585 | 456 | 14 | 21 | 0 / 0 / 0 |
+
+Each Python regression total includes **208 explicitly labelled mock contracts**
+and 1,377 unit/contract/mixed cases. Frontend includes eight unit/contracts and
+six fetch doubles; frontend/Go JUnit does not itself classify evidence, so the
+CI classification is recorded separately. All 456 integration cases have the
+actual `real_integration` JUnit property. Three active Darwin-only cases are
+listed as platform-not-applicable, not successful Linux tests or hidden skips.
+All 1,558/454/14/21 historical baseline testcase identities remain present;
+27 regression and two integration cases were added. The intermediate 1,576-case
+regression selection also remains entirely present, with nine additions.
+
+The separate [native run 39526474747](https://github.com/akosdrx/redjohn/actions/runs/39526474747)
+passed 1,585 regressions and 26 actual native cases per architecture. The separate
+[artifact run 39526474754](https://github.com/akosdrx/redjohn/actions/runs/39526474754)
+passed 11 actual WPScan/SBOM cases plus three strict orphan-recovery repetitions
+per architecture. These overlap cases from the full suite; do not add them as
+unique new coverage. No active test file or case was removed.
+
+Both complete soaks met all **16 invariants**, zero normal owner/pool OOM events,
+zero residual reservations, baseline process/FD/listener counts, closed browser
+pages/contexts/proxy connections, and verified owner/process/cgroup/AppArmor
+cleanup. Each used owner **2,147,483,648 B**, aggregate **4,294,967,296 B**, swap
+zero, owner `memory.oom.group=1` and pids 512. The aggregate OOM group is zero
+and pids limit 4096. No host namespace protection was disabled. The ten required
+actual kernel fault/inheritance controls and all eleven artifact-owner receipts
+were independently checked in the full artifacts.
+
+| Measurement | x64 | ARM64 |
+|---|---:|---:|
+| Completed cycles | 120 | 120 |
+| Scheduled jobs | 360 | 360 |
+| Actual requests / durable budget usage | 720 | 720 |
+| Explicit workload loop (s) | 1200.156791 | 1200.326945 |
+| Pacing within loop (s) | 892.324768 | 788.795085 |
+| Loop excluding pacing (s) | 307.832023 | 411.531860 |
+| Runtime setup outside loop (s) | 0.389367 | 0.566574 |
+| Complete benchmark including setup/cleanup/diagnostics (s) | 1209.547936 | 1214.219902 |
+| Actual owner kernel peak (B) | 402,726,912 | 339,881,984 |
+| Actual aggregate kernel peak (B) | 402,739,200 | 339,894,272 |
+| Outside evidence supervisor peak RSS (B) | 20,914,176 | 19,410,944 |
+| Retained / total captured profile samples | 561 / 2240 | 482 / 1921 |
+| Natural process-tree RSS before (B) | 112,537,600 | 111,570,944 |
+| Natural process-tree RSS after cleanup, before GC (B) | 212,385,792 | 196,771,840 |
+| Natural process-tree RSS increase (B) | 99,848,192 | 85,200,896 |
+| Cache serialized payload before close (B) | 6,291,462 | 6,291,462 |
+| Cache serialized payload after close (B) | 0 | 0 |
+| Controller RSS immediately before allocator trim (B) | 209,244,160 | 194,699,264 |
+| Controller PSS immediately before allocator trim (B) | 197,582,848 | 185,591,808 |
+| Controller private immediately before allocator trim (B) | 194,658,304 | 182,886,400 |
+| Controller RSS immediately after allocator trim (B) | 160,382,976 | 163,971,072 |
+| Controller PSS immediately after allocator trim (B) | 148,721,664 | 154,863,616 |
+| Controller private immediately after allocator trim (B) | 145,797,120 | 152,158,208 |
+| RSS/PSS/private decrease during actual trim (B) | 48,861,184 | 30,728,192 |
+| Controller RSS after trim minus initial profile (B) | 47,792,128 | 52,195,328 |
+
+Each loop had 60 positive and 60 fixed cycles, running actual headless Chromium
+→ inventory → httpx → Nuclei jobs serially against owned loopback TLS fixtures.
+The loop timestamps exclude runtime setup; pacing is explicitly inside the
+1,200-second window. Synthetic queue/cache/log/body pressure exercises actual
+bounded implementations; it is not additional scanner detection evidence.
+
+The real glibc **2.39** diagnostic returned 1 on both architectures (one call
+only; x64 0.003069321 s, ARM64 0.007458833 s). Its explicit pre/post observations
+prove **48,861,184 B / 30,728,192 B** of reclaimable controller allocator residency
+in these runs. This does not fully attribute the historical 85–86 MB observation.
+After trim, controller RSS remains **47,792,128 B / 52,195,328 B** above its initial
+profile; that residual is not fully attributed. Cache payload release, live
+Python bytes, tracer metadata, observer JSON and allocator/RSS changes are
+separate quantities, not an additive causal decomposition. No universal
+leak-free claim or automatic production `malloc_trim` policy is made.
+
+All named roles (controller, Chromium, Node, httpx and Nuclei) were actually
+observed with the new executable-identity classifier. Role peaks below are
+sampled at different times and cannot be summed into a concurrent peak.
+
+| Role | x64 peak RSS / PSS / private (B) | ARM64 peak RSS / PSS / private (B) |
+|---|---|---|
+| controller | 210,829,312 / 199,168,000 / 196,243,456 | 195,772,416 / 186,664,960 / 183,959,552 |
+| node | 126,210,048 / 122,424,320 / 121,970,688 | 138,006,528 / 135,433,216 / 134,750,208 |
+| chromium | 474,460,160 / 189,258,752 / 91,017,216 | 502,267,904 / 198,086,656 / 104,009,728 |
+| httpx | 211,013,632 / 211,005,440 / 211,005,440 | 190,676,992 / 190,668,800 / 190,668,800 |
+| nuclei | 171,859,968 / 171,851,776 / 171,851,776 | 105,480,192 / unavailable / unavailable |
+
+Chromium peaks comprise seven processes. ARM64 Nuclei's highest RSS sample used
+an explicit comm fallback and had unavailable PSS/private; a different complete,
+executable-identified sample recorded RSS 105,037,824 B
+and PSS/private 105,029,632 B. Those lower-sample values are not substituted for
+missing peak values. Some transient descendant reads also disappeared or denied
+smaps; these observations stay explicit, never zero-memory results.
+
+Each final artifact has **813 verified source hashes and 377 verified indexed
+files**, independently checked against the frozen manifest. Source hashes,
+JUnit, commands/build logs, `*-versions.json`, `tool-receipts`, resource time
+series, kernel receipts and cleanup evidence are retained by Actions even on
+failure. Build/scanner version pins and provenance were rechecked; core versions
+include Playwright 1.58.0 / Chromium 145.0.7632.0, Nuclei 3.11.1, httpx 1.12.0,
+frontend-build Node 22.14.0 and Go 1.25.1. The browser-driver Node is supplied
+by the separately pinned Playwright package, not inferred to have the frontend
+Node version.
+
+| Final artifact | GitHub artifact ID | Verified ZIP SHA-256 |
+|---|---:|---|
+| x64 | 12315600630 | `b136fe2e2d68670c0cdfadd519c727fc77184728faca871c0707a56b1d65db1a` |
+| ARM64 | 12315381746 | `6df84cebf8a3a6f9ee5937a2dca9d9f12dad81dc0a18651513f072f1a4b0e01d` |
+
+The [separate model capability run 39526571218](https://github.com/akosdrx/redjohn/actions/runs/39526571218)
+is **blocked**, not successful real model E2E. Both platforms lack an explicit
+model and dedicated repository secret; each preflight JUnit has one error,
+zero failures and zero skipped cases. No real model, CLI/TUI model scan or scanner
+installation ran in that job. The normal full workflow's skipped optional
+model job is likewise not model proof. See the [exact access and harness boundary](redjohn-live-model-e2e.md).
+
+The correct GitHub user was reverified as `akosdrx`. Local Git HEAD
+`115c7958232f1be5b34fe95159b21b86e85af06f`, index SHA-256
+`95c507103b42959002663306e132127a1c2fbc4b0d3c04b4c2b97283ad8419db`
+and private MCP configuration SHA-256
+`37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570`
+remain unchanged. Source was published to the separate
+`codex/redjohn-resource-closure` branch with a non-force expected-head lease;
+813 Git blob identities/modes and secret patterns were checked before upload.
+Final measurement documentation is a documentation-only successor; these results
+belong to source `fc1f70dc`, never silently to a later SHA.
+
+## Intermediate diagnostic evidence
 
 The first complete workload-bound run,
 [`39520343037`](https://github.com/akosdrx/redjohn/actions/runs/39520343037),
@@ -268,10 +405,9 @@ about 86 MB on ARM64, GC did not lower it, stopping the tracer lowered it by
 1,028,096 bytes, and comm-only role classification missed Chromium/Node names.
 The cache release is proven; the remaining controller-resident memory is not
 fully attributed by that run. These findings prompted the executable-identity
-and allocator-diagnostic follow-up. The new ten-checkpoint source requires its
-own completed hosted validation; no intermediate result is silently reassigned
-to that source. Final source SHA, run links and independently verified metrics
-are recorded below only after that new run completes.
+and allocator-diagnostic follow-up. The new ten-checkpoint source received its
+own completed hosted validation above; no intermediate result is silently
+reassigned to that source.
 
 One intermediate source, `3d7cf156b7889f643aacabbf384a25d5e21dbcae`, had an x64
 [regression failure](https://github.com/akosdrx/redjohn/actions/runs/39519351016):
