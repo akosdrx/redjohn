@@ -285,7 +285,7 @@ async def workload(  # noqa: PLR0915 - actual ordered scheduler stages and clean
                         ),
                     )
                     if cycle == 0 and memory.controller_diagnostics is not None:
-                        memory.checkpoint("first_browser_job_completed")
+                        memory.controller_checkpoint("first_browser_job_completed")
                     fixture.fixed = bool(cycle % 2)
                     probe = Surface(
                         fixture.origin + "/api/items",
@@ -309,7 +309,7 @@ async def workload(  # noqa: PLR0915 - actual ordered scheduler stages and clean
                     )
                     require(probed["coverage"] == "completed", "httpx_incomplete")
                     if cycle == 0 and memory.controller_diagnostics is not None:
-                        memory.checkpoint("first_httpx_job_completed")
+                        memory.controller_checkpoint("first_httpx_job_completed")
                     # The actual httpx response must have committed observed inventory.
                     inventory = next(
                         row
@@ -331,7 +331,7 @@ async def workload(  # noqa: PLR0915 - actual ordered scheduler stages and clean
                     memory.set_phase("nuclei", cycle)
                     scanned = await _job(app, surface, spec)
                     if cycle == 0 and memory.controller_diagnostics is not None:
-                        memory.checkpoint("first_nuclei_job_completed")
+                        memory.controller_checkpoint("first_nuclei_job_completed")
                     expected = 0 if fixture.fixed else 1
                     require(
                         scanned["coverage"] == "completed" and scanned["findings"] == expected,

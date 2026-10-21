@@ -27,6 +27,8 @@ class ControllerLauncherContracts(unittest.TestCase):
         self.assertTrue(all("runner." not in value for value in job["env"].values()))
         cases = (ROOT / ".github/scripts/controller-profile-cases.sh").read_text()
         self.assertIn("--memory-budget-mib 2048 --aggregate-budget-mib 4096", cases)
+        self.assertIn('"$RUNNER_TEMP/controller-attribution-memory-pool"', cases)
+        self.assertNotIn('controller-$task_case-memory-pool', cases)
         self.assertNotIn("--no-sandbox", cases)
 
 

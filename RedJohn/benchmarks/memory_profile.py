@@ -336,10 +336,22 @@ class MemoryAttribution:
         if observation is not None:
             value.update(phase=self.phase, cycle=self.cycle)
         value["checkpoint"] = name
-        if self.controller_diagnostics is not None:
-            value["controller_details"] = self.controller_diagnostics.capture()
         self.report["checkpoints"].append(value)
+        self.controller_checkpoint(name, observation=value)
         return value
+
+    def controller_checkpoint(self, name: str, *, observation=None):
+        # Supplemental data stays outside the historical process observation
+        # schema, including the exact allocator before/after comparison.
+        if self.controller_diagnostics is None:
+            return
+        self.report.setdefault("controller_diagnostics", []).append(
+            {
+                "checkpoint": name,
+                "memory_observation": self.capture() if observation is None else observation,
+                "controller_details": self.controller_diagnostics.capture(),
+            }
+        )
 
     def error(self, exc: Exception):
         name = type(exc).__name__

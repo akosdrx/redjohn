@@ -51,6 +51,19 @@ def test_controller_live_object_probe_tolerates_nonstring_module_descriptors(mon
     assert value["live_component_types"] == {}
 
 
+def test_supplemental_controller_data_does_not_change_bracketed_observations(monkeypatch):
+    profile = helpers(monkeypatch)
+    recorder = profile.MemoryAttribution(0)
+    recorder.controller_diagnostics = SimpleNamespace(capture=lambda: {"numeric_control": 1})
+    supplied = {"status": "controlled", "sample_monotonic": 1}
+    result = recorder.checkpoint("after_allocator_trim", observation=supplied)
+    assert result == {**supplied, "phase": "setup", "cycle": None,
+                      "checkpoint": "after_allocator_trim"}
+    assert recorder.report["checkpoints"] == [result]
+    assert recorder.report["controller_diagnostics"][0]["memory_observation"] is result
+    assert recorder.report["controller_diagnostics"][0]["controller_details"] == {"numeric_control": 1}
+
+
 def write_process(root, pid, parent, name, *, identity=123, rss_pages=10, smaps=True):
     directory = root / str(pid)
     directory.mkdir()

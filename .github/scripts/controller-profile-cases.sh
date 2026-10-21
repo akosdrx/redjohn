@@ -23,7 +23,7 @@ for task_case in idle playwright_import tls_fixture synthetic_pressure traced un
     "$task_python" -m redjohn.assessment.memory_exec \
     --delegated-root "$REDJOHN_TEST_CGROUP_ROOT" \
     --memory-budget-mib 2048 --aggregate-budget-mib 4096 \
-    --pool-state-directory "$RUNNER_TEMP/controller-$task_case-memory-pool" \
+    --pool-state-directory "$RUNNER_TEMP/controller-attribution-memory-pool" \
     --receipt "$GITHUB_WORKSPACE/artifacts/controller-$task_case-owner/receipt.json" \
     --timeout-seconds 240 -- "${task_command[@]}"; then
     task_failed=1
