@@ -3,7 +3,7 @@
 > **Aktuális állapot (2026-10-21):** a jelenlegi, commit-azonosított javítási
 > állapot a [`redjohn-remediation-status.md`](redjohn-remediation-status.md).
 > Az alábbi dátumozott futások és SHA-k történeti rekordok; nem bizonyítják a
-> jelenlegi `4dbe72c9341ad9b35f30a3db16c7bae6d542f702` forrás állapotát.
+> jelenlegi `9d3de449301532e839d74708604865056232daaf` forrás állapotát.
 
 
 **2026-10-18, felhasználói pontosítás:** az élő cloud/Kubernetes-hozzáférést

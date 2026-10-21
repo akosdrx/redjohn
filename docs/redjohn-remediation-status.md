@@ -7,21 +7,20 @@ commitból előálló eredmények használhatók.
 
 ## Kanonikus forrás
 
-- Commit: `4dbe72c9341ad9b35f30a3db16c7bae6d542f702`
-- Commit üzenete: `fix(assessment): harden browser, hunt, evidence, retention and viewer state`
+- Commit: `9d3de449301532e839d74708604865056232daaf`
 - A commit a teljes `RedJohn/`, `.github/`, `docs/` és a szükséges gyökérfájlok
   kanonikus fáját tartalmazza.
 - A worktree a commit után tiszta; a `.venv`, `node_modules`, `.tools`, cache-ek
   és runtime adatbázisok nincsenek verziókezelve.
+- A javítási branch: `fix/redjohn-hardening-20261021`.
 
-## Ezen a gépen ténylegesen lefutott ellenőrzések
+## Helyi ellenőrzések
 
-Környezet: macOS arm64, Python 3.13.16, Node 24.21.0, Go 1.27.1. A helyi
-eredmények nem helyettesítik a Kali x64/ARM64 vagy a hosted Ubuntu CI futást.
+Környezet: macOS arm64, Python 3.13.16, Node 24.21.0, Go 1.27.1.
 
 | Ellenőrzés | Eredmény |
 |---|---|
-| `PYTHONPATH=RedJohn .venv/bin/python -m pytest RedJohn/tests -q` | **1931 passed, 138 skipped, 0 failed** (982.93 s) |
+| `PYTHONPATH=RedJohn .venv/bin/python -m pytest RedJohn/tests -q` | **1931 passed, 138 skipped, 0 failed** (17:44) |
 | `.github` CI-szerződés tesztek | **61 passed** |
 | `npm test` | **14 passed, 0 failed** |
 | `npm run build` | sikeres; a commitolt static bundle változatlan |
@@ -29,8 +28,31 @@ eredmények nem helyettesítik a Kali x64/ARM64 vagy a hosted Ubuntu CI futást.
 | `go test -race -count=1 ./...` | sikeres |
 | wheel build | `redjohn_agent-1.7.0-py3-none-macosx_11_0_arm64.whl`, 17 MB, sha256 `3e25351de3439adaef6427b63e2c05e301aec66e3e8ab3177d939054005f416f` |
 | `redjohn --version` | `RedJohn 1.7.0` |
-| `redjohn assess health` | a `browser_discover` valódi Playwright Chromium útvonalat talál; `live_verified=false`, mert health önmagában nem futtat böngészőt |
+| `redjohn assess health` | valódi Playwright Chromium útvonal; `live_verified=false`, mert health nem indít böngészőt |
 | `redjohn assess demo --cycles 1` | sikeres; 6 HTTP kérés, 0 modelhívás, 1.12 s |
+
+## Hosted Ubuntu CI — commit `9d3de44`
+
+A teljes `RedJohn Ubuntu validation` futás
+[39555197530](https://github.com/akosdrx/redjohn/actions/runs/39555197530)
+**mindkét architektúrán success**:
+
+| Platform | Regresszió | Valódi integráció | Frontend | Go |
+|---|---:|---:|---:|---:|
+| Ubuntu 24.04 x64 / Python 3.13.16 | 1615 passed, 0 failed/skip | 451 passed, 0 failed/skip | 14 passed | 21 passed |
+| Ubuntu 24.04 ARM64 / Python 3.12.3 | 1615 passed, 0 failed/skip | 451 passed, 0 failed/skip | 14 passed | 21 passed |
+
+A futás mixed soakja 2 ciklusos volt, nem hosszú soak:
+
+- x64: 83.98 s, minden 16 soak-invariant `true`;
+- ARM64: 73.68 s, minden 16 soak-invariant `true`;
+- a summary `success=true`, blockers üres.
+
+További commit-azonosított hosted futások:
+
+- natív komponens smoke: [39555197563](https://github.com/akosdrx/redjohn/actions/runs/39555197563) — success;
+- offline artifact E2E: [39555197528](https://github.com/akosdrx/redjohn/actions/runs/39555197528) — success;
+- controller-memory x64/ARM64: [39559726136](https://github.com/akosdrx/redjohn/actions/runs/39559726136) — success; capability `available=true`, namespace/browser/cgroup elérhető, blockers üres.
 
 ## Javított területek
 
@@ -54,9 +76,6 @@ eredmények nem helyettesítik a Kali x64/ARM64 vagy a hosted Ubuntu CI futást.
   postinstall fut.
 - **P2 health:** archive nem számít telepített binárisnak; a browser health a
   Playwright cache tényleges Chromium executable-jét ellenőrzi.
-- **P2 AppArmor:** a globális `/{,**} mrwlkix` és a `sys_admin`, `net_admin`,
-  `sys_ptrace` capability eltávolítva; a profil workspace/home-cache/temp/cgroup
-  útvonalakra szűkített. A profil runtime viselkedése Linuxon még ellenőrizendő.
 - **P2 teszt-besorolás:** a `real_integration` explicit teszt-szintű manifest
   (`.github/scripts/pytest-real-integration.json`), nem fájlszintű címke.
 - **P2 retention:** a finding, audit, terminal session/capture/followup és
@@ -70,13 +89,16 @@ eredmények nem helyettesítik a Kali x64/ARM64 vagy a hosted Ubuntu CI futást.
 
 ## Nem igazolt / nyitott
 
+- **P2-3 AppArmor:** a szűkített profil kísérlet nem kompatibilis a jelenlegi
+  `bwrap`/`unshare` namespace-attestationnel (cross-profile
+  `/proc/<pid>/ns/net` hozzáférés). A profil a known-good széles változatra van
+  visszaállítva; a globális write és a `sys_admin`/`net_admin` továbbra is jelen
+  van. Ez **nyitott**, nem tekinthető javítottnak. Dedikált AppArmor redesign
+  szükséges, külön Linux E2E-vel.
 - Kali Linux x64/ARM64 telepítés és `assess health` a telepítő után.
-- Hosted Ubuntu x64/ARM64 teljes CI, a 440 kijelölt integrációs eset
-  capability-korlátai miatt itt nem futott.
-- Az AppArmor profil tényleges Linux enforcementje és a negatív write-teszt.
-- Teljes cgroup/`memory.max` workload és hosszú, commit-bound soak.
+- A 2 ciklusos CI soak nem hosszú 120 ciklusos / 1200 s-es soak.
 - Élő modelles E2E; a dedikált secret továbbra sem elérhető.
-- A 120 ciklusos / 1200 s-es hosted eredmények; ezek történeti rekordok.
+- A `redjohn-live-model` workflow nem futott.
 
 ## Történeti dokumentumok
 
@@ -84,4 +106,4 @@ A `docs/redjohn-requirements.md`, `docs/redjohn-completion-status.md`,
 `docs/redjohn-resource-closure.md`, `docs/redjohn-controller-memory.md` és a
 többi mérési rekord korábbi commitokhoz tartozik. Ezekben a `3cc92d2`,
 `fc1f70d`, `fd7c0d41`, `9f3a1a03`, `5cfd51d2`, `fefc3bf9`, `0b978b8` és hasonló
-SHA-k **történeti** hivatkozások, nem a `4dbe72c` állapotának bizonyítékai.
+SHA-k **történeti** hivatkozások, nem a `9d3de44` állapotának bizonyítékai.

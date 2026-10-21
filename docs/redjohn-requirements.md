@@ -3,7 +3,7 @@
 > **Aktuális állapot (2026-10-21):** a jelenlegi javítási és verifikációs rekord
 > [`redjohn-remediation-status.md`](redjohn-remediation-status.md). Az itt
 > szereplő korábbi SHA-k és hosted futások történeti bizonyítékok, nem a
-> `4dbe72c9341ad9b35f30a3db16c7bae6d542f702` commit jelenlegi állapotának
+> `9d3de449301532e839d74708604865056232daaf` commit jelenlegi állapotának
 > bizonyítékai.
 
 

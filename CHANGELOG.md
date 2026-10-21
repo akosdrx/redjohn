@@ -10,8 +10,9 @@
   local targets, install the governed Playwright browser, and validate real
   Chromium health.
 - Add per-test real-integration classification, bounded retention, staged
-  vault publication, a scoped AppArmor profile, and consistent CLI/TUI version
-  and viewer URL handling. See the
+  vault publication, bounded retention, and consistent CLI/TUI version
+  and viewer URL handling. The attempted AppArmor narrowing was reverted after
+  Linux namespace-attestation incompatibility; it remains an explicit open item. See the
   [commit-bound remediation status](docs/redjohn-remediation-status.md).
 
 
