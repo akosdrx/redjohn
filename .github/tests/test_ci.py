@@ -643,9 +643,9 @@ class EvidenceContract(unittest.TestCase):
     def test_ci_apparmor_profile_has_no_global_write_or_privileged_capabilities(self):
         policy = (Path(__file__).parents[1] / "policies/redjohn-ci.apparmor").read_text()
         assert "/{,**} mrwlkix" not in policy
-        for capability in ("net_admin", "sys_ptrace"):
-            assert f"capability {capability}," not in policy
+        assert "capability sys_ptrace," not in policy
         assert "capability sys_admin," in policy  # setuid bwrap namespace setup
+        assert "capability net_admin," in policy  # bwrap loopback setup
         assert "/home/*/work/** rwklix" in policy
         assert "/sys/fs/cgroup/redjohn-ci-*/** rwklix" in policy
 
