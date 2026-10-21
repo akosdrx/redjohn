@@ -20,7 +20,13 @@ profile @REDJOHN_CI_PROFILE@ flags=(attach_disconnected,mediate_deleted) {
   # package caches, temporary files and the delegated cgroup.
   / r,
   /{bin,etc,lib,lib32,lib64,sbin,usr}/** rix,
+  # bwrap creates empty mountpoints in its private mount namespace. These
+  # directory-only write rules do not grant writes to host files below them.
+  /{bin,etc,lib,lib32,lib64,sbin,usr,proc,dev,tmp,run,sys,home,opt,var}/ w,
   /opt/** rix,
+  /var/lib/dpkg/** r,
+  /var/lib/apt/lists/** r,
+  /var/cache/apt/** r,
   /home/*/work/** rwklix,
   /home/*/go/** rwklix,
   /home/*/.gitconfig r,
