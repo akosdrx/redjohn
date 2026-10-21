@@ -18,6 +18,8 @@ import tracemalloc
 from collections import Counter
 from pathlib import Path
 
+from allocation_profile import allocation_sites
+
 
 MALLINFO_FIELDS = (
     "arena", "ordblks", "smblks", "hblks", "hblkhd", "usmblks", "fsmblks",
@@ -65,6 +67,11 @@ def mapping_counters(path=Path("/proc/self/smaps")):  # noqa: PLR0912 - fixed ma
                         if len(fields) != 3 or fields[2] != "kB":
                             return {"status": "blocked", "reason": "unexpected_smaps_unit"}
                         groups[group][key + "_bytes"] += int(fields[1]) * 1024
+        if not groups or any(
+            not {key + "_bytes" for key in COUNTERS} <= counters.keys()
+            for counters in groups.values()
+        ):
+            return {"status": "blocked", "reason": "incomplete_mapping_counters"}
         return {"status": "observed", "mapping_count": count, "groups": dict(groups)}
     except (OSError, ValueError, IndexError):
         return {"status": "blocked", "reason": "linux_smaps_unavailable"}
@@ -73,9 +80,10 @@ def mapping_counters(path=Path("/proc/self/smaps")):  # noqa: PLR0912 - fixed ma
 class ControllerDiagnostics:
     """Fixed checkpoint summaries; never retain a heap/object snapshot."""
 
-    def __init__(self):
+    def __init__(self, *, compact_summaries=True):
         self.initial_modules = frozenset(sys.modules)
         self.mallinfo = None
+        self.compact_summaries = compact_summaries
         if sys.platform == "linux":
             try:
                 library = ctypes.CDLL(None)
@@ -114,10 +122,15 @@ class ControllerDiagnostics:
                 "status": "observed", **{name: getattr(measured, name) for name in MALLINFO_FIELDS}
             }
         if tracemalloc.is_tracing():
-            snapshot = tracemalloc.take_snapshot()
             groups = Counter()
-            for item in snapshot.statistics("filename"):
-                name = item.traceback[0].filename
+            if self.compact_summaries:
+                sites = allocation_sites()
+                rows = ((name, size) for (name, _line), (size, _count) in sites.items())
+            else:
+                snapshot = tracemalloc.take_snapshot()
+                rows = ((item.traceback[0].filename, item.size)
+                        for item in snapshot.statistics("filename"))
+            for name, size in rows:
                 category = (
                     "playwright" if "/playwright/" in name else
                     "redjohn_runtime" if "/redjohn/" in name.lower() else
@@ -126,9 +139,8 @@ class ControllerDiagnostics:
                     "source_cache" if name.endswith("/linecache.py") else
                     "other_python"
                 )
-                groups[category] += item.size
+                groups[category] += size
             value["traced_allocation_groups_bytes"] = dict(groups)
-            del snapshot
         objects = gc.get_objects()
         selected = Counter()
         for item in objects:

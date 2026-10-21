@@ -246,7 +246,9 @@ def allocator_trim_diagnostic(capture, *, library_loader=ctypes.CDLL):
 class MemoryAttribution:
     """Retain a bounded 2s series and one peak per fixed workload phase."""
 
-    def __init__(self, started: float, *, controller_details: bool = False):
+    def __init__(
+        self, started: float, *, controller_details: bool = False, compact_summaries: bool = True,
+    ):
         self.started = started
         self.phase = "setup"
         self.cycle = None
@@ -255,7 +257,7 @@ class MemoryAttribution:
         if controller_details:
             from controller_diagnostics import ControllerDiagnostics  # noqa: PLC0415
 
-            self.controller_diagnostics = ControllerDiagnostics()
+            self.controller_diagnostics = ControllerDiagnostics(compact_summaries=compact_summaries)
         self.report = {
             "measurement": "process_observations_not_memory_limit_enforcement",
             "sampling_interval_seconds": SAMPLE_INTERVAL_SECONDS,

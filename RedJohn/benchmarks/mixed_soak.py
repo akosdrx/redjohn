@@ -24,6 +24,7 @@ from collections import Counter
 from contextlib import suppress
 from pathlib import Path
 
+from allocation_profile import allocation_sites, changed_sites, largest_sites, pymalloc_counters
 from browser_soak import _source_hashes, sample
 from limit_pressure import body_pressure, log_pressure
 from memory_profile import SAMPLE_INTERVAL_SECONDS, MemoryAttribution, allocator_trim_diagnostic
@@ -125,7 +126,7 @@ def cache_pressure(cache, cycle: int) -> dict:
     }
 
 
-def heap_sample() -> dict:
+def heap_sample(*, snapshot_mode: str = "compact") -> dict:
     if not tracemalloc.is_tracing():
         return {
             "status": "not_requested", "controller_traced_bytes": None,
@@ -133,15 +134,19 @@ def heap_sample() -> dict:
             "gc_generation_counts": list(gc.get_count()), "largest_allocations": [],
         }
     current, peak = tracemalloc.get_traced_memory()
-    top = tracemalloc.take_snapshot().statistics("lineno")[:12]
+    if snapshot_mode == "compact":
+        top = largest_sites(allocation_sites())
+    else:
+        top = [
+            {"location": str(x.traceback), "bytes": x.size, "count": x.count}
+            for x in tracemalloc.take_snapshot().statistics("lineno")[:12]
+        ]
     return {
         "controller_traced_bytes": current,
         "controller_traced_peak_bytes": peak,
         "tracer_metadata_bytes": tracemalloc.get_tracemalloc_memory(),
         "gc_generation_counts": list(gc.get_count()),
-        "largest_allocations": [
-            {"location": str(x.traceback), "bytes": x.size, "count": x.count} for x in top
-        ],
+        "largest_allocations": top,
     }
 
 
@@ -151,6 +156,7 @@ def benchmark_sources() -> dict:
         for name in (
             "mixed_soak.py", "browser_soak.py", "limit_pressure.py", "memory_profile.py",
             "controller_diagnostics.py",
+            "allocation_profile.py",
         )
     }
 
@@ -178,7 +184,7 @@ async def _job(app, surface: Surface, spec: JobSpec) -> dict:
     }
 
 
-async def workload(  # noqa: PLR0915 - actual ordered scheduler stages and cleanup
+async def workload(  # noqa: PLR0912, PLR0915 - ordered scheduler stages and diagnostic modes
     output: Path,
     lock_document: dict,
     httpx_document: dict,
@@ -190,6 +196,7 @@ async def workload(  # noqa: PLR0915 - actual ordered scheduler stages and clean
     deadline: float,
     progress: dict,
     memory: MemoryAttribution,
+    snapshot_mode: str = "compact",
 ) -> dict:
     lock = NucleiLock.from_mapping(lock_document)
     httpx = DiscoveryToolConfig.from_mapping("httpx", httpx_document)
@@ -251,8 +258,13 @@ async def workload(  # noqa: PLR0915 - actual ordered scheduler stages and clean
                 progress["queue_pressure"] = queue
                 require(queue["ok"], "persistent_queue_pressure_failed")
                 cycle = 0
-                warmup_heap = heap_sample()
-                warmup_snapshot = tracemalloc.take_snapshot() if tracemalloc.is_tracing() else None
+                warmup_heap = heap_sample(snapshot_mode=snapshot_mode)
+                warmup_snapshot = None
+                if tracemalloc.is_tracing():
+                    warmup_snapshot = (
+                        allocation_sites() if snapshot_mode == "compact"
+                        else tracemalloc.take_snapshot()
+                    )
                 progress["heap_after_warmup"] = warmup_heap
                 loop_started = time.monotonic()
                 timing["loop_started_monotonic"] = loop_started
@@ -358,9 +370,11 @@ async def workload(  # noqa: PLR0915 - actual ordered scheduler stages and clean
                     )
                     require(caches[-1]["ok"], "cache_pressure_failed")
                     if cycle + 1 == warmup:
-                        warmup_heap = heap_sample()
+                        warmup_heap = heap_sample(snapshot_mode=snapshot_mode)
                         warmup_snapshot = (
-                            tracemalloc.take_snapshot() if tracemalloc.is_tracing() else None
+                            (allocation_sites() if snapshot_mode == "compact"
+                             else tracemalloc.take_snapshot())
+                            if tracemalloc.is_tracing() else None
                         )
                         progress["heap_after_warmup"] = warmup_heap
                         memory.checkpoint("after_warmup")
@@ -401,19 +415,22 @@ async def workload(  # noqa: PLR0915 - actual ordered scheduler stages and clean
             memory.set_phase("closed")
             memory.checkpoint("after_runtime_close")
             progress["cache_after_close"] = app.control.cache.stats()
-            differences = (
-                tracemalloc.take_snapshot().compare_to(warmup_snapshot, "lineno")
-                if warmup_snapshot is not None else []
-            )
-            progress["allocation_changes_after_warmup"] = [
-                {
-                    "location": str(item.traceback),
-                    "bytes_diff": item.size_diff,
-                    "count_diff": item.count_diff,
-                }
-                for item in differences[:12]
-            ]
-            del differences, warmup_snapshot
+            if snapshot_mode == "compact":
+                progress["allocation_changes_after_warmup"] = (
+                    changed_sites(warmup_snapshot, allocation_sites())
+                    if warmup_snapshot is not None else []
+                )
+            else:
+                differences = (
+                    tracemalloc.take_snapshot().compare_to(warmup_snapshot, "lineno")
+                    if warmup_snapshot is not None else []
+                )
+                progress["allocation_changes_after_warmup"] = [
+                    {"location": str(item.traceback), "bytes_diff": item.size_diff,
+                     "count_diff": item.count_diff} for item in differences[:12]
+                ]
+                del differences
+            del warmup_snapshot
             health = app.browser.healthcheck()
             progress.update(
                 {
@@ -427,7 +444,7 @@ async def workload(  # noqa: PLR0915 - actual ordered scheduler stages and clean
                     "fixture_counts": dict(fixture.counts),
                     "observed_actors": sorted({r["actor"] for r in fixture.observed_actors}),
                     "heap_after_warmup": warmup_heap,
-                    "heap_after_close": heap_sample(),
+                    "heap_after_close": heap_sample(snapshot_mode=snapshot_mode),
                     "nuclei_version": lock.binary_version,
                     "nuclei_binary_sha256": lock.binary_sha256,
                     "template_sha256": lock.bundle_sha256,
@@ -456,7 +473,7 @@ async def workload(  # noqa: PLR0915 - actual ordered scheduler stages and clean
                     progress["native_session_empty"] = (
                         not session._active and not session._reservations
                     )
-                progress["heap_after_close"] = heap_sample()
+                progress["heap_after_close"] = heap_sample(snapshot_mode=snapshot_mode)
             finally:
                 store.close()
 
@@ -472,8 +489,11 @@ async def run(  # noqa: PLR0915 - benchmark evidence retained even on workload f
     minimum: float = 300,
     trace_allocations: bool = True,
     controller_details: bool = False,
+    snapshot_mode: str = "compact",
 ) -> dict:
     deadline = validate(cycles, warmup, interval, minimum)
+    if snapshot_mode not in {"compact", "legacy"}:
+        raise ValueError("unsupported_snapshot_summary_mode")
     output = output.resolve()
     output.mkdir(mode=0o700, parents=True, exist_ok=True)
     require(not any(output.iterdir()), "output_directory_must_be_empty")
@@ -501,6 +521,7 @@ async def run(  # noqa: PLR0915 - benchmark evidence retained even on workload f
         "baseline": "baseline_unavailable",
         "allocation_tracing_requested": trace_allocations,
         "controller_details_requested": controller_details,
+        "snapshot_summary_mode": snapshot_mode,
         "coverage_limits": [
             "owned_loopback_fixture_only",
             "controller_tracemalloc_excludes_native_children",
@@ -514,7 +535,10 @@ async def run(  # noqa: PLR0915 - benchmark evidence retained even on workload f
     }
     stop = asyncio.Event()
     samples, observation_errors = [], Counter()
-    memory = MemoryAttribution(started, controller_details=controller_details)
+    memory = MemoryAttribution(
+        started, controller_details=controller_details,
+        compact_summaries=snapshot_mode == "compact",
+    )
     result["memory_attribution"] = memory.report
 
     async def observe():
@@ -567,6 +591,7 @@ async def run(  # noqa: PLR0915 - benchmark evidence retained even on workload f
                 deadline=deadline,
                 progress=result["workload"],
                 memory=memory,
+                snapshot_mode=snapshot_mode,
             )
     except BaseException as exc:
         result["error"] = {"type": type(exc).__name__, "message": str(exc)[:1024]}
@@ -579,13 +604,13 @@ async def run(  # noqa: PLR0915 - benchmark evidence retained even on workload f
             result["sample_after"] = await asyncio.to_thread(sample)
             memory.set_phase("closed")
             memory.checkpoint("after_workload_return_before_gc")
-            result["heap_before_diagnostic_gc"] = heap_sample()
+            result["heap_before_diagnostic_gc"] = heap_sample(snapshot_mode=snapshot_mode)
             # Diagnostic only, after normal runtime/child/FD cleanup. Retain the
             # pre-GC measurements; collection must not conceal runtime leaks.
             result["diagnostic_gc_collected_objects"] = gc.collect()
             memory.set_phase("after_gc")
             memory.checkpoint("after_diagnostic_gc")
-            result["heap_after_diagnostic_gc"] = heap_sample()
+            result["heap_after_diagnostic_gc"] = heap_sample(snapshot_mode=snapshot_mode)
             result["resources_after_close"] = HostResourcePool(pool).snapshot()
             result["sources_unchanged"] = (
                 sources == _source_hashes()
@@ -711,6 +736,7 @@ def main() -> None:
     parser.add_argument("--minimum-seconds", type=float, default=300)
     parser.add_argument("--allocation-tracing", choices=("on", "off"), default="on")
     parser.add_argument("--controller-details", action="store_true")
+    parser.add_argument("--snapshot-mode", choices=("compact", "legacy"), default="compact")
     args = parser.parse_args()
     receipt = json.loads(args.httpx_receipt.read_text())
     httpx = {
@@ -720,6 +746,7 @@ def main() -> None:
             "version": receipt["version"],
         }
     }
+    allocator_before = pymalloc_counters()
     result = asyncio.run(
         run(
             args.output,
@@ -731,8 +758,14 @@ def main() -> None:
             minimum=args.minimum_seconds,
             trace_allocations=args.allocation_tracing == "on",
             controller_details=args.controller_details,
+            snapshot_mode=args.snapshot_mode,
         )
     )
+    result["python_allocator_diagnostic"] = {
+        "measurement": "single_threaded_cpython_counters_not_rss_accounting",
+        "before_asyncio_run": allocator_before, "after_asyncio_run": pymalloc_counters(),
+    }
+    (args.output / "mixed-soak.json").write_text(json.dumps(result, indent=2) + "\n")
     print(  # noqa: T201 - standalone CLI summary
         json.dumps({key: result.get(key) for key in ("ok", "elapsed_seconds", "checks")})
     )

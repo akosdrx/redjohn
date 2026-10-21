@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib
+import tracemalloc
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -20,9 +21,9 @@ def test_controller_mapping_counters_do_not_publish_paths_or_addresses(tmp_path,
     path = tmp_path / "smaps"
     path.write_text(
         "1000-2000 rw-p 00000000 00:00 0 [heap]\n"
-        "Size: 8 kB\nRss: 4 kB\nPss: 4 kB\nPrivate_Dirty: 3 kB\n"
+        "Size: 8 kB\nRss: 4 kB\nPss: 4 kB\nPrivate_Dirty: 3 kB\nPrivate_Clean: 0 kB\n"
         "2000-3000 r--p 00000000 00:00 0 /private/sensitive/library.so\n"
-        "Size: 4 kB\nRss: 2 kB\nPss: 1 kB\nPrivate_Clean: 1 kB\n"
+        "Size: 4 kB\nRss: 2 kB\nPss: 1 kB\nPrivate_Clean: 1 kB\nPrivate_Dirty: 0 kB\n"
     )
     value = module.mapping_counters(path)
     assert value["status"] == "observed"
@@ -37,6 +38,14 @@ def test_controller_mapping_missing_or_invalid_data_is_blocked(tmp_path, monkeyp
     assert module.mapping_counters(tmp_path / "absent")["status"] == "blocked"
     path = tmp_path / "smaps"
     path.write_text("1000-2000 rw-p 00000000 00:00 0\nRss: 4 bytes\n")
+    assert module.mapping_counters(path)["status"] == "blocked"
+
+
+def test_empty_controller_mapping_observation_is_not_success(tmp_path, monkeypatch):
+    helpers(monkeypatch)
+    module = importlib.import_module("controller_diagnostics")
+    path = tmp_path / "empty_smaps"
+    path.write_text("")
     assert module.mapping_counters(path)["status"] == "blocked"
 
 
@@ -61,7 +70,50 @@ def test_supplemental_controller_data_does_not_change_bracketed_observations(mon
                       "checkpoint": "after_allocator_trim"}
     assert recorder.report["checkpoints"] == [result]
     assert recorder.report["controller_diagnostics"][0]["memory_observation"] is result
-    assert recorder.report["controller_diagnostics"][0]["controller_details"] == {"numeric_control": 1}
+    assert recorder.report["controller_diagnostics"][0]["controller_details"] == {
+        "numeric_control": 1,
+    }
+
+
+def test_compact_allocation_sites_match_public_stdlib_statistics(monkeypatch):
+    helpers(monkeypatch)
+    module = importlib.import_module("allocation_profile")
+    assert not tracemalloc.is_tracing()
+    tracemalloc.start(5)
+    try:
+        retained = [bytearray(1000 + index) for index in range(30)]
+        snapshot = tracemalloc.take_snapshot()
+        expected = {
+            (item.traceback[0].filename, item.traceback[0].lineno): [item.size, item.count]
+            for item in snapshot.statistics("lineno")
+        }
+        assert module.allocation_sites(snapshot) == expected
+        assert sum(row[0] for row in expected.values()) >= sum(map(len, retained))
+    finally:
+        tracemalloc.stop()
+
+
+def test_compact_allocation_changes_preserve_positive_and_negative_counts(monkeypatch):
+    helpers(monkeypatch)
+    module = importlib.import_module("allocation_profile")
+    tracemalloc.start(5)
+    try:
+        retained = [bytearray(2000) for _ in range(30)]
+        before = tracemalloc.take_snapshot()
+        retained.clear()
+        after = tracemalloc.take_snapshot()
+        expected = {
+            str(item.traceback): (item.size_diff, item.count_diff)
+            for item in after.compare_to(before, "lineno")
+        }
+        actual = module.changed_sites(
+            module.allocation_sites(before), module.allocation_sites(after), limit=16384,
+        )
+        assert {row["location"]: (row["bytes_diff"], row["count_diff"])
+                for row in actual} == expected
+        assert any(row[0] < 0 for row in expected.values())
+    finally:
+        tracemalloc.stop()
 
 
 def write_process(root, pid, parent, name, *, identity=123, rss_pages=10, smaps=True):
