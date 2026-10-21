@@ -154,11 +154,10 @@ with a private delegated cgroup; required hosted jobs must fail on missing
 capabilities rather than count them as negative results:
 
 ```sh
-cd RedJohn
 REDJOHN_REQUIRE_OS_MEMORY=1 \
 REDJOHN_TEST_CGROUP_ROOT=/sys/fs/cgroup/OPERATOR_PRIVATE_TEST_ROOT \
 REDJOHN_OS_MEMORY_MEASUREMENTS=/ABSOLUTE/PRIVATE/measurements \
-../.venv/bin/python -m pytest -q tests/test_lab_validation_live.py \
+.venv/bin/python -m pytest -q tests/test_lab_validation_live.py \
   --junitxml=/ABSOLUTE/PRIVATE/lab-live.junit.xml
 ```
 

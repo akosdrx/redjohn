@@ -1,6 +1,6 @@
 # Offline `wordpress_observe` runtime capability
 
-Status: **public opt-in runtime/registry/scheduler integration implemented and actual hosted x64/ARM64 proof completed**. See [the verification record](redjohn-artifact-runtime-verification.md): four WPScan native scenarios passed on each architecture at source `9f3a1a037b2f44bf1b503e2c796a0682f1ba146c`. `wordpress_assess` remains unimplemented. The new adapter and job factory have file/SQLite regression coverage; four actual native cases ran successfully on hosted Ubuntu; a Mac without the required Linux owner/runtime remains unsupported for these native cases. No native Ruby/gem build or scanner execution occurred locally.
+Status: **public opt-in runtime/registry/scheduler integration implemented and actual hosted x64/ARM64 proof completed**. See [the verification record](archive/redjohn-artifact-runtime-verification.md): four WPScan native scenarios passed on each architecture at source `9f3a1a037b2f44bf1b503e2c796a0682f1ba146c`. `wordpress_assess` remains unimplemented. The new adapter and job factory have file/SQLite regression coverage; four actual native cases ran successfully on hosted Ubuntu; a Mac without the required Linux owner/runtime remains unsupported for these native cases. No native Ruby/gem build or scanner execution occurred locally.
 
 The separate frozen 35-package full-CLI audit still exits 2 for the missing `get_process_mem` license notice. That package is outside this narrow component's require closure; the full CLI is neither installed nor loaded.
 
@@ -44,7 +44,7 @@ The native runtime consists of Nokogiri **1.19.4**, Racc **1.8.1**, their requir
 
 The CI-only installer does not run on macOS. Its fixed build/inspection commands run in a deny-all network namespace, use only pinned local gem archives, at most two make jobs, finite timeouts, bounded files/logs and a dedicated process group killed on success/failure/timeout. It records Ruby revision, native versions, compiler/build package versions, actual linked OS package versions, all copied file hashes and full original copyright notices. Original Ruby/Nokogiri/Racc license digests are mandatory at runtime. These are host build receipts, not upstream signatures. Product namespace evidence remains the actual Scheduler E2E's responsibility.
 
-From `RedJohn/`, after Ubuntu build dependencies and namespace capability are available:
+From ``, after Ubuntu build dependencies and namespace capability are available:
 
 ```sh
 python scripts/install-wpscan-observe.py --cache "$RUNNER_TEMP/wordpress-cache" --destination "$PWD/.tools/wordpress-observe/4.1.0" --logs "$ARTIFACTS/wordpress-build" --external-operator-component
@@ -59,6 +59,6 @@ Required build packages: gcc, make, pkg-config, binutils, libc6-dev, libxml2-dev
 
 ## Verified and remaining
 
-Historical local preparation results: **65 passed, 0 failed, 4 blocked native skips**, 0.45 s. Payload/protocol fixtures and installer-process doubles are explicitly synthetic; SQLite, file-reader, archive-budget and lifecycle assertions use actual files/state. Both real Ruby archives plus all four selected gem archives passed the safe read-only extractor. Ruby/component syntax-only parsing is distinct from engine execution. Those historical measurements are under `docs/measurements/master-completion-20261018/wpscan-observe-component/`; the current hosted proof and artifact hashes are in [the verification record](redjohn-artifact-runtime-verification.md).
+Historical local preparation results: **65 passed, 0 failed, 4 blocked native skips**, 0.45 s. Payload/protocol fixtures and installer-process doubles are explicitly synthetic; SQLite, file-reader, archive-budget and lifecycle assertions use actual files/state. Both real Ruby archives plus all four selected gem archives passed the safe read-only extractor. Ruby/component syntax-only parsing is distinct from engine execution. Those historical measurements are under `docs/measurements/master-completion-20261018/wpscan-observe-component/`; the current hosted proof and artifact hashes are in [the verification record](archive/redjohn-artifact-runtime-verification.md).
 
 The actual positive-generator, generic-absence, external-DTD non-fetch and post-health cancellation cases all passed on hosted Ubuntu x64 and ARM64 at the source SHA above. They assert public runtime composition, shared worker admission, immutable namespace, zero HTTP requests, partial-only coverage, cleanup and SQLite restart deduplication. The adapter scenarios run under an actual 2 GiB pre-exec owner memory fence. A partial generator observation is never a database-confirmed version, deployment assurance, vulnerability finding or global clean result. Full WordPress assessment, authenticated WordPress replay, vulnerability API/database and browser artifact provenance remain outside this component.

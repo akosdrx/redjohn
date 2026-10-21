@@ -2,13 +2,13 @@
 # This explicit CI-owned build does not grant product redistribution rights.
 set -euo pipefail
 mkdir -p artifacts/tool-receipts
-python RedJohn/scripts/install-service-scanners.py nmap --owned-fixture-build
+python scripts/install-service-scanners.py nmap --owned-fixture-build
 python - <<'PY'
 import hashlib
 import json
 from pathlib import Path
 
-root = Path("RedJohn/.tools/nmap/7.992")
+root = Path(".tools/nmap/7.992")
 raw = (root / "receipt.json").read_bytes()
 receipt = json.loads(raw)
 digest = hashlib.sha256((root / "nmap").read_bytes()).hexdigest()

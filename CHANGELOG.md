@@ -2,7 +2,7 @@
 
 ## 2026-10-21 — Source/evidence integrity and assessment hardening
 
-- Restore the canonical `RedJohn/` source tree in Git and require a clean
+- Restore the canonical `` source tree in Git and require a clean
   worktree before CI source hashing.
 - Wire the production policy/governor into `hunt`; quarantine browser capacity
   when Chromium cleanup cannot be proven.
@@ -69,7 +69,7 @@ and unknown network outcomes stay distinct from negative results.
   XSS; existing Nuclei replay/session workflows retain their paths.
 - Separate contract and real CLI/Chromium/SQLite/HTTPS tests, with
   [verification](docs/redjohn-specialists-verification.md) and
-  [runbook](RedJohn/docs/query-specialists.md). Upstream licensing is recorded;
+  [runbook](docs/query-specialists.md). Upstream licensing is recorded;
   proprietary sqlmap packaging remains uncleared.
 
 ## 2026-10-17 - ffuf, assessment Web View and partial evidence
@@ -78,7 +78,7 @@ and unknown network outcomes stay distinct from negative results.
 - Cancellation retains owned evidence references and discards finding claims.
 - Read-only assessment Web View distinguishes candidates, coverage and capability gaps. Legacy run records remain supported.
 - Go TUI skill count comes from the actual registry; branding remains unchanged.
-- [Runbook](RedJohn/docs/ffuf-discovery.md), [E2E evidence and images](docs/redjohn-ffuf-verification.md).
+- [Runbook](docs/ffuf-discovery.md), [E2E evidence and images](docs/redjohn-ffuf-verification.md).
 
 ## 2026-10-17 — Korlátozott automatikus session-helyreállítás
 
@@ -89,7 +89,7 @@ and unknown network outcomes stay distinct from negative results.
   refresh indítja a meglévő új capture → kijelölt Nuclei láncot.
 - A régi hibás job és bizonyítéka megmarad; sem a régi POST, sem egy elveszett
   refresh nem lesz automatikus retry. Séma és mérési parancs:
-  [automatic session recovery](RedJohn/docs/automatic-session-recovery.md).
+  [automatic session recovery](docs/automatic-session-recovery.md).
 
 ## 2026-10-17 — Folyamatos refresh → Chromium → Nuclei lánc
 
@@ -99,7 +99,7 @@ and unknown network outcomes stay distinct from negative results.
   nyugtázása atomi SQLite-tranzakcióban maradnak. A batch limit minden lépésre
   érvényes; queue-hiba nem ismételteti meg a módosító szülőkérést.
 - Konfiguráció, indítás, helyreállítás és valódi Linux E2E:
-  [folyamatos workflow](RedJohn/docs/continuous-refresh-replay.md).
+  [folyamatos workflow](docs/continuous-refresh-replay.md).
 
 Az alábbi bejegyzések az akkori működést és méréseket őrzik.
 
@@ -121,7 +121,7 @@ Az alábbi bejegyzések az akkori működést és méréseket őrzik.
   injektál. Ismeretlen mutáló kimenetel továbbra sem retry.
 - A teljes login/MFA/password-reset, provider-refresh-token rotáció és általános
   cross-origin credential-workflow hiányzó képesség marad. Séma, indítóparancs és
-  korlátok: [Chromium/body-token dokumentáció](RedJohn/docs/browser-post-body-tokens.md).
+  korlátok: [Chromium/body-token dokumentáció](docs/browser-post-body-tokens.md).
 
 Az alábbi korábbi bejegyzések az akkori snapshotot és korlátokat őrzik.
 
@@ -141,7 +141,7 @@ Az alábbi korábbi bejegyzések az akkori snapshotot és korlátokat őrzik.
 - A bodyba ágyazott token automatikus átírása, a provider saját refresh-tokenjének
   válaszból rotálása és a teljes login/MFA/password-reset workflow továbbra sem
   támogatott. A tesztfajtákat és az aktuális mérési eredményt a
-  [POST/session dokumentáció](RedJohn/docs/post-refresh-replay.md) külön kezeli.
+  [POST/session dokumentáció](docs/post-refresh-replay.md) külön kezeli.
 
 Az alábbi bejegyzések az adott korábbi forrássnapshot állapotát őrzik.
 

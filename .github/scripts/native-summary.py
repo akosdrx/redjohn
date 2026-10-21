@@ -16,7 +16,7 @@ from ci import ROOT, identity, junit_summary
 
 OUT = ROOT / "artifacts"
 EXCLUDED_BROWSER = (
-    "RedJohn/tests/test_owned_memory_live.py::"
+    "tests/test_owned_memory_live.py::"
     "test_actual_browser_sdk_mcp_and_native_worker_inherit_the_owner_hard_fence"
 )
 REQUIRED_MEMORY_GUARD = (

@@ -25,7 +25,7 @@
     "privilege": "unprivileged",
     "owner_process_only": false,
     "live_verified": false,
-    "recorded_verification_report": "redjohn-mime-restart-verification.md"
+    "recorded_verification_report": "archive/redjohn-browser-verification.md"
   },
   {
     "id": "http_observe",
@@ -53,7 +53,7 @@
     "privilege": "unprivileged",
     "owner_process_only": true,
     "live_verified": false,
-    "recorded_verification_report": "redjohn-verification.md"
+    "recorded_verification_report": "redjohn-architecture.md"
   },
   {
     "id": "headers_audit",
@@ -81,7 +81,7 @@
     "privilege": "unprivileged",
     "owner_process_only": true,
     "live_verified": false,
-    "recorded_verification_report": "redjohn-verification.md"
+    "recorded_verification_report": "redjohn-architecture.md"
   },
   {
     "id": "nuclei_scan",
@@ -114,7 +114,7 @@
     "privilege": "unprivileged",
     "owner_process_only": false,
     "live_verified": false,
-    "recorded_verification_report": "redjohn-mime-restart-verification.md"
+    "recorded_verification_report": "nuclei-integration.md"
   },
   {
     "id": "ffuf_discover",
@@ -143,7 +143,7 @@
     "privilege": "unprivileged",
     "owner_process_only": false,
     "live_verified": false,
-    "recorded_verification_report": "redjohn-ffuf-verification.md"
+    "recorded_verification_report": "ffuf-discovery.md"
   },
   {
     "id": "httpx_probe",
@@ -174,7 +174,7 @@
     "privilege": "unprivileged",
     "owner_process_only": false,
     "live_verified": false,
-    "recorded_verification_report": "redjohn-projectdiscovery-verification.md"
+    "recorded_verification_report": "projectdiscovery-adapters.md"
   },
   {
     "id": "katana_discover",
@@ -204,7 +204,7 @@
     "privilege": "unprivileged",
     "owner_process_only": false,
     "live_verified": false,
-    "recorded_verification_report": "redjohn-projectdiscovery-verification.md"
+    "recorded_verification_report": "projectdiscovery-adapters.md"
   },
   {
     "id": "vulnx_intelligence",
@@ -234,7 +234,7 @@
     "privilege": "unprivileged",
     "owner_process_only": false,
     "live_verified": false,
-    "recorded_verification_report": "redjohn-projectdiscovery-verification.md"
+    "recorded_verification_report": "projectdiscovery-adapters.md"
   },
   {
     "id": "naabu_ports",
@@ -347,7 +347,7 @@
     "privilege": "unprivileged",
     "owner_process_only": true,
     "live_verified": false,
-    "recorded_verification_report": "redjohn-authenticated-schema-oast-verification.md"
+    "recorded_verification_report": "post-refresh-replay.md"
   },
   {
     "id": "workflow_execute",
@@ -374,7 +374,7 @@
     "privilege": "unprivileged",
     "owner_process_only": true,
     "live_verified": false,
-    "recorded_verification_report": "../RedJohn/docs/redjohn-graphql-workflows.md"
+    "recorded_verification_report": "redjohn-graphql-workflows.md"
   },
   {
     "id": "arjun_parameters",
@@ -403,7 +403,7 @@
     "privilege": "unprivileged",
     "owner_process_only": false,
     "live_verified": false,
-    "recorded_verification_report": "redjohn-specialists-verification.md"
+    "recorded_verification_report": "query-specialists.md"
   },
   {
     "id": "sqlmap_validate",
@@ -432,7 +432,7 @@
     "privilege": "unprivileged",
     "owner_process_only": false,
     "live_verified": false,
-    "recorded_verification_report": "redjohn-specialists-verification.md"
+    "recorded_verification_report": "query-specialists.md"
   },
   {
     "id": "tinja_validate",
@@ -464,7 +464,7 @@
     "privilege": "unprivileged",
     "owner_process_only": false,
     "live_verified": false,
-    "recorded_verification_report": "redjohn-mime-restart-verification.md"
+    "recorded_verification_report": "schema-oast-adapters.md"
   },
   {
     "id": "schemathesis_validate",
@@ -496,7 +496,7 @@
     "privilege": "unprivileged",
     "owner_process_only": false,
     "live_verified": false,
-    "recorded_verification_report": "redjohn-mime-restart-verification.md"
+    "recorded_verification_report": "schema-oast-adapters.md"
   },
   {
     "id": "dalfox_validate",
@@ -525,7 +525,7 @@
     "privilege": "unprivileged",
     "owner_process_only": false,
     "live_verified": false,
-    "recorded_verification_report": "redjohn-specialists-verification.md"
+    "recorded_verification_report": "query-specialists.md"
   },
   {
     "id": "owned_lab_regression",
@@ -581,7 +581,7 @@
     "privilege": "unprivileged",
     "owner_process_only": true,
     "live_verified": false,
-    "recorded_verification_report": "redjohn-mime-restart-verification.md"
+    "recorded_verification_report": "schema-oast-adapters.md"
   },
   {
     "id": "oast_poll",
@@ -611,7 +611,7 @@
     "privilege": "unprivileged",
     "owner_process_only": true,
     "live_verified": false,
-    "recorded_verification_report": "redjohn-mime-restart-verification.md"
+    "recorded_verification_report": "schema-oast-adapters.md"
   },
   {
     "id": "browser_xss_confirmation",
@@ -638,7 +638,7 @@
     "privilege": "unprivileged",
     "owner_process_only": false,
     "live_verified": false,
-    "recorded_verification_report": "redjohn-specialists-verification.md"
+    "recorded_verification_report": "query-specialists.md"
   },
   {
     "id": "browser_post_capture",
@@ -665,7 +665,7 @@
     "privilege": "unprivileged",
     "owner_process_only": false,
     "live_verified": false,
-    "recorded_verification_report": "redjohn-mime-restart-verification.md"
+    "recorded_verification_report": "browser-post-body-tokens.md"
   },
   {
     "id": "browser_auth_flow",
@@ -692,7 +692,7 @@
     "privilege": "unprivileged",
     "owner_process_only": false,
     "live_verified": false,
-    "recorded_verification_report": "../RedJohn/docs/redjohn-browser-auth-workflows.md"
+    "recorded_verification_report": "redjohn-browser-auth-workflows.md"
   },
   {
     "id": "mcp_target_read",
@@ -983,7 +983,7 @@
     "privilege": "unprivileged",
     "owner_process_only": true,
     "live_verified": false,
-    "recorded_verification_report": "../RedJohn/docs/redjohn-cloud-kubernetes-preparation.md"
+    "recorded_verification_report": "redjohn-cloud-kubernetes-preparation.md"
   },
   {
     "id": "kubernetes_prepare",
@@ -1011,7 +1011,7 @@
     "privilege": "unprivileged",
     "owner_process_only": true,
     "live_verified": false,
-    "recorded_verification_report": "../RedJohn/docs/redjohn-cloud-kubernetes-preparation.md"
+    "recorded_verification_report": "redjohn-cloud-kubernetes-preparation.md"
   },
   {
     "id": "feroxbuster",

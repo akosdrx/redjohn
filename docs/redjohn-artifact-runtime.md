@@ -29,7 +29,7 @@ means no signature in this approved HTML artifact, not no WordPress on a site.
 ## SBOM matching
 
 The `trivy_sbom` object contains `binary`, `source_root`, `files`, `database`;
-see [SBOM contract](../RedJohn/docs/redjohn-trivy-sbom.md). It preserves the
+see [SBOM contract](redjohn-trivy-sbom.md). It preserves the
 existing `trivy_source` misconfiguration capability. Operator OCI snapshots
 still require immutable declared reference, hash, byte limit, schema/freshness
 and separately pinned data-source terms. Engine licensing is not feed licensing.
@@ -73,7 +73,7 @@ redjohn assess run --config /absolute/approved-assessment.json --output /absolut
 
 The approved configuration must also request the existing Linux `os_memory`
 owner fence (or a host must supply a genuinely attested pre-exec owner). See
-[the memory setup](../RedJohn/docs/shared-resources-and-os-memory.md). A cooperative
+[the memory setup](shared-resources-and-os-memory.md). A cooperative
 resource ledger alone does not authorize these IO helpers. For example:
 
 ```json
@@ -95,6 +95,6 @@ scanner endpoint or credential is introduced.
 unit/contract evidence, **not native E2E**. The four WPScan cases and seven SBOM
 cases are in the required real-integration selection. Both architectures completed the actual native proof at source
 `9f3a1a037b2f44bf1b503e2c796a0682f1ba146c`: **11 passed, 0 failed/error/skipped**.
-See [the verification record](redjohn-artifact-runtime-verification.md) for the
+See [the verification record](archive/redjohn-artifact-runtime-verification.md) for the
 completed run, source/artifact hashes, controls and measured memory. Older runs
 explicitly excluded WPScan and did not execute Trivy SBOM matching.

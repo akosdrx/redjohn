@@ -11,7 +11,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
-project = tomllib.loads((ROOT / "RedJohn/pyproject.toml").read_text())["project"]
+project = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]
 expected_name = re.sub(r"[-_.]+", "_", project["name"]).lower()
 wheels = list((ROOT / "artifacts/build").glob(expected_name + "-*.whl"))
 if len(wheels) != 1:
@@ -31,7 +31,7 @@ with zipfile.ZipFile(wheel) as archive:
         raise SystemExit("built_wheel_license_metadata_mismatch")
     license_files = {}
     for filename in ("LICENSE", "THIRD_PARTY_NOTICES.md"):
-        expected = (ROOT / "RedJohn" / filename).read_bytes()
+        expected = (ROOT / filename).read_bytes()
         members = [name for name in names if name.endswith(".dist-info/licenses/" + filename)]
         if len(members) != 1 or archive.read(members[0]) != expected:
             raise SystemExit("built_wheel_required_license_payload_missing_or_changed")

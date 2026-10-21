@@ -25,7 +25,7 @@ class ArtifactEvidenceContracts(unittest.TestCase):
         receipts.mkdir()
         for number, (filename, tests) in enumerate(evidence.EXPECTED.items()):
             for index, test in enumerate(sorted(tests)):
-                case = ET.SubElement(suite, 'testcase', file='RedJohn/tests/' + filename, name=test)
+                case = ET.SubElement(suite, 'testcase', file='tests/' + filename, name=test)
                 props = ET.SubElement(case, 'properties')
                 ET.SubElement(props, 'property', name='evidence_kind', value='real_integration')
                 ET.SubElement(props, 'property', name='required_runner_capabilities', value='cgroup_available,namespace_available')
@@ -74,7 +74,7 @@ class OwnerRecoveryEvidenceContracts(unittest.TestCase):
     def fixture(self, root):
         for repeat in (1, 2, 3):
             suite = ET.Element('testsuite')
-            case = ET.SubElement(suite, 'testcase', file='RedJohn/tests/test_os_memory_live.py', name=evidence.RECOVERY_CASE)
+            case = ET.SubElement(suite, 'testcase', file='tests/test_os_memory_live.py', name=evidence.RECOVERY_CASE)
             props = ET.SubElement(case, 'properties')
             ET.SubElement(props, 'property', name='evidence_kind', value='real_integration')
             ET.ElementTree(suite).write(root / f'recovery-{repeat}.junit.xml')

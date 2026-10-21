@@ -49,13 +49,13 @@ jobs:
             runner_arch: ARM64
             python: '3.12.3'
     env:
-      PYTHONPATH: ${{ github.workspace }}/RedJohn:${{ github.workspace }}/.github/scripts
+      PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/.github/scripts
       REDJOHN_TELEMETRY: '0'
       OPENAI_AGENTS_DISABLE_TRACING: '1'
       REDJOHN_LIVE_MODEL: ${{ inputs.model }}
       REDJOHN_TEST_CGROUP_ROOT: /sys/fs/cgroup/redjohn-ci-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.runner_arch }}
       REDJOHN_CI_APPARMOR_PROFILE: redjohn-ci-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.runner_arch }}
-      REDJOHN_NUCLEI_LOCK: ${{ github.workspace }}/RedJohn/.tools/nuclei/3.11.1/fixture-lock.json
+      REDJOHN_NUCLEI_LOCK: ${{ github.workspace }}/.tools/nuclei/3.11.1/fixture-lock.json
       REDJOHN_DNS_FIXTURE_NAME: redjohn-owned-fixture.test
       GOMAXPROCS: '2'
       GOTOOLCHAIN: local
@@ -87,7 +87,7 @@ jobs:
         uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
         with:
           go-version: '1.25.1'
-          cache-dependency-path: RedJohn/redjohn/interface/tui/go.sum
+          cache-dependency-path: redjohn/interface/tui/go.sum
       - name: Cache version-pinned Chromium
         uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
         with:
@@ -99,9 +99,9 @@ jobs:
           sudo apt-get install -y bubblewrap iproute2 apparmor-utils
           python -m playwright install --with-deps chromium
           mkdir -p artifacts/tool-receipts
-          python RedJohn/scripts/install-nuclei-pinned.py > artifacts/tool-receipts/nuclei.json
-          python RedJohn/scripts/create-nuclei-fixture-lock.py
-          cd RedJohn/redjohn/interface/tui
+          python scripts/install-nuclei-pinned.py > artifacts/tool-receipts/nuclei.json
+          python scripts/create-nuclei-fixture-lock.py
+          cd redjohn/interface/tui
           timeout 8m go build -trimpath -o "$GITHUB_WORKSPACE/artifacts/redjohn-tui" ./cmd/redjohn-tui
       - name: Delegate only the owned cgroup
         id: delegation

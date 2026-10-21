@@ -1,0 +1,283 @@
+{
+  "recorded_at": "2026-10-17T14:43:44.680245+00:00",
+  "basis": "Automatic complete401/private-expiry detection, persistently bounded refresh and existing live capture/replay continuation; source/test preservation and post-test generated cleanup verified.",
+  "baseline_snapshot": "docs/measurements/auth-recovery-start.json",
+  "excluded": "Managed dependencies/tools, runtime state, private files, generated caches and all changed-files.json manifests excluded. JSON manifest exclusions avoid circular hashes.",
+  "files": [
+    {
+      "path": ".github/workflows/redjohn-remote-egress.yml",
+      "status": "modified",
+      "sha256": "1e3485ef2425ad326b2f4e091a720f2ce6de79db751c3419cf6a5addf7ea37e3"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "status": "modified",
+      "sha256": "34d0231dd2b5bea6ee5dcef6d2e602c77ab66fbfeda798159ebdcd8d3303a897"
+    },
+    {
+      "path": "README.md",
+      "status": "modified",
+      "sha256": "fcf79131a67472544bd6041a2b971de0da32dc22f6d8cb414a871170eae45c7b"
+    },
+    {
+      "path": "docs/automatic-session-recovery.md",
+      "status": "added",
+      "sha256": "3cca93d062529d3dd91dff386f8880858a46c67a0d36489d7fbb3ccd4866b8d5"
+    },
+    {
+      "path": "docs/continuous-refresh-replay.md",
+      "status": "modified",
+      "sha256": "8d655d8603e0211532600a5570b83ea2067fb5a5fe08ea2bc3b567912797cbb2"
+    },
+    {
+      "path": "redjohn/assessment/adapters.py",
+      "status": "modified",
+      "sha256": "096348406d74747e57c670a652f282a2491a3896006350dd83a92377ec8d91b2"
+    },
+    {
+      "path": "redjohn/assessment/browser.py",
+      "status": "modified",
+      "sha256": "231b005fa296d448f88f4158437b6006a930ea84b901834011d184b59b9b11ef"
+    },
+    {
+      "path": "redjohn/assessment/browser_capture.py",
+      "status": "modified",
+      "sha256": "5f0bdcc48a4ccb5ac6f022019e0da5995ca7667e9a8602db27a49ee8b6b75893"
+    },
+    {
+      "path": "redjohn/assessment/browser_proxy.py",
+      "status": "modified",
+      "sha256": "7c1dc3faada8d7ad04dd40d6272f9857a85d0a94dc864460f8b3f9190d424ddb"
+    },
+    {
+      "path": "redjohn/assessment/browser_workflow.py",
+      "status": "modified",
+      "sha256": "a1bd88efc01165380f24187a36f4e97902d60faa86cec76acaf8b1fc935de93e"
+    },
+    {
+      "path": "redjohn/assessment/runtime.py",
+      "status": "modified",
+      "sha256": "9208bb59b8d283350e198895ba2956649c655fe31d57f99e435d5b16d85d1ff4"
+    },
+    {
+      "path": "redjohn/assessment/session_recovery.py",
+      "status": "added",
+      "sha256": "21abc8d4acba00c1a4f3c2658df48cf7bcee801593c652e57452360e3f9f901a"
+    },
+    {
+      "path": "redjohn/assessment/store.py",
+      "status": "modified",
+      "sha256": "f19e1c1b265697036cbdd22f7b61b1612d321e52c2a13fe8ce85bcc98bbfac2a"
+    },
+    {
+      "path": "redjohn/skills/assessment/authentication-session/SKILL.md",
+      "status": "modified",
+      "sha256": "476be831ff6fc64b874eef76c0ad542a3fcc01c4f64a429ed16bc9aaf55ad0e8"
+    },
+    {
+      "path": "redjohn/skills/assessment/execution-scheduling/SKILL.md",
+      "status": "modified",
+      "sha256": "31bd7beb834b73a0d3a061618c86b9902d6e06c4542e529131679fc8033a1ae1"
+    },
+    {
+      "path": "redjohn/skills/assessment/manifest.json",
+      "status": "modified",
+      "sha256": "832b568276a713354a66a4ef0aa1f0dc8ce17ba882cc9f4a5d32e5536e7bbeff"
+    },
+    {
+      "path": "tests/test_auth_recovery_adapter_signals.py",
+      "status": "added",
+      "sha256": "bb83f656b3a8b9d689013e2296a5ef3e308cc0c331ef5f74969f4900624b787e"
+    },
+    {
+      "path": "tests/test_auth_recovery_outbox.py",
+      "status": "added",
+      "sha256": "0d56248b34d491814a488243f07dc1f3578cf256bfc7f03c17a31b1357c2252b"
+    },
+    {
+      "path": "tests/test_automatic_session_recovery_pipeline.py",
+      "status": "added",
+      "sha256": "a4b8ef00863fbe162ae5ea6f1333f06ec0d1c3ae0ab245e705bd0ccdc9278e93"
+    },
+    {
+      "path": "tests/test_session_expiry_scope.py",
+      "status": "added",
+      "sha256": "912a4ebfc95e6332f8fdb9a1d2c4a9e72180ffe413f557258d1c8515dcd33b56"
+    },
+    {
+      "path": "tests/test_session_recovery_workflow.py",
+      "status": "added",
+      "sha256": "ef041897788c4408fd8cc6cb18f1ed52e96e6726749d230c522cd3a872f0d9b4"
+    },
+    {
+      "path": "docs/measurements/auth-recovery-cleanup.json",
+      "status": "added",
+      "sha256": "9e5633578e36de3da64c04416d2abbad37bc2ace600d86c98bbb96bb56d426a0"
+    },
+    {
+      "path": "docs/measurements/auth-recovery-completion-audit.json",
+      "status": "added",
+      "sha256": "51d309bb3bf1c4fab3a955c70b5095db867d8ad3496be862ecbf31e566562e8f"
+    },
+    {
+      "path": "docs/measurements/auth-recovery-dead-code-audit.json",
+      "status": "added",
+      "sha256": "bacd7f3d1673cc0cff8163455bedb0c1f0157cab13a7adaa81b2dd18da48b522"
+    },
+    {
+      "path": "docs/measurements/auth-recovery-go-tests.txt",
+      "status": "added",
+      "sha256": "42952d0b99d8ab8a13ec873bcca334c73ca7177fb07f0e74cd2084f46bd93ebe"
+    },
+    {
+      "path": "docs/measurements/auth-recovery-linux-source-files.json",
+      "status": "added",
+      "sha256": "190051061e8cf4bb9a9a174aa0f09477a8f98cde4c9e22430a0807012dac22c7"
+    },
+    {
+      "path": "docs/measurements/auth-recovery-linux-source-verification.json",
+      "status": "added",
+      "sha256": "fee82d3c4bc6296ee1327c6eeaf2257ec872c1775893de34d3fccf37ed5163ca"
+    },
+    {
+      "path": "docs/measurements/auth-recovery-linux/auth-recovery-full.junit.xml",
+      "status": "added",
+      "sha256": "94b140aca4eac8d526582dd9cdc6acb2b836680636b86e213eb9f67b859f977e"
+    },
+    {
+      "path": "docs/measurements/auth-recovery-linux/auth-recovery-full.txt",
+      "status": "added",
+      "sha256": "9d6fa5af49c15aa5f9df60c5c330e87e3326a2b0d3963ceae9711c0040ba41dc"
+    },
+    {
+      "path": "docs/measurements/auth-recovery-linux/automatic-session-e2e.json",
+      "status": "added",
+      "sha256": "213a253647e40322770bc1158d3026e886af3d744cc60b9b0befa0bffd5ab1c7"
+    },
+    {
+      "path": "docs/measurements/auth-recovery-linux/automatic-session-focused.json",
+      "status": "added",
+      "sha256": "2860830250c975ef9fc327acd73081a019ea748ee420f76a3d487505540d8bc7"
+    },
+    {
+      "path": "docs/measurements/auth-recovery-linux/automatic-session-focused.junit.xml",
+      "status": "added",
+      "sha256": "9af549e623609c418bb84d96c3d2d69e479bf42ca8264bf3437f501bf09c1ee5"
+    },
+    {
+      "path": "docs/measurements/auth-recovery-linux/automatic-session-focused.txt",
+      "status": "added",
+      "sha256": "e537843adf8338de264621b4401cac8a74cf0be15760f0e8a8d875f48f2e4a66"
+    },
+    {
+      "path": "docs/measurements/auth-recovery-linux/browser-token-e2e.json",
+      "status": "added",
+      "sha256": "73f0992bbca56a22857e5ff65efee62c1bc38a949786a9f49c629e5728243528"
+    },
+    {
+      "path": "docs/measurements/auth-recovery-linux/continuous-refresh-e2e.json",
+      "status": "added",
+      "sha256": "1f29cc6b80fbffa60bcf0d6d454e5d53afcd007a5195b965855322e730f0028e"
+    },
+    {
+      "path": "docs/measurements/auth-recovery-linux/nuclei-install.json",
+      "status": "added",
+      "sha256": "32230dd74e41cf7b5bb68c2a9b3ca17cc7a8f9d3e06f3f15a5d207105235ee5b"
+    },
+    {
+      "path": "docs/measurements/auth-recovery-linux/nuclei-live.json",
+      "status": "added",
+      "sha256": "e84b4ea1399edf4a07e1a02b77e74a335b6c3bcf9b981bc5de531fd84aaa606c"
+    },
+    {
+      "path": "docs/measurements/auth-recovery-linux/pip-freeze.txt",
+      "status": "added",
+      "sha256": "d3ee438245ca697fa8dc82fb855177128ce6b6015d79add783ee24f46f8738b0"
+    },
+    {
+      "path": "docs/measurements/auth-recovery-linux/post-refresh-e2e.json",
+      "status": "added",
+      "sha256": "63bbe761690447e391545773aa749d94454d96169a22cbcc20691572e2b7450c"
+    },
+    {
+      "path": "docs/measurements/auth-recovery-linux/runtime.json",
+      "status": "added",
+      "sha256": "b52b74cfd7899fef7082eba607381dd6bdb76c76bc0f7178b7131ba645cea271"
+    },
+    {
+      "path": "docs/measurements/auth-recovery-macos-tests.txt",
+      "status": "added",
+      "sha256": "22ddf78e6813d3a9b37e51067003362729bd96b603f1f2b3d59f20d128b0ad3f"
+    },
+    {
+      "path": "docs/measurements/auth-recovery-macos.junit.xml",
+      "status": "added",
+      "sha256": "84ac5aac2c5d390ca9d0abbfc37026122c828b1050ef4aebaed2a2079efa03ad"
+    },
+    {
+      "path": "docs/measurements/auth-recovery-mypy.txt",
+      "status": "added",
+      "sha256": "0aff7acab7d7f7348f7cdca0a283d4e476853f4d68a09cc3d2708a2f847eb9c6"
+    },
+    {
+      "path": "docs/measurements/auth-recovery-preservation.json",
+      "status": "added",
+      "sha256": "b8b1148033c94d35744e695817dbc522b92a7e3b4861bd248aac5eb3a49a639e"
+    },
+    {
+      "path": "docs/measurements/auth-recovery-ruff.txt",
+      "status": "added",
+      "sha256": "a3ce8ee56a5a7c1911e7cade623ee452443c5ab868ea2d95a9af7c53aa2615c1"
+    },
+    {
+      "path": "docs/measurements/auth-recovery-source-skills.json",
+      "status": "added",
+      "sha256": "9ca5a01d26b1dbf4a3df779287a9ce1c4a0e356e78f0f11d534cf1d3f034093e"
+    },
+    {
+      "path": "docs/measurements/auth-recovery-start.json",
+      "status": "added",
+      "sha256": "f046f5f61e6524edc59e0a55a00b6583d4b444bffe70aecbb48c1e6f78c2fc8b"
+    },
+    {
+      "path": "docs/measurements/auth-recovery-verification-summary.json",
+      "status": "added",
+      "sha256": "39dd79dce41c384b612cb42eb9ed8059cd47e2964a6c229bc79a11936a1d3618"
+    },
+    {
+      "path": "docs/measurements/auth-recovery-viewer-build.txt",
+      "status": "added",
+      "sha256": "452d6123f15cfdda580ad56a97b5301797b63d400e337eedeff99056e81ca949"
+    },
+    {
+      "path": "docs/redjohn-architecture.md",
+      "status": "modified",
+      "sha256": "07ce752a26dbf3714f1a0a506de4f5870865161a88830555cf7828ca12682a6c"
+    },
+    {
+      "path": "docs/redjohn-auth-recovery-verification.md",
+      "status": "added",
+      "sha256": "9294d15b7596c892813a743753940c01534d8b52095fcb038638bc0e326bc12a"
+    },
+    {
+      "path": "docs/redjohn-changed-files.md",
+      "status": "modified",
+      "sha256": "60d39321507d4a68b02215a265bfb8b98eab918baa89002d4bb66983dec2b08e"
+    },
+    {
+      "path": "docs/redjohn-continuous-refresh-verification.md",
+      "status": "modified",
+      "sha256": "d368c3c6ccba3f0bbc2ac849d6b8b4d9494f362ee232847727ee3a3568e882c4"
+    },
+    {
+      "path": "docs/redjohn-requirements.md",
+      "status": "modified",
+      "sha256": "7e503506996d90834a5c4d72117f6b3742d7622a517e4b7edc0dcfaf1b9bf22a"
+    },
+    {
+      "path": "docs/redjohn-runbook.md",
+      "status": "modified",
+      "sha256": "a49b38ead165f5a7eda5eb4c146baf0608968ddf273fd0b697670b9650504047"
+    }
+  ]
+}

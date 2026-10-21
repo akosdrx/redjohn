@@ -1,6 +1,6 @@
 # RedJohn determinisztikus assessment-réteg
 
-Current extension: [ffuf and assessment Web View](../RedJohn/docs/ffuf-discovery.md). Reuses the proxy/governor/supervisor; only selected jobs launch the optional executable. Cancellation retains committed evidence. Reports use the configured capability registry.
+Current extension: [ffuf and assessment Web View](ffuf-discovery.md). Reuses the proxy/governor/supervisor; only selected jobs launch the optional executable. Cancellation retains committed evidence. Reports use the configured capability registry.
 
 Az új réteg a meglévő Python-csomag része. Nincs második platform,
 adatbázismotor, Redis, Temporal, Neo4j, Crawlee queue vagy LLM-kötelezettség.
@@ -22,7 +22,7 @@ CLI-controllert. Ugyanaz a scheduler és adapterlánc fut benne. A kernelhatár
 ellenőrzése, az OOM evidence és a halott ownerhez tartozó processzfa lezárása
 tényleges implementáció. A supervisor RAM-ja a host-admissionben számít; a
 dedikált CLI hard limitje különbözik egy teljes hostra vonatkozó OS-kerettől.
-[Kontraktus és határok](../RedJohn/docs/shared-resources-and-os-memory.md).
+[Kontraktus és határok](shared-resources-and-os-memory.md).
 
 ```text
 operator configuration / caller identity
@@ -151,7 +151,7 @@ A `benchmarks/mixed_soak.py` a meglévő queue/governor/proxy útvonalakat haszn
 nem második ütemezőt. A valódi Chromium/httpx/Nuclei oracle-ciklusoktól külön
 jelöli a tényleges processz/socket/SQLite limiteket terhelő szintetikus bemenetet.
 A hiányzó mérés, cleanup, engine vagy hibás forrásazonosság nem siker.
-[Mérési kontraktus és célzott eredmény](redjohn-mixed-soak-verification.md).
+[Mérési kontraktus és célzott eredmény](archive/redjohn-mixed-soak-verification.md).
 
 ## Meglévő Nuclei a tartós HTTP(S) láncban
 
@@ -215,7 +215,7 @@ a szülő sikerével atomi outbox-bejegyzést kap; a child-jobok beszúrása és
 esemény nyugtázása szintén atomi. A koordinátor lockja, a teljes batch-limit,
 session/evidence/vault ellenőrzés és stabil jobkulcsok minden lépésre érvényesek.
 Follow-up hiba nem változtatja retryvá a sikeres, módosító szülőjobot.
-Séma és recovery: [continuous workflow](../RedJohn/docs/continuous-refresh-replay.md).
+Séma és recovery: [continuous workflow](continuous-refresh-replay.md).
 
 Az opcionális `session_recovery` csak teljes, pontos GET-start/POST-route proxy-401
 vagy az adott start bindingjának igazolt lejárata után hoz létre auth-failure
@@ -224,7 +224,7 @@ ellenőrzését végzi; a store atomi `rj_auth_recovery_budget` és
 `rj_auth_recovery_job` táblái adják a revíziókon/újraindításon át megmaradó
 limitet és cooldown-t. Kései régi hiba nem frissíti az új sessiont. A hiányos
 401 és a más endpoint lejárata nem ad jogosultságot; a régi POST nem retry.
-[Séma és határok](../RedJohn/docs/automatic-session-recovery.md).
+[Séma és határok](automatic-session-recovery.md).
 
 A `body_tokens` csak deklarált JSONPointer/form/multipart text mezőket cserél az
 új header/cookie/response tokenből. Unbound wirebyte és upload változatlan; a
@@ -233,7 +233,7 @@ egyezniük kell; multipartnál kizárólag a boundary framing térhet el. A pont
 publikus multipart Content-Type/body sentinel stabil template-lockot enged, a
 host injektálja a privát boundaryt/bodyt. Provider-refresh-token rotáció és a
 teljes login/MFA-workflow nincs. Sémák, limitek és recovery:
-[browser/body-token workflow](../RedJohn/docs/browser-post-body-tokens.md).
+[browser/body-token workflow](browser-post-body-tokens.md).
 
 ## Kis API és meglévő agent
 

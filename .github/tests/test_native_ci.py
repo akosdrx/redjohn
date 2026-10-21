@@ -130,7 +130,7 @@ class NativeEvidenceContracts(unittest.TestCase):
                         else "synthetic_" + str(index)
                     ),
                     classname="synthetic",
-                    file="RedJohn/tests/" + selected["file"],
+                    file="tests/" + selected["file"],
                 )
             if name == "preparation":
                 props = ET.SubElement(suite, "properties")
@@ -374,7 +374,7 @@ class NativeEvidenceContracts(unittest.TestCase):
             self.assertIn("always()", step.get("if", ""))
         launcher = (SCRIPTS / "linux-tests.sh").read_text()
         for item in native.SUITES.values():
-            self.assertIn("RedJohn/tests/" + item["file"], launcher)
+            self.assertIn("tests/" + item["file"], launcher)
         self.assertIn("not " + native.EXCLUDED_BROWSER.split("::")[1], launcher)
         self.assertIn('--reuid="$SUDO_UID"', launcher)
 

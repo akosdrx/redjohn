@@ -224,7 +224,7 @@ async def execute(interface: str, fixture, gateway, args, output: Path) -> dict:
     environment.setdefault("GOCACHE", str(Path.home() / ".cache/go-build"))
     environment.setdefault("GOMODCACHE", str(Path.home() / "go/pkg/mod"))
     environment.update({"HOME": str(private), "TERM": "xterm-256color", "CI": "true",
-        "PYTHONPATH": str(ROOT / "RedJohn"), "REDJOHN_NO_UPDATE_CHECK": "1", "REDJOHN_TELEMETRY": "0",
+        "PYTHONPATH": str(ROOT), "REDJOHN_NO_UPDATE_CHECK": "1", "REDJOHN_TELEMETRY": "0",
         "OPENAI_AGENTS_DISABLE_TRACING": "1", "REDJOHN_RUNTIME_BACKEND": "local",
         "REDJOHN_ASSESSMENT_APPROVAL_KEY": str(private / "keys/host.key"),
         "REDJOHN_MCP_CONFIG": str(private / "empty-mcp.json"),

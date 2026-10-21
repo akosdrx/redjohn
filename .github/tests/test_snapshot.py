@@ -20,10 +20,10 @@ class PublicationAllowlist(unittest.TestCase):
             root = Path(folder)
             for name in (
                 "docs/redjohn-capabilities.json", "docs/third-party-references.json",
-                "docs/redjohn-schemas.json", "docs/readme.md", "RedJohn/module.py",
+                "docs/redjohn-schemas.json", "docs/readme.md", "redjohn/module.py",
                 "docs/local-credentials.json", "docs/measurements/report.md",
-                "docs/nested/redjohn-capabilities.json", "RedJohn/.env.production",
-                "RedJohn/.tools/scanner/key.py", "docs/debug-changed-files.md",
+                "docs/nested/redjohn-capabilities.json", "redjohn/.env.production",
+                ".tools/scanner/key.py", "docs/debug-changed-files.md",
             ):
                 path = root / name
                 path.parent.mkdir(parents=True, exist_ok=True)
@@ -32,7 +32,7 @@ class PublicationAllowlist(unittest.TestCase):
                 selected = snapshot.selected()
             self.assertEqual(set(selected), {
                 "docs/redjohn-capabilities.json", "docs/third-party-references.json",
-                "docs/redjohn-schemas.json", "docs/readme.md", "RedJohn/module.py",
+                "docs/redjohn-schemas.json", "docs/readme.md", "redjohn/module.py",
             })
 
 

@@ -33,3 +33,6 @@ RedJohn/.tools/
 RedJohn/build/
 /artifacts/
 /.ci-state/
+
+# Host-local verified optional tool artifacts; not source or full templates.
+.tools/

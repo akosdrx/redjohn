@@ -1,0 +1,582 @@
+{
+  "recorded_at": "2026-10-17T13:10:18.378780+00:00",
+  "excluded": "Installed tools, runtime state, credentials, generated runs/caches, and all changed-files.json manifests (avoids circular hashes). Cleanup has a separate measured list.",
+  "basis": "Current source compared with remote-auth-start Python hashes and prior handoff cumulative manifest for non-Python files; newly added files included explicitly. Not a diff against inherited dirty Git HEAD.",
+  "files": [
+    {
+      "path": ".github/workflows/redjohn-remote-egress.yml",
+      "status": "added",
+      "sha256": "ef005ae6b82491778bf84b5f0f04fa7b33aee88e040a1de414417e01c538a890"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "status": "modified",
+      "sha256": "d3e78e0f1718d6683885148b0797178be653421325c1dcfa159e083259b182c4"
+    },
+    {
+      "path": "README.md",
+      "status": "modified",
+      "sha256": "9e7b1b7dca7de9f8202c7574eee7145720896a17c36d465dc7a7b2e47f6eac3a"
+    },
+    {
+      "path": "README.md",
+      "status": "modified",
+      "sha256": "f03fbf86b494094c391557aabbc9a101a0c5cab40b851d9fd29ce22ce9429aec"
+    },
+    {
+      "path": "docs/nuclei-auth-replay.md",
+      "status": "added",
+      "sha256": "540ca1abe282747f59d09285bcd63df97fe4040181a9b232ecbd1e2fe0d8beaa"
+    },
+    {
+      "path": "docs/nuclei-integration.md",
+      "status": "modified",
+      "sha256": "86a2a9f538d4c2db4a7356a00fd172f56477202c5fe41fa3501028cbdf9ce065"
+    },
+    {
+      "path": "docs/redjohn-skill-coverage.md",
+      "status": "modified",
+      "sha256": "8f1bdc212ffd6190f9e718d01ea0b3f53ab5a5de75f6e661a20a6c963ab192d8"
+    },
+    {
+      "path": "docs/remote-egress-auth.md",
+      "status": "added",
+      "sha256": "b42e9e650e2275b3bf0629f49d9e9e259619aeccccbc6fcd9c93e9a5d9f40777"
+    },
+    {
+      "path": "docs/remote-egress.md",
+      "status": "added",
+      "sha256": "28669576a541197faaefddf6437db5f6011fd01f01cb8ef0c5a443ed145945e3"
+    },
+    {
+      "path": "redjohn/assessment/_egress_worker.py",
+      "status": "added",
+      "sha256": "e786827fbb8365b57778dd3019ddb96dd3ba1d034e6d253de08fa60330baf16e"
+    },
+    {
+      "path": "redjohn/assessment/adapters.py",
+      "status": "modified",
+      "sha256": "f3d1ebdf4e6767ff80d7b0aec252917a48b6c6aa7a228c415733dd2d2e70588a"
+    },
+    {
+      "path": "redjohn/assessment/auth_replay.py",
+      "status": "added",
+      "sha256": "af354144507c9797f2f81a73dd963db05a0279df231b9d1f8649541945b0a116"
+    },
+    {
+      "path": "redjohn/assessment/browser.py",
+      "status": "modified",
+      "sha256": "a0db1b50f9bf3264f3f2d784a4cb85774610d5bbfe8de666742d435ef315da21"
+    },
+    {
+      "path": "redjohn/assessment/browser_proxy.py",
+      "status": "modified",
+      "sha256": "06ff196ed5c6be45c75ffe79f52a9e1314e3faee76efbfa75cc48ebed291782b"
+    },
+    {
+      "path": "redjohn/assessment/browser_tls.py",
+      "status": "modified",
+      "sha256": "24b83f1ba9d1943d773b6c9288387b7d22ebd4cbb030c247eded5aeaa8aad019"
+    },
+    {
+      "path": "redjohn/assessment/cli.py",
+      "status": "modified",
+      "sha256": "a4f7388a7a95d7698d54acc795a37fa0dabaa53f68056a952e133a56fa4aa51e"
+    },
+    {
+      "path": "redjohn/assessment/control.py",
+      "status": "modified",
+      "sha256": "d65a634a29833a0c201218dc44b462a6bdc8aac9dbcce6f7203ae3a87d0e487e"
+    },
+    {
+      "path": "redjohn/assessment/egress.py",
+      "status": "added",
+      "sha256": "1ba085bce6f80d23d892cf899af5356445cc8be09e665318043650d93ee2dd0e"
+    },
+    {
+      "path": "redjohn/assessment/native_session.py",
+      "status": "modified",
+      "sha256": "4ef4f1fafdf2f221c914d215ed820f85bd9fec7e611ccfd980af7d0f297cd096"
+    },
+    {
+      "path": "redjohn/assessment/policy.py",
+      "status": "modified",
+      "sha256": "bd7fd0ee8bc7cde467a8b2c35f3b3c2425b7694f831bf1710bb4784590c875e1"
+    },
+    {
+      "path": "redjohn/assessment/registry.py",
+      "status": "modified",
+      "sha256": "164626275456d990524b51c5ef9fdcc13068c68161d1dba11316a096ced4c47a"
+    },
+    {
+      "path": "redjohn/assessment/report.py",
+      "status": "modified",
+      "sha256": "2c7d5a28ab14d59c52333e7e06e9aeba4c0da6ce9afc1ae3ef9935428e70051e"
+    },
+    {
+      "path": "redjohn/assessment/resources.py",
+      "status": "modified",
+      "sha256": "3f7866d48d47bd3b4ab4ab705f59ddf26bb9adf30b56b514c9934787e8c6f85b"
+    },
+    {
+      "path": "redjohn/assessment/runtime.py",
+      "status": "modified",
+      "sha256": "cf1e3912f8238dbad6a624282b25aa731e440b9d157c29b419e8eb0b1bd4944d"
+    },
+    {
+      "path": "redjohn/assessment/scheduler.py",
+      "status": "modified",
+      "sha256": "8d87877ad6db17c0da7cf9996464f03673f55f3cb7499a9b6ae000fefcb91374"
+    },
+    {
+      "path": "redjohn/assessment/store.py",
+      "status": "modified",
+      "sha256": "23e44803637b8481ba29d68ccd829a0842cf858d8812d349a51ca4d4bbe12a9b"
+    },
+    {
+      "path": "redjohn/skills/README.md",
+      "status": "modified",
+      "sha256": "0c2f3eea5ec0b1958273a7a31a120291a224fdd2f1023438996c403d93de8ac0"
+    },
+    {
+      "path": "redjohn/skills/assessment/api-graphql-security/SKILL.md",
+      "status": "modified",
+      "sha256": "6464af765a9f4e2ac096f96265545e8b26bd9d5b5c3f5aea7b8671dec3080cc1"
+    },
+    {
+      "path": "redjohn/skills/assessment/authentication-session/SKILL.md",
+      "status": "modified",
+      "sha256": "9d3deee7eba08b699266cca480978a6c845a5817a68e9e3a909a3c97978e340a"
+    },
+    {
+      "path": "redjohn/skills/assessment/authorization-bfla-bopla/SKILL.md",
+      "status": "modified",
+      "sha256": "d856fea7c35f00433173920488c85ae8a29b937702efcbf32dfabe97cf7d1c7f"
+    },
+    {
+      "path": "redjohn/skills/assessment/authorization-idor-bola/SKILL.md",
+      "status": "modified",
+      "sha256": "9768a443d7f6b0d1381893face4fd4c8940caad4c509cdfad257ce93fcccff59"
+    },
+    {
+      "path": "redjohn/skills/assessment/business-logic-testing/SKILL.md",
+      "status": "modified",
+      "sha256": "a2193e7e71a8febaa1ef6e34022d3e2a7ce895b2530c2e15d171c8257c6cd038"
+    },
+    {
+      "path": "redjohn/skills/assessment/cache-freshness-control/SKILL.md",
+      "status": "modified",
+      "sha256": "52fafc38c7555aa9f9e1951043272696eab6bcdb6d975a5ad9842da476154bb2"
+    },
+    {
+      "path": "redjohn/skills/assessment/cloud-posture-assessment/SKILL.md",
+      "status": "modified",
+      "sha256": "f014358f2d245ed2734398cd0d60f4e245b0ccff0cee950f4541aa1e6d51e030"
+    },
+    {
+      "path": "redjohn/skills/assessment/command-injection-validation/SKILL.md",
+      "status": "modified",
+      "sha256": "2cba344e96585e7e9fa060ef0618c33390bb3d8eb22ad5e39fa2b48cb341fd1a"
+    },
+    {
+      "path": "redjohn/skills/assessment/correlation-hypothesis-review/SKILL.md",
+      "status": "modified",
+      "sha256": "da27ffc05959749a7703b1dab3651fa5b343eda9db1b251ccee5db061b81e49d"
+    },
+    {
+      "path": "redjohn/skills/assessment/cors-validation/SKILL.md",
+      "status": "modified",
+      "sha256": "10c27d2ca9044905de2d82692a958da2efac5f5ac787a992067b314cc108533f"
+    },
+    {
+      "path": "redjohn/skills/assessment/crlf-response-splitting/SKILL.md",
+      "status": "modified",
+      "sha256": "fc99d7d4ff7d7cae6489f673d04a3da29597d38ee869e782e63bb5477844a67f"
+    },
+    {
+      "path": "redjohn/skills/assessment/csrf-validation/SKILL.md",
+      "status": "modified",
+      "sha256": "c314048a15ac1cae1c3b8f95483519026f3fdeb4abb5f4e3f39a887561d5e451"
+    },
+    {
+      "path": "redjohn/skills/assessment/deserialization-risk/SKILL.md",
+      "status": "modified",
+      "sha256": "f6d38c714c4999d01c448e5863ecdfcaebaa83788f5fc908308feb52d55742e3"
+    },
+    {
+      "path": "redjohn/skills/assessment/dns-asset-discovery/SKILL.md",
+      "status": "modified",
+      "sha256": "1949aa2e48e3468b3834a388c39ef4601acf80f2c8e9f8b3ba0207db507a2686"
+    },
+    {
+      "path": "redjohn/skills/assessment/engagement-scope/SKILL.md",
+      "status": "modified",
+      "sha256": "f3de9436131f7071a7a8b40f7e80f07d8bf18822fd0fa2b5fad1a6e41f7d84d6"
+    },
+    {
+      "path": "redjohn/skills/assessment/execution-scheduling/SKILL.md",
+      "status": "modified",
+      "sha256": "1ac20da056f4501d43160f40a35b88f5077a052578396e280291ae2d22a09b7e"
+    },
+    {
+      "path": "redjohn/skills/assessment/file-upload-processing/SKILL.md",
+      "status": "modified",
+      "sha256": "7a7b57af9cefb12419617e037d59e4817ea73fffd0863afe724afd775350ebeb"
+    },
+    {
+      "path": "redjohn/skills/assessment/finding-triage-retest/SKILL.md",
+      "status": "modified",
+      "sha256": "195c5f4e61cb407976f856d7d835cd3b9b7d512cc1537d5cbce28d9971144cdf"
+    },
+    {
+      "path": "redjohn/skills/assessment/headless-browser-discovery/SKILL.md",
+      "status": "modified",
+      "sha256": "4506ba9b3326f407aebc43f09ce9712699e820fb3711182282ca655a314c2703"
+    },
+    {
+      "path": "redjohn/skills/assessment/http-desync-assessment/SKILL.md",
+      "status": "modified",
+      "sha256": "d085d1dc8c7cfa5fd9e54891f9c2dc4dd0b4049ee0ca7f2c46dd50b6fc7a54aa"
+    },
+    {
+      "path": "redjohn/skills/assessment/input-discovery/SKILL.md",
+      "status": "modified",
+      "sha256": "6bc644fd04822123cb820bf0fa624eee3554112227acf34c266172e2ed9d0855"
+    },
+    {
+      "path": "redjohn/skills/assessment/javascript-endpoint-analysis/SKILL.md",
+      "status": "modified",
+      "sha256": "1603dd3418eae5dd77d3685a04f4096920373e2baf3df6d4ba4f0f2644678aa9"
+    },
+    {
+      "path": "redjohn/skills/assessment/jwt-security/SKILL.md",
+      "status": "modified",
+      "sha256": "64fa6a8417ead873107dab105c4fcf0dd3f6e8466f9442f72cc59fccba5f91de"
+    },
+    {
+      "path": "redjohn/skills/assessment/kubernetes-benchmark-assessment/SKILL.md",
+      "status": "modified",
+      "sha256": "bc55533e7a8bfb19132553027643e08450b0de6bf06c7880eb4d1bef4909b6d0"
+    },
+    {
+      "path": "redjohn/skills/assessment/local-binary-triage/SKILL.md",
+      "status": "modified",
+      "sha256": "f1bd81d6b009a10d15e1585ebdf439a5b7dfea80a004d6322156c862b9f968de"
+    },
+    {
+      "path": "redjohn/skills/assessment/manifest.json",
+      "status": "modified",
+      "sha256": "f4447fd25f607527d3b36900725827e98d4c10dd6a34ecd0767136c1fc3f6819"
+    },
+    {
+      "path": "redjohn/skills/assessment/memory-context-budgeting/SKILL.md",
+      "status": "modified",
+      "sha256": "678aba0c6660cfb627bd9cb876eadeddf81bb1d6928d81cee57dcdde4f922c1d"
+    },
+    {
+      "path": "redjohn/skills/assessment/nosql-ldap-injection/SKILL.md",
+      "status": "modified",
+      "sha256": "dbc910a9867188875fc01c3a8d3749becebb4135bfc2cd9f007cbcde93a09132"
+    },
+    {
+      "path": "redjohn/skills/assessment/nuclei-cve-planning/SKILL.md",
+      "status": "modified",
+      "sha256": "235acd39220709ba3340de1ec355286716867e04a344f3c43058af0fae859e9a"
+    },
+    {
+      "path": "redjohn/skills/assessment/oast-correlation/SKILL.md",
+      "status": "modified",
+      "sha256": "65a4640debe6225c779299f19f3e30eb2cf0967800ca4690bf5ca51ab6a468ed"
+    },
+    {
+      "path": "redjohn/skills/assessment/path-traversal-lfi-rfi/SKILL.md",
+      "status": "modified",
+      "sha256": "67793cabc05fbc428cf9edf2924f79a4314b39b554852c84d20c1ee2d09f1dc8"
+    },
+    {
+      "path": "redjohn/skills/assessment/performance-regression/SKILL.md",
+      "status": "modified",
+      "sha256": "de308362bbf7831ff2a46d56b428efb9bb63d5f648cc6f18330d5c5408e1e0ca"
+    },
+    {
+      "path": "redjohn/skills/assessment/prototype-pollution/SKILL.md",
+      "status": "modified",
+      "sha256": "d9568a28237c6f29b10486c6cbc4d3bdb5d557e46e4c1ea3d60f7f7c77f1cd22"
+    },
+    {
+      "path": "redjohn/skills/assessment/race-toctou/SKILL.md",
+      "status": "modified",
+      "sha256": "57ad556868f48550e0c0a59214d0fbee4c17a3c803ce7b586b522c763d713202"
+    },
+    {
+      "path": "redjohn/skills/assessment/report-coverage/SKILL.md",
+      "status": "modified",
+      "sha256": "9011829ccba31068dc4347e45bec534a4895d7ecb1e6f9868e1bbe9cc751986e"
+    },
+    {
+      "path": "redjohn/skills/assessment/resilience-recovery/SKILL.md",
+      "status": "modified",
+      "sha256": "0bc7a62fdbf531144c626d45cba757b0ff9acab692ed3d33f8d1c07a1067ee29"
+    },
+    {
+      "path": "redjohn/skills/assessment/safe-reproducer-validation/SKILL.md",
+      "status": "modified",
+      "sha256": "ba7a6a572a8c42269f85945cc800124f231c044a3843e00ab7dc0e542d70e2b0"
+    },
+    {
+      "path": "redjohn/skills/assessment/service-discovery/SKILL.md",
+      "status": "modified",
+      "sha256": "90bdba2e1d74a41fd8150a5847257fb601e8f35908eddf12be41e6da3737280a"
+    },
+    {
+      "path": "redjohn/skills/assessment/source-dependency-analysis/SKILL.md",
+      "status": "modified",
+      "sha256": "4de45e3f5651cd738b3bfdafbd35e780c21764e696dae75e7f6874736112e315"
+    },
+    {
+      "path": "redjohn/skills/assessment/sql-injection-validation/SKILL.md",
+      "status": "modified",
+      "sha256": "daa88ec4550f708d65c9cf34cd51ece3344bf9fe231f0c820e224032a01849c7"
+    },
+    {
+      "path": "redjohn/skills/assessment/ssrf-validation/SKILL.md",
+      "status": "modified",
+      "sha256": "60d016afea32c1ead654beb2ac1ba9a780be53b35256ffebd25ac8a318ea03f7"
+    },
+    {
+      "path": "redjohn/skills/assessment/subdomain-takeover/SKILL.md",
+      "status": "modified",
+      "sha256": "5ebcbb3572152e6c3706b6e1d948d6ca1918fd789c558d6b3723b724271771ed"
+    },
+    {
+      "path": "redjohn/skills/assessment/technology-fingerprinting/SKILL.md",
+      "status": "modified",
+      "sha256": "ec88f0be56bf57843faf877c86baa355acce7bc66c204967e2bef4425ea8866a"
+    },
+    {
+      "path": "redjohn/skills/assessment/template-injection-validation/SKILL.md",
+      "status": "modified",
+      "sha256": "3a230379db42a9929cbe4a14a2253753e08e3c2a450cbd24bb6eb7dde3307f20"
+    },
+    {
+      "path": "redjohn/skills/assessment/web-surface-inventory/SKILL.md",
+      "status": "modified",
+      "sha256": "015cc4fa7dd3949c021471da23a493d059cf95fa2f6ae87b307d1a0161345d88"
+    },
+    {
+      "path": "redjohn/skills/assessment/wordpress-assessment/SKILL.md",
+      "status": "modified",
+      "sha256": "b337e4bd9b741810d284e85a219a1781d696d44b1cb3b3028604c4081dad5245"
+    },
+    {
+      "path": "redjohn/skills/assessment/xss-validation/SKILL.md",
+      "status": "modified",
+      "sha256": "bf8ba36eb4544bfe496ba7e6a75b9c0082581c2eb41e94008083c4de32f9ae4e"
+    },
+    {
+      "path": "redjohn/skills/assessment/xxe-validation/SKILL.md",
+      "status": "modified",
+      "sha256": "f4d4ddeb416991bbc9892f38fce61ea0a4f7bacb68644f7ba21c490d38d21ac4"
+    },
+    {
+      "path": "redjohn/tools/hunt/nuclei.py",
+      "status": "modified",
+      "sha256": "b585f08a66506940cade30c561071f2423eecfeed85a50a2d75959582ccbfe46"
+    },
+    {
+      "path": "tests/remote_https_fixture.py",
+      "status": "added",
+      "sha256": "663a32270593c1bf261f51ac3f6d6996f331fbe7e4ea4d000b7c62c59664e45d"
+    },
+    {
+      "path": "tests/test_assessment_auth_replay.py",
+      "status": "added",
+      "sha256": "494bab0accc0c3fd1281ca5281efb91391df37eedb741181ca9a5f380c7563a8"
+    },
+    {
+      "path": "tests/test_assessment_egress.py",
+      "status": "added",
+      "sha256": "bcb99906f3d53d9071618a647d31b1f794379a93991be038ee838b74d7d14c92"
+    },
+    {
+      "path": "tests/test_assessment_resource_control.py",
+      "status": "modified",
+      "sha256": "e90e5b98dae7d2d5cdcb1f965cabe22fa50a7161b3bfffc309c6c11bf1f17f8f"
+    },
+    {
+      "path": "tests/test_assessment_skills.py",
+      "status": "modified",
+      "sha256": "499f2a2e2211d08c87021535342f1c2524dce2b353160e4a847cb34765c465c0"
+    },
+    {
+      "path": "tests/test_nuclei_auth_live.py",
+      "status": "added",
+      "sha256": "8f979afc3d9f1ad95a8dfdc1a495f4878666395b114d17d8ac33d638a9e4dcb5"
+    },
+    {
+      "path": "tests/test_remote_authenticated_pipeline.py",
+      "status": "added",
+      "sha256": "2e3808322e9d8b19c3ecc09c27e0ca007e80d2f48c7b2ccec868b5374968a354"
+    },
+    {
+      "path": "tests/test_remote_policy.py",
+      "status": "added",
+      "sha256": "81bf331e219fe188ef4782a84df48fc927d97d7e8fce1b72b0e25b9e1cfd5e85"
+    },
+    {
+      "path": "docs/measurements/authenticated-nuclei-live.json",
+      "status": "added",
+      "sha256": "09d9cac4ceaec7db8f32f5cfc6aa28602e008c0952ee763d9895d80cd1b7b3da"
+    },
+    {
+      "path": "docs/measurements/english-skill-validation.json",
+      "status": "added",
+      "sha256": "06322b5b0c27958b1a18355c412d532b6d1089de8fef107d79b1f1a4476f67b4"
+    },
+    {
+      "path": "docs/measurements/nuclei-https-start.json",
+      "status": "added",
+      "sha256": "ee981570b3435ba2882cfc296b7c714b2e252acc1f3e44e984f560d4282aea42"
+    },
+    {
+      "path": "docs/measurements/remote-auth-cleanup.json",
+      "status": "added",
+      "sha256": "44cd8df45641e8b4b1e4b964abd84fe91933f4cee96e97df4a5302a82d077fb8"
+    },
+    {
+      "path": "docs/measurements/remote-auth-linux/auth-e2e.json",
+      "status": "added",
+      "sha256": "2518d3b62b2795fe2f839792dc81928da7954858ab35036f027faa7624691bfb"
+    },
+    {
+      "path": "docs/measurements/remote-auth-linux/guest-browser-bootstrap.json",
+      "status": "added",
+      "sha256": "db8972d95f3689f5ae9003c6fb3e5fbc762f3f9b93999c41af5f633c39052c9b"
+    },
+    {
+      "path": "docs/measurements/remote-auth-linux/guest-kernel-bootstrap.txt",
+      "status": "added",
+      "sha256": "636d60c964793cbc457e247f81323ba60170f83b2e0ca8abc068838dccc74e53"
+    },
+    {
+      "path": "docs/measurements/remote-auth-linux/guest-pip-freeze.txt",
+      "status": "added",
+      "sha256": "d3ee438245ca697fa8dc82fb855177128ce6b6015d79add783ee24f46f8738b0"
+    },
+    {
+      "path": "docs/measurements/remote-auth-linux/https-e2e.json",
+      "status": "added",
+      "sha256": "f177d852bccb844d54ee8cb5b42fb09e8f0be8de339a88869194f259c7609dbd"
+    },
+    {
+      "path": "docs/measurements/remote-auth-linux/namespace-final-tests.txt",
+      "status": "added",
+      "sha256": "4e50ad83cee92f457798a54b2f9b8c49f98441ee01fce024c84a04dfff51366a"
+    },
+    {
+      "path": "docs/measurements/remote-auth-linux/namespace-final.junit.xml",
+      "status": "added",
+      "sha256": "679779f9cebbe81462732f1076e8f69632b5224dc0b47ea26376d912b131499c"
+    },
+    {
+      "path": "docs/measurements/remote-auth-linux/nuclei-live.json",
+      "status": "added",
+      "sha256": "4cf8a2ab1afea876a3e111046f9f52be20cda635f653c2b6226a9cf190f4add6"
+    },
+    {
+      "path": "docs/measurements/remote-auth-linux/redjohn-tests.junit.xml",
+      "status": "added",
+      "sha256": "7dc7f3f45175fce1bbd779bb5a482fbd469010fcd08ec065d9db092cf2abf415"
+    },
+    {
+      "path": "docs/measurements/remote-auth-linux/redjohn-tests.txt",
+      "status": "added",
+      "sha256": "378b192facaa7f6e618b1d0ce135d5930ca4bf2dcf32f3c7a7cf35e41ee84704"
+    },
+    {
+      "path": "docs/measurements/remote-auth-linux/remote-auth-e2e.json",
+      "status": "added",
+      "sha256": "0ed89c018e87e647ca25320960d90805d130a80ab89bbe62c480f7b3b77453da"
+    },
+    {
+      "path": "docs/measurements/remote-auth-linux/source-and-runtime-verification.json",
+      "status": "added",
+      "sha256": "eb94602fb530727e16c7fb958ab54e248aedff76699c0ff4e8a21cf3a82c1d73"
+    },
+    {
+      "path": "docs/measurements/remote-auth-macos-tests.txt",
+      "status": "added",
+      "sha256": "fd8508b8b0b1a4539f48c70e5f99b6cdebf3d78f9c2f74f0018b955040578471"
+    },
+    {
+      "path": "docs/measurements/remote-auth-macos.junit.xml",
+      "status": "added",
+      "sha256": "e292dc497b877cd16d39fde2be8ae63cdf63d59899dbb400f9303e7f19881684"
+    },
+    {
+      "path": "docs/measurements/remote-auth-start.json",
+      "status": "added",
+      "sha256": "dc2238699380256828f7217a98e4c81b07425e0530e9e03f7254fbe5dcf26c64"
+    },
+    {
+      "path": "docs/measurements/remote-auth-verification-summary.json",
+      "status": "added",
+      "sha256": "d04fd0c25fbee5a4e5afc553699f721a26bab6f9d168b8be81334df5190f15a9"
+    },
+    {
+      "path": "docs/measurements/remote-authenticated-live.json",
+      "status": "added",
+      "sha256": "d2eda1572bc1996ed416797831f46d32fad59d7ea68128d234671a396b7fa2ee"
+    },
+    {
+      "path": "docs/measurements/remote-linux-source-files.json",
+      "status": "added",
+      "sha256": "bd9a715e54ab9ac5c3ae9525fb667f759a22d6ecab77c9d73099941ae055104f"
+    },
+    {
+      "path": "docs/redjohn-architecture.md",
+      "status": "modified",
+      "sha256": "579707c191d8703c83940642dde3cc23652230d980775b153e5cc44d2ca83e3a"
+    },
+    {
+      "path": "docs/redjohn-capabilities.json",
+      "status": "modified",
+      "sha256": "6fa8e3dbc9f79c5a9d95f6c854095be6aa2e50208912fdde98a0802c2f35d208"
+    },
+    {
+      "path": "docs/redjohn-capabilities.md",
+      "status": "modified",
+      "sha256": "907dda521833baa5ca232b453e1d41b2e20fb47d510363c7405beb3a99ad009c"
+    },
+    {
+      "path": "docs/redjohn-changed-files.md",
+      "status": "modified",
+      "sha256": "4cbfbb59327ac5674d8efbda02555fe1333f3dc399cfa218216fb32062b22807"
+    },
+    {
+      "path": "docs/redjohn-https-nuclei-verification.md",
+      "status": "modified",
+      "sha256": "5ca041a797c8ecff3b2892adb57d185f08b4454f97382cf42d7584d039431934"
+    },
+    {
+      "path": "docs/redjohn-remote-auth-verification.md",
+      "status": "added",
+      "sha256": "5ca4ce2fdba7f65be90d08b82e3006c16a97af04b26b5f5247429e19d54d2138"
+    },
+    {
+      "path": "docs/redjohn-requirements.md",
+      "status": "modified",
+      "sha256": "6e36e9863085dd643dac88d88dcddb0e72ff841eef11fcc65315e86e4c92e086"
+    },
+    {
+      "path": "docs/redjohn-runbook.md",
+      "status": "modified",
+      "sha256": "ae00bc3c2010053c07409b6bc8339035e4eaecd5d860f58d342e5cbc140d51b6"
+    },
+    {
+      "path": "docs/redjohn-verification.md",
+      "status": "modified",
+      "sha256": "585493b8bbb92db1d8547c0e0c0f98c9a3ac12bd9e35328fb202bddf70454830"
+    }
+  ]
+}

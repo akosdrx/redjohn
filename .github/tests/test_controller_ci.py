@@ -86,7 +86,7 @@ class ControllerLauncherContracts(unittest.TestCase):
         source = (ROOT / ".github/scripts/controller-profile-linux.sh").read_text()
         self.assertIn('test "$(pwd -P)" = "${GITHUB_WORKSPACE:?}"', source)
         self.assertLess(source.index("/usr/bin/setpriv"), source.index("PYTHONPATH="))
-        self.assertIn('PYTHONPATH="$task_workspace/RedJohn:$task_workspace/.github/scripts"', source)
+        self.assertIn('PYTHONPATH="$task_workspace:$task_workspace/.github/scripts"', source)
 
     def test_workflow_keeps_both_architectures_and_valid_job_contexts(self):
         workflow = yaml.load(

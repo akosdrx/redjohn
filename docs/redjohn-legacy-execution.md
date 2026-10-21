@@ -127,15 +127,14 @@ target isolation and cross-platform hard memory enforcement are separate gates.
 Focused macOS command from the repository root:
 
 ```sh
-cd RedJohn
-../.venv/bin/python -m pytest -q tests/test_legacy_execution.py \
+.venv/bin/python -m pytest -q tests/test_legacy_execution.py \
   tests/test_mcp_configuration.py tests/test_runner_assessment_contract.py \
   tests/test_legacy_shell_boundary_live.py
-../.venv/bin/ruff check redjohn/runtime/legacy_execution.py \
+.venv/bin/ruff check redjohn/runtime/legacy_execution.py \
   redjohn/runtime/legacy_shell_boundary.py redjohn/runtime/local_backend.py \
   redjohn/assessment/browser_proxy.py redjohn/tools/mcp redjohn/core \
   redjohn/agents/factory.py
-../.venv/bin/mypy redjohn --no-incremental
+.venv/bin/mypy redjohn --no-incremental
 ```
 
 The focused bridge/MCP/root set produced **36 passed** in **7.16 seconds** before
@@ -217,8 +216,7 @@ and authenticated/body replay remain separate explicit capabilities.
 Phase-two verification:
 
 ```sh
-cd RedJohn
-../.venv/bin/python -m pytest -q tests/test_mcp_authorization_live.py \
+.venv/bin/python -m pytest -q tests/test_mcp_authorization_live.py \
   tests/test_legacy_execution.py tests/test_mcp_configuration.py \
   tests/test_runner_assessment_contract.py
 ```
@@ -265,8 +263,7 @@ attestation, because that probe may yield while an operator stops the engagement
 Focused combined verification, retaining JUnit outside the source tree:
 
 ```sh
-cd RedJohn
-../.venv/bin/python -m pytest -q tests/test_darwin_shell_boundary.py \
+.venv/bin/python -m pytest -q tests/test_darwin_shell_boundary.py \
   tests/test_legacy_shell_darwin_live.py tests/test_mcp_authorization_live.py \
   tests/test_legacy_execution.py tests/test_mcp_configuration.py \
   tests/test_runner_assessment_contract.py \

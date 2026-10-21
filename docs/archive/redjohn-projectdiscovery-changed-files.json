@@ -1,0 +1,489 @@
+{
+  "recorded_at": "2026-10-18T00:27:55.439182+00:00",
+  "basis": "Changes from this task baseline; inherited Git restructuring is preserved. Existing active tests and user edits were not reset.",
+  "excluded": "Managed binaries/runtime/private data/caches; manifest files excluded from content hashes to avoid cycles.",
+  "manifest_files": [
+    "docs/redjohn-changed-files.json",
+    "docs/redjohn-changed-files.md",
+    "docs/redjohn-projectdiscovery-changed-files.json",
+    "docs/redjohn-projectdiscovery-changed-files.md"
+  ],
+  "files": [
+    {
+      "path": ".github/workflows/redjohn-remote-egress.yml",
+      "status": "modified",
+      "before_sha256": "9e24db6aa3702c832a391a46399acb4056e64d52e95c6b011252964ba0764bf1",
+      "sha256": "83968b9181622515564ae8ee5d15030186ab996a60977eaeefe7c792d547a040",
+      "bytes": 7377
+    },
+    {
+      "path": "README.md",
+      "status": "modified",
+      "before_sha256": "cd216ac3b648e7b43081503356aae2d7bc6fcee9011268e72887c58ac1df1103",
+      "sha256": "d01030e85e9d5ca42c9184f5b58d5714a7c9a85873f3680579f222157ef3edab",
+      "bytes": 4780
+    },
+    {
+      "path": "docs/projectdiscovery-adapters.md",
+      "status": "added",
+      "before_sha256": null,
+      "sha256": "10646503ab32022d199b3719ab2f802942d309974f8672836a9ff8f6344b8244",
+      "bytes": 9267
+    },
+    {
+      "path": "examples/assessment-projectdiscovery.json",
+      "status": "added",
+      "before_sha256": null,
+      "sha256": "e7d6db153d7fbb4b7df42e61db65dfc564b274524bcbf934e5a1f5efaad7389f",
+      "bytes": 1423
+    },
+    {
+      "path": "redjohn/assessment/browser_proxy.py",
+      "status": "modified",
+      "before_sha256": "e36cbae15c48848adceb6e1b5ca237e1a5e70fa218bf936035986c06921d2e99",
+      "sha256": "207726c2f6f7d87b77ba0914d3142711f71a7e73eff1c2f2d0db977e410f4fff",
+      "bytes": 25762
+    },
+    {
+      "path": "redjohn/assessment/cli.py",
+      "status": "modified",
+      "before_sha256": "b475faf1ea79ff0a1e561510a49346cbaffbea51ebff02f053be83e0f8a23f91",
+      "sha256": "db6c1dc461c57eee6225c0d43ef3a90bf7d67ad45c67beaa76fb9067662e75c7",
+      "bytes": 17956
+    },
+    {
+      "path": "redjohn/assessment/discovery_tools.py",
+      "status": "added",
+      "before_sha256": null,
+      "sha256": "7a9177af05af9099c5ff8cfc0cf346f654b5c3633bf1b9bb87b6f30a1966a5a4",
+      "bytes": 20761
+    },
+    {
+      "path": "redjohn/assessment/pinned_tools.py",
+      "status": "added",
+      "before_sha256": null,
+      "sha256": "53df6570e233ccfa8d54d7a60dab0e00db0c6819bec05a3e29a813fc222a7a20",
+      "bytes": 8890
+    },
+    {
+      "path": "redjohn/assessment/registry.py",
+      "status": "modified",
+      "before_sha256": "61a4c099c542c90017c9831c82551c1fa0dc33e73132c63682cfa3c60945fdb2",
+      "sha256": "67a6a53e593d106d1c85b1e9eb823701b2ffcd350ce9928b19c626da22419418",
+      "bytes": 17919
+    },
+    {
+      "path": "redjohn/assessment/runtime.py",
+      "status": "modified",
+      "before_sha256": "bc1597fa68c445011fea57c569fec340624ef47127dc37d0d6eebe08b927d347",
+      "sha256": "71d724cdff0ba0106f1537560c4de2394cb587a65a20e95b4511b00a35683d8e",
+      "bytes": 11360
+    },
+    {
+      "path": "redjohn/assessment/scheduler.py",
+      "status": "modified",
+      "before_sha256": "2391e413a69e3c78d95f8f2a3c8f5bb55385fef99c9dd34914692f542ff26920",
+      "sha256": "77211b76871c97d3d00e4f84c65e847aa0e6569e156d17ca2d0687f33ac0f160",
+      "bytes": 25946
+    },
+    {
+      "path": "redjohn/assessment/vulnx.py",
+      "status": "added",
+      "before_sha256": null,
+      "sha256": "fc58885372743938eafdbbafd2469b1722f790dbe642b8478a60af85bc316219",
+      "bytes": 25693
+    },
+    {
+      "path": "redjohn/tools/hunt/bounded_worker.py",
+      "status": "modified",
+      "before_sha256": "24b3040531b2ea99b6e41e0a29ea4a3f8af4953f67bbf7ccb389d884427f9b4d",
+      "sha256": "c0e2bef9f86f7df0e54959b36490c4ec3026b2b882922b709ac7895b64cfcb27",
+      "bytes": 8566
+    },
+    {
+      "path": "scripts/install-projectdiscovery-pinned.py",
+      "status": "added",
+      "before_sha256": null,
+      "sha256": "3fcc7b21cf4da94d163ea8c6aba09ce36f50c1fd8ebf5fcf0e16ee719059127c",
+      "bytes": 5011
+    },
+    {
+      "path": "scripts/projectdiscovery-pins.json",
+      "status": "added",
+      "before_sha256": null,
+      "sha256": "5665c1ef7256031734b114eefac2ef9711ec99f3e61a6350bb71e4722416fbbf",
+      "bytes": 2227
+    },
+    {
+      "path": "tests/test_projectdiscovery_contract.py",
+      "status": "added",
+      "before_sha256": null,
+      "sha256": "7e8289b83ef110c3d3e9a6383a0fe5cacfbd723d5379ea02376be31b9f0cc783",
+      "bytes": 12185
+    },
+    {
+      "path": "tests/test_projectdiscovery_live.py",
+      "status": "added",
+      "before_sha256": null,
+      "sha256": "04595d5f38dad8ebda3bad992203e1a7d83783909ec1f7c5ea9ed6f7ad7760a5",
+      "bytes": 42784
+    },
+    {
+      "path": "docs/measurements/projectdiscovery/cleanup.json",
+      "status": "added",
+      "before_sha256": null,
+      "sha256": "c1f1b20ac19922b80f2077614d5a3cd14f5bab6979406735e60e46823dd9c2d9",
+      "bytes": 15636
+    },
+    {
+      "path": "docs/measurements/projectdiscovery/linux/auth-e2e.json",
+      "status": "added",
+      "before_sha256": null,
+      "sha256": "a2db692eb23683f361315e44a8a101efb22b59a88924f042d401a19ab1a24def",
+      "bytes": 2228
+    },
+    {
+      "path": "docs/measurements/projectdiscovery/linux/automatic-session-e2e.json",
+      "status": "added",
+      "before_sha256": null,
+      "sha256": "c294db2c47c787dfb4089af0425abcad2c1b1d8256b37484c70265b3843aec18",
+      "bytes": 352111
+    },
+    {
+      "path": "docs/measurements/projectdiscovery/linux/binary-integrity.json",
+      "status": "added",
+      "before_sha256": null,
+      "sha256": "3b57e1af907cec6269cffc5bfbb46a4670b73c162b3f340327b7acef3fefbfe6",
+      "bytes": 940
+    },
+    {
+      "path": "docs/measurements/projectdiscovery/linux/browser-token-e2e.json",
+      "status": "added",
+      "before_sha256": null,
+      "sha256": "cd93023f8b20191353ca0deddc9b4f3bb9e716f1fc4c6263103190a42576e75e",
+      "bytes": 82875
+    },
+    {
+      "path": "docs/measurements/projectdiscovery/linux/chain-loopback.json",
+      "status": "added",
+      "before_sha256": null,
+      "sha256": "86cfef4f03615cb6a01230133a8add2bacf4446672cb6f74b5f799613934833a",
+      "bytes": 13373
+    },
+    {
+      "path": "docs/measurements/projectdiscovery/linux/chain-remote.json",
+      "status": "added",
+      "before_sha256": null,
+      "sha256": "55b02ba193840a440f8c8e04ac29360f8529cb5793dae6d3e46b4657e5a537d9",
+      "bytes": 17616
+    },
+    {
+      "path": "docs/measurements/projectdiscovery/linux/continuous-refresh-e2e.json",
+      "status": "added",
+      "before_sha256": null,
+      "sha256": "bdd3a22b8fa5b17750bc5e67fa53123edd48b97be960af53cbe2df77583eb3e5",
+      "bytes": 71808
+    },
+    {
+      "path": "docs/measurements/projectdiscovery/linux/derived.json",
+      "status": "added",
+      "before_sha256": null,
+      "sha256": "1b179c05cbe25a89918114dc24a4251d0535a828b7d62c8bf1eb7ba3df887c91",
+      "bytes": 3310
+    },
+    {
+      "path": "docs/measurements/projectdiscovery/linux/dns-https.json",
+      "status": "added",
+      "before_sha256": null,
+      "sha256": "09976fea788db678e15732def6d866d41ebec7d92a9f3db4a1dc3cd869613193",
+      "bytes": 7628
+    },
+    {
+      "path": "docs/measurements/projectdiscovery/linux/ffuf-e2e-loopback.json",
+      "status": "added",
+      "before_sha256": null,
+      "sha256": "8fed4b828af15a6eecbe2626a0a32276d0034a9a7f2324db653928bcf850bc75",
+      "bytes": 10883
+    },
+    {
+      "path": "docs/measurements/projectdiscovery/linux/ffuf-e2e-remote.json",
+      "status": "added",
+      "before_sha256": null,
+      "sha256": "1bb75250617451f80d9a60c584ea0177a6b8f87e9bd623151b01b26fd9901eb1",
+      "bytes": 15397
+    },
+    {
+      "path": "docs/measurements/projectdiscovery/linux/https-e2e.json",
+      "status": "added",
+      "before_sha256": null,
+      "sha256": "a7cb76867e5a7dabdfdc73d8224e6983543636edb60d8b372e16d9e6d8ac7ad3",
+      "bytes": 2795
+    },
+    {
+      "path": "docs/measurements/projectdiscovery/linux/httpx-install.json",
+      "status": "added",
+      "before_sha256": null,
+      "sha256": "8137283462202df1715583aad09b4aeb8baf2700e89a3c66ebf41e97384b154a",
+      "bytes": 1235
+    },
+    {
+      "path": "docs/measurements/projectdiscovery/linux/katana-install.json",
+      "status": "added",
+      "before_sha256": null,
+      "sha256": "d189720469e8779e1a74e9f1c145f27ecee0416ee8bee2393ec4fde7463c6c71",
+      "bytes": 1236
+    },
+    {
+      "path": "docs/measurements/projectdiscovery/linux/kernel.txt",
+      "status": "added",
+      "before_sha256": null,
+      "sha256": "63cfb2226fe2ec52e79924a591aaac563e4484b501ecefe15ba4803ba5654687",
+      "bytes": 42
+    },
+    {
+      "path": "docs/measurements/projectdiscovery/linux/mypy.txt",
+      "status": "added",
+      "before_sha256": null,
+      "sha256": "23fc7e042d1ea8a3d99ad0b5b4118a5835b6cb7cd69d74e486b90801fdf501b9",
+      "bytes": 107
+    },
+    {
+      "path": "docs/measurements/projectdiscovery/linux/nuclei-live.json",
+      "status": "added",
+      "before_sha256": null,
+      "sha256": "04b8116c237c7bec9da3440ed3bd1245d09acb93a6532a9806bfc438f49f16c0",
+      "bytes": 851
+    },
+    {
+      "path": "docs/measurements/projectdiscovery/linux/post-nuclei-live.json",
+      "status": "added",
+      "before_sha256": null,
+      "sha256": "d75001acb020a33d177814b78c6e3c9fa48e4355632e092974795c9cadc18335",
+      "bytes": 2799
+    },
+    {
+      "path": "docs/measurements/projectdiscovery/linux/post-refresh-e2e.json",
+      "status": "added",
+      "before_sha256": null,
+      "sha256": "5c6d2387a3b7f067c80cc72d1a2fca4a11409289d8f4db2bf577c02f0c5f741f",
+      "bytes": 61695
+    },
+    {
+      "path": "docs/measurements/projectdiscovery/linux/processes-after-tests.txt",
+      "status": "added",
+      "before_sha256": null,
+      "sha256": "6e7479907f7ab48cad2e1a831c9b9f55f41010a50200514a92c637ccd72c6ae1",
+      "bytes": 3367
+    },
+    {
+      "path": "docs/measurements/projectdiscovery/linux/python-packages.txt",
+      "status": "added",
+      "before_sha256": null,
+      "sha256": "15eea8c7e11d85b9caa06201d3663116e81f0989b6f57f6862eec7548e8502b4",
+      "bytes": 1690
+    },
+    {
+      "path": "docs/measurements/projectdiscovery/linux/remote-auth-e2e.json",
+      "status": "added",
+      "before_sha256": null,
+      "sha256": "3d2a597a4a5d6b93a34e39321a5ce34f61b77420c6a98d5949a895d498d69698",
+      "bytes": 39930
+    },
+    {
+      "path": "docs/measurements/projectdiscovery/linux/source-hash-check.txt",
+      "status": "added",
+      "before_sha256": null,
+      "sha256": "64c71969d789bd2c09e17baf03cc79a0f626e3c3b020ac22af07991afcd165bd",
+      "bytes": 27
+    },
+    {
+      "path": "docs/measurements/projectdiscovery/linux/tests.junit.xml",
+      "status": "added",
+      "before_sha256": null,
+      "sha256": "3af220a0ffda7fd3e288403aaeb86d9ef14289c566bfd75b789a667100ee7e4d",
+      "bytes": 128239
+    },
+    {
+      "path": "docs/measurements/projectdiscovery/linux/tests.txt",
+      "status": "added",
+      "before_sha256": null,
+      "sha256": "4f601994b4976d45a7631c83b6ad5b0c5352f3d45acc23dd3086e826e2f6572d",
+      "bytes": 7727
+    },
+    {
+      "path": "docs/measurements/projectdiscovery/linux/vulnx-install.json",
+      "status": "added",
+      "before_sha256": null,
+      "sha256": "2e759522f569d0f7731571ab6b2a0355a60c2c1d2b0a232ee3622beb86fcb894",
+      "bytes": 1225
+    },
+    {
+      "path": "docs/measurements/projectdiscovery/linux/vulnx-public.json",
+      "status": "added",
+      "before_sha256": null,
+      "sha256": "1c9e6ce27ec98c73a35c66c9c8a6d3977680e76094a00db14ef7d3f3c6d3b29d",
+      "bytes": 4838
+    },
+    {
+      "path": "docs/measurements/projectdiscovery/macos/binary-integrity.json",
+      "status": "added",
+      "before_sha256": null,
+      "sha256": "9119cfa5ba8d2f9921e735e730fe6988475c84966cbc067d509b6d89229841a7",
+      "bytes": 960
+    },
+    {
+      "path": "docs/measurements/projectdiscovery/macos/chain-loopback.json",
+      "status": "added",
+      "before_sha256": null,
+      "sha256": "7f187dd232abd77a37e8a18b2c31bb7a5915e0ca2b9a2b3c719d3466377d9d62",
+      "bytes": 13299
+    },
+    {
+      "path": "docs/measurements/projectdiscovery/macos/derived.json",
+      "status": "added",
+      "before_sha256": null,
+      "sha256": "d3c709c81f56ee13c39af5b9a6489d54c6b33d9bc7b0cfcccdeec273ea387f53",
+      "bytes": 3292
+    },
+    {
+      "path": "docs/measurements/projectdiscovery/macos/go-test.txt",
+      "status": "added",
+      "before_sha256": null,
+      "sha256": "42952d0b99d8ab8a13ec873bcca334c73ca7177fb07f0e74cd2084f46bd93ebe",
+      "bytes": 283
+    },
+    {
+      "path": "docs/measurements/projectdiscovery/macos/go-vet.txt",
+      "status": "added",
+      "before_sha256": null,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "docs/measurements/projectdiscovery/macos/httpx-install.json",
+      "status": "added",
+      "before_sha256": null,
+      "sha256": "756fcfd329be7711202772653b61c1915cfadbbb6821eef7c1656ba21e5630aa",
+      "bytes": 1152
+    },
+    {
+      "path": "docs/measurements/projectdiscovery/macos/katana-install.json",
+      "status": "added",
+      "before_sha256": null,
+      "sha256": "2395aae38a5535b8e938809650cf13eceb35d3a0db4d47fa68232c46fd96e296",
+      "bytes": 1153
+    },
+    {
+      "path": "docs/measurements/projectdiscovery/macos/mypy-final.txt",
+      "status": "added",
+      "before_sha256": null,
+      "sha256": "23fc7e042d1ea8a3d99ad0b5b4118a5835b6cb7cd69d74e486b90801fdf501b9",
+      "bytes": 107
+    },
+    {
+      "path": "docs/measurements/projectdiscovery/macos/ruff-final.txt",
+      "status": "added",
+      "before_sha256": null,
+      "sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+      "bytes": 19
+    },
+    {
+      "path": "docs/measurements/projectdiscovery/macos/tests.junit.xml",
+      "status": "added",
+      "before_sha256": null,
+      "sha256": "27fbacd1e12dc0a4c42e46176744b7ab067ef0dcbf79a2dae34b03ae27b2b5ff",
+      "bytes": 132607
+    },
+    {
+      "path": "docs/measurements/projectdiscovery/macos/tests.txt",
+      "status": "added",
+      "before_sha256": null,
+      "sha256": "ebf4e5d0b85a8015733137b4c52d797fcc58181d4a8cc08cf3c5f7a9bde89a6d",
+      "bytes": 6482
+    },
+    {
+      "path": "docs/measurements/projectdiscovery/macos/typescript.txt",
+      "status": "added",
+      "before_sha256": null,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "docs/measurements/projectdiscovery/macos/viewer-assets.json",
+      "status": "added",
+      "before_sha256": null,
+      "sha256": "e8d0219492dcd253a79dd2d8deeb576f912f44f5f25dc249f6afe7078bdf83ed",
+      "bytes": 622
+    },
+    {
+      "path": "docs/measurements/projectdiscovery/macos/viewer-build.txt",
+      "status": "added",
+      "before_sha256": null,
+      "sha256": "21d3e79663d54c5163e7b195480c00725c36015d81f5ca7afa9b735afd91118e",
+      "bytes": 917
+    },
+    {
+      "path": "docs/measurements/projectdiscovery/macos/vulnx-install.json",
+      "status": "added",
+      "before_sha256": null,
+      "sha256": "067fc46440ba5ebc07268f1cc053312171b131514753f8bca9210d45e97d40b0",
+      "bytes": 1143
+    },
+    {
+      "path": "docs/measurements/projectdiscovery/performance-summary.json",
+      "status": "added",
+      "before_sha256": null,
+      "sha256": "e8fc35a99a70f9331897105dc3243fcf748f3ffc945461137c853d688f7c4006",
+      "bytes": 3780
+    },
+    {
+      "path": "docs/measurements/projectdiscovery/preservation.json",
+      "status": "added",
+      "before_sha256": null,
+      "sha256": "82fcedcc10c90940ee4044fd367f3acd602d16d95dc663d4d6cd19b746848ba7",
+      "bytes": 18197
+    },
+    {
+      "path": "docs/measurements/projectdiscovery/source-hashes.json",
+      "status": "added",
+      "before_sha256": null,
+      "sha256": "cf1dab68f5c27b6e290f19279ea9bbbc3844e33f9d2666b4d71d4cd5a73ef04e",
+      "bytes": 29602
+    },
+    {
+      "path": "docs/measurements/projectdiscovery/test-summary.json",
+      "status": "added",
+      "before_sha256": null,
+      "sha256": "59eb390254f2de06550dc087c3e8b86083807b68aa4074a9d2fd68b7c249ac56",
+      "bytes": 4344
+    },
+    {
+      "path": "docs/redjohn-implementation-audit.md",
+      "status": "modified",
+      "before_sha256": "6858b608d27bdbbce8e3e37dc486308063cec80961ea73da05a8957e297691ce",
+      "sha256": "3e3abe7157bf39b92e470ea708b86bb2ab8ed69abd2393721d554f324ada4c97",
+      "bytes": 6775
+    },
+    {
+      "path": "docs/redjohn-projectdiscovery-verification.md",
+      "status": "added",
+      "before_sha256": null,
+      "sha256": "dcf3050905f9198de771f2457517b4b94f3d9cf25f3f17437c85d6f5f8cdd3c8",
+      "bytes": 12457
+    },
+    {
+      "path": "docs/redjohn-requirements.md",
+      "status": "modified",
+      "before_sha256": "510c866e913c2822e5298cdb4092f295e69901ac6764777d682a117dfe478517",
+      "sha256": "989e7cec2dc5e745594ed040dc2da9185d28c9f2da72e22e392933b3763a4e52",
+      "bytes": 9502
+    },
+    {
+      "path": "docs/third-party-references.json",
+      "status": "modified",
+      "before_sha256": "c508cef1de0687173026218ec52b6595b3c0e1a62d1f8bdad3ab524b3b240df9",
+      "sha256": "2de0c44c7dbf99017bcc0fbd8222b36f38f542da2b9ed5fc65cba1b3192d4c2f",
+      "bytes": 5701
+    }
+  ]
+}

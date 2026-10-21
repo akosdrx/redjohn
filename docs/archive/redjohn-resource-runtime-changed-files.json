@@ -1,0 +1,254 @@
+{
+  "recorded_at": "2026-10-18T12:11:44.007898+00:00",
+  "scope": "Shared host resources, explicit Linux containment, durable capacity retry and owner-crash recovery; overall master goal remains active.",
+  "baseline_existing_files": 1506,
+  "preservation": {
+    "active_test_files": {
+      "count": 70,
+      "changed": []
+    },
+    "engines": {
+      "count": 11,
+      "changed": []
+    }
+  },
+  "latest_verification": "docs/redjohn-resource-runtime-verification.md",
+  "measurement_directory": "docs/measurements/resource-runtime/",
+  "files": [
+    {
+      "path": ".github/workflows/redjohn-remote-egress.yml",
+      "status": "modified",
+      "sha256_before": "80a1651773618dbbce57cdf321f9a10ecb06c3363c8a86e0a0d9935b9616042f",
+      "sha256": "5fb2ddccafa705ceffed1963c3d18a9c84e846982884af463b4b7d992437f2ee",
+      "bytes": 10377
+    },
+    {
+      "path": "CHANGELOG.md",
+      "status": "modified",
+      "sha256_before": "ff855adace07f88549f5a5801b33654411dc1849580e2f4877125f07ec965113",
+      "sha256": "36c7f90faeb769495d9d3ee53d6064e6b381dc47048e4b392962a4a21338ab83",
+      "bytes": 13505
+    },
+    {
+      "path": "README.md",
+      "status": "modified",
+      "sha256_before": "ad1f6d091fff911047bcf883fef3be41655ff933f1f469335fa319eff4bd05f6",
+      "sha256": "60e5b1375708b9a44625ff61ab17a4c40a522c2464f6d425182e236c830d1689",
+      "bytes": 7750
+    },
+    {
+      "path": "README.md",
+      "status": "modified",
+      "sha256_before": "39374b7d6f7be5690dc88cce9aeba4e180461239d37a1974c565c711f669d4d2",
+      "sha256": "dcc0af6d12c2c5e02c8608a00918cf6be8c5e916737b748e3e426a6fc1a19a36",
+      "bytes": 6092
+    },
+    {
+      "path": "benchmarks/README.md",
+      "status": "added",
+      "sha256": "f908c19716c7e1d33a1b9c0651b04c9bda8110e91a906885b6f80f54527eb9e3",
+      "bytes": 2581
+    },
+    {
+      "path": "benchmarks/browser_soak.py",
+      "status": "added",
+      "sha256": "a626c29ff81215dbecab0fbf3f1e48461c3327638ceba12ac56e2b7a2a2b3041",
+      "bytes": 17461
+    },
+    {
+      "path": "docs/shared-resources-and-os-memory.md",
+      "status": "added",
+      "sha256": "70ca3c4fb4380389b107007439ae112f80329d433d8e1443ef99def2f6d63302",
+      "bytes": 8884
+    },
+    {
+      "path": "examples/host-resources.json",
+      "status": "added",
+      "sha256": "d0218d221c55de841b12ec3dcc99258e59807beb1ce8881d52d6cc391670960d",
+      "bytes": 120
+    },
+    {
+      "path": "redjohn/assessment/adapters.py",
+      "status": "modified",
+      "sha256_before": "096348406d74747e57c670a652f282a2491a3896006350dd83a92377ec8d91b2",
+      "sha256": "279c207f42e5c5d8d6cbc9c1770ad2950c3d4f1428c0d2af64eb297fdaa0a74d",
+      "bytes": 36204
+    },
+    {
+      "path": "redjohn/assessment/cli.py",
+      "status": "modified",
+      "sha256_before": "be811094bea41662594f8871ba56f890d3744ef76f5fdb93e03572ff936efb67",
+      "sha256": "3a88355b4b398987ebe19d0db6b8478e3383490573a2b1863b4c90b1c9070b4d",
+      "bytes": 27107
+    },
+    {
+      "path": "redjohn/assessment/contained_controller.py",
+      "status": "added",
+      "sha256": "2957432de060bd7e45cd2297babd63db81e4031a1c6ad9c5e074bd151bce84cf",
+      "bytes": 6426
+    },
+    {
+      "path": "redjohn/assessment/host_resources.py",
+      "status": "added",
+      "sha256": "52a416264b9d74577764bc92bafc9df22a6b04cf1060dd15a006ae8d2b531c8d",
+      "bytes": 17834
+    },
+    {
+      "path": "redjohn/assessment/https_verification.py",
+      "status": "modified",
+      "sha256_before": "c3724b4234406693c99866e05c52ee462cacd8e2e6a4b6830af35171709e3913",
+      "sha256": "4c7fbf235030f5364bee0b082ed9491349303c7fb64d737301e936f8182bd507",
+      "bytes": 10307
+    },
+    {
+      "path": "redjohn/assessment/oast.py",
+      "status": "modified",
+      "sha256_before": "09ab215370bf3c3041c5ee0463d17fd180db798ee7dca5524a2f05d968291f4f",
+      "sha256": "6c14be732f14f8bf97eeba0bc8a2010468af9e40a7f34027262c872968f08d47",
+      "bytes": 38440
+    },
+    {
+      "path": "redjohn/assessment/os_memory.py",
+      "status": "added",
+      "sha256": "82922328f16be56a776b8cf2dc8af0e02838e91f7bd087e1e582d4f470442b91",
+      "bytes": 10670
+    },
+    {
+      "path": "redjohn/assessment/recovery.py",
+      "status": "modified",
+      "sha256_before": "c2bca405c7a65a3329e122478830c57359c1a6a68d6bc09a1b8ca1b83edba61b",
+      "sha256": "3927c69536d1fcce3bf9c1f477bf2fa737861ec568d45ae623e9ddbd13a17ad1",
+      "bytes": 19678
+    },
+    {
+      "path": "redjohn/assessment/registry.py",
+      "status": "modified",
+      "sha256_before": "65f20bd6e24207fa1316527b13d03353204acf4fefa375d7bc8b0e9a2d51ede4",
+      "sha256": "c2d5d4ae9b03a9af601d8e8b8f45c35a2ba3dab4b80e81792886967af56656ce",
+      "bytes": 24513
+    },
+    {
+      "path": "redjohn/assessment/resources.py",
+      "status": "modified",
+      "sha256_before": "3f7866d48d47bd3b4ab4ab705f59ddf26bb9adf30b56b514c9934787e8c6f85b",
+      "sha256": "a836ad03d9b3cb9892f10637ab4d3a8021ffe3104d2e35883c93436b9cd3495a",
+      "bytes": 14650
+    },
+    {
+      "path": "redjohn/assessment/runtime.py",
+      "status": "modified",
+      "sha256_before": "d5468772d51827ab3e5e5a2864d261b94d240cba756d97bb0746874a6f91ba03",
+      "sha256": "ac9cce75aabbca6dcef1d8df3e7480f1f5bdabcf68264c000918531013fa52af",
+      "bytes": 16543
+    },
+    {
+      "path": "redjohn/assessment/scheduler.py",
+      "status": "modified",
+      "sha256_before": "69aa285e59f0e4a2cef68180c9b44d249f22ec499a8a8d8961d614acb53adb35",
+      "sha256": "3356e7c3bf76213bf5be2290bafad66602f0c076987a79c2576471cfc31e9f91",
+      "bytes": 30007
+    },
+    {
+      "path": "redjohn/assessment/session_refresh.py",
+      "status": "modified",
+      "sha256_before": "0ac3fee1489c52c6a211da56cd50c8e3ca3728285f9ccd224b4202d52a26ca27",
+      "sha256": "5801e81245552e2acdf4179807d975f9013e40caeb40d33cc0f85a66e813d826",
+      "bytes": 24470
+    },
+    {
+      "path": "redjohn/assessment/store.py",
+      "status": "modified",
+      "sha256_before": "851d8453d95bea7678d70e26f8f86d98c30635e504bda02725e0c95d7734beee",
+      "sha256": "e936444f804c09cf31fef9bc35045cfcd02f5470c26645eb7a6f3413ae309293",
+      "bytes": 83226
+    },
+    {
+      "path": "scripts/update-capability-matrix.py",
+      "status": "added",
+      "sha256": "49bcab433087d04af3e51cb1c8182572ef7cd9f285b66ae3ea3a9bfe5dd1eef4",
+      "bytes": 5023
+    },
+    {
+      "path": "tests/test_host_resources_contract.py",
+      "status": "added",
+      "sha256": "17e008838a54980c089d1fe136cffe7ea4af4d1d2f0a548a3fc012f419d92df5",
+      "bytes": 5656
+    },
+    {
+      "path": "tests/test_host_resources_live.py",
+      "status": "added",
+      "sha256": "1fb09a125df74fcff66259d7bbc3028aad6035197f73992c111ab41132d0a9f8",
+      "bytes": 5181
+    },
+    {
+      "path": "tests/test_host_scheduler_live.py",
+      "status": "added",
+      "sha256": "6e199f79f7f4b1e6a4cb784f0b59df5018b481d9a1e37fe7ea88a9915f3e5a39",
+      "bytes": 9204
+    },
+    {
+      "path": "tests/test_os_memory_live.py",
+      "status": "added",
+      "sha256": "087f725a3ba0f4b4862b4e19bf1dc938a3539cf5d6081c4912fc3507a0d81991",
+      "bytes": 8424
+    },
+    {
+      "path": "tests/test_resource_crash_recovery_live.py",
+      "status": "added",
+      "sha256": "399c3205586c6fe2bbbc6253608af0ee6f764205f393e9e9e4bf45092c09f3bf",
+      "bytes": 4074
+    },
+    {
+      "path": "tests/test_resource_owner_lifetime_contract.py",
+      "status": "added",
+      "sha256": "e1b7bfd5c08f9e0f3bc6c9f3c81d8807cceda08c0bf1b811835dcd76a0a05da2",
+      "bytes": 2815
+    },
+    {
+      "path": "docs/redjohn-architecture.md",
+      "status": "modified",
+      "sha256_before": "036c8e69c2d856d4c9c8074116d255b53669445fe2c58fbaafc10e813aeb4cc2",
+      "sha256": "bbc5f87cea46badec4fd095e79fd0b16fba479b4cdc0ba384f0d73b62409ea38",
+      "bytes": 15361
+    },
+    {
+      "path": "docs/redjohn-capabilities.json",
+      "status": "modified",
+      "sha256_before": "1646826a82cd54d14a1386e69f6bfed7ee63ab5db9371f84e819e8cf0763bc09",
+      "sha256": "c594693d755d78ee9c646530857076b57de0d8e11ec7dbe98b4c104f297b6c88",
+      "bytes": 25326
+    },
+    {
+      "path": "docs/redjohn-capabilities.md",
+      "status": "modified",
+      "sha256_before": "6b0361261fcbce9b19da30ee30ce31a57a9aff733fe1c05111b54011f5aa36b6",
+      "sha256": "50901abee47ed53bc320b9a85fa411a2bc4e4f3efbbf8f926f4c9f54ded5bbc2",
+      "bytes": 7648
+    },
+    {
+      "path": "docs/redjohn-completion-status.md",
+      "status": "added",
+      "sha256": "c029d7166f427d8ecea5bfc36282f6e0fd82af7672d3c44953996269b7494e0f",
+      "bytes": 9033
+    },
+    {
+      "path": "docs/redjohn-requirements.md",
+      "status": "modified",
+      "sha256_before": "d17a5d8cd9ca1d1a06ca2de6392a7a60e260bb9d8438166d1457156347d81f08",
+      "sha256": "20f5365212fc4783248f8e29d3bd5cf7c1cf014de7850b5de5cf59ceb9c29c12",
+      "bytes": 13348
+    },
+    {
+      "path": "docs/redjohn-resource-runtime-verification.md",
+      "status": "added",
+      "sha256": "fd3b96ba39d034abb4a4c0b64ae2f1a38b1fadd45b466996e98efd1c7b6731c0",
+      "bytes": 12304
+    }
+  ],
+  "excluded": [
+    "Self-referential manifest hashes",
+    "Generated measurement artifacts (listed by the verification report)",
+    "Private credentials/configuration contents",
+    "Inherited Git restructuring"
+  ]
+}

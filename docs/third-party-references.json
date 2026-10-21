@@ -35,7 +35,7 @@
     "license_file": "https://raw.githubusercontent.com/projectdiscovery/nuclei/a8c88feb4a1c8e961b7902534ce3af97e9d524a4/LICENSE.md",
     "archive_sha256": "7d7e291addd1fc29a9bf8d089afe878a9799b20229cbea2fb1693fc40fd4c5f0",
     "binary_sha256": "f427ae885dcd60be25cf27c34a416ef18a803b29e153d5568057d7b6012a454d",
-    "provenance": "RedJohn/docs/nuclei-engine-provenance.json"
+    "provenance": "docs/nuclei-engine-provenance.json"
   },
   {
     "repository": "https://github.com/ffuf/ffuf",
@@ -51,7 +51,7 @@
       "main.go and pkg/ffuf/optionsparser.go: configuration boundaries",
       "pkg/output/stdout.go: JSONL contract"
     ],
-    "installer": "RedJohn/scripts/install-ffuf-pinned.py",
+    "installer": "scripts/install-ffuf-pinned.py",
     "provenance": "docs/measurements/ffuf-discovery/ffuf-install-macos.json"
   },
   {
@@ -66,8 +66,8 @@
       "runner/options.go: fixed GET, no fallback/update, proxy and output bounds",
       "runner/runner.go: URL handling and JSON output; engine rewrites fail closed"
     ],
-    "pins": "RedJohn/scripts/projectdiscovery-pins.json",
-    "installer": "RedJohn/scripts/install-projectdiscovery-pinned.py"
+    "pins": "scripts/projectdiscovery-pins.json",
+    "installer": "scripts/install-projectdiscovery-pinned.py"
   },
   {
     "repository": "https://github.com/projectdiscovery/katana",
@@ -84,8 +84,8 @@
       "pkg/utils/regex.go: JS extraction limitations",
       "projectdiscovery/utils v0.11.6 proxy/burp.go: rejected optional proxy detector"
     ],
-    "pins": "RedJohn/scripts/projectdiscovery-pins.json",
-    "installer": "RedJohn/scripts/install-projectdiscovery-pinned.py"
+    "pins": "scripts/projectdiscovery-pins.json",
+    "installer": "scripts/install-projectdiscovery-pinned.py"
   },
   {
     "repository": "https://github.com/projectdiscovery/vulnx",
@@ -100,8 +100,8 @@
       "cmd/vulnx/clis/id.go and version.go: fixed ID/JSON and offline version contracts",
       "client.go and types.go: API endpoint, environment override and response schemas"
     ],
-    "pins": "RedJohn/scripts/projectdiscovery-pins.json",
-    "installer": "RedJohn/scripts/install-projectdiscovery-pinned.py"
+    "pins": "scripts/projectdiscovery-pins.json",
+    "installer": "scripts/install-projectdiscovery-pinned.py"
   },
   {
     "repository": "https://github.com/s0md3v/Arjun",
@@ -110,8 +110,8 @@
     "commit": "1b11c3574e1e173b47990e7d914f0c183986ec32",
     "license": "AGPL-3.0 (LICENSE); setup.py contains conflicting GPLv3 metadata",
     "reuse": "optional_separate_process_install_no_upstream_source_in_redjohn_package",
-    "pins": "RedJohn/scripts/specialist-pins.json",
-    "license_notes": "See RedJohn/docs/query-specialists.md; proprietary redistribution not cleared for sqlmap; Arjun metadata conflict and GPL dicttoxml dependency recorded.",
+    "pins": "scripts/specialist-pins.json",
+    "license_notes": "See docs/query-specialists.md; proprietary redistribution not cleared for sqlmap; Arjun metadata conflict and GPL dicttoxml dependency recorded.",
     "license_sha256": "8486a10c4393cee1c25392769ddd3b2d6c242d6ec7928e1414efff7dfb2f07ef",
     "license_file": "https://github.com/s0md3v/Arjun/blob/1b11c3574e1e173b47990e7d914f0c183986ec32/LICENSE"
   },
@@ -122,8 +122,8 @@
     "commit": "65b6e7b4acb13a736614a1ab73b0908476f3c24a",
     "license": "GPL-2.0-or-later with upstream clarifications and exceptions (LICENSE)",
     "reuse": "optional_separate_process_install_no_upstream_source_in_redjohn_package",
-    "pins": "RedJohn/scripts/specialist-pins.json",
-    "license_notes": "See RedJohn/docs/query-specialists.md; proprietary redistribution not cleared for sqlmap; Arjun metadata conflict and GPL dicttoxml dependency recorded.",
+    "pins": "scripts/specialist-pins.json",
+    "license_notes": "See docs/query-specialists.md; proprietary redistribution not cleared for sqlmap; Arjun metadata conflict and GPL dicttoxml dependency recorded.",
     "license_sha256": "b1bbb62f5b272a6247d442d5e4f644a5bca7138e70776539ec84a5a90433fd13",
     "license_file": "https://github.com/sqlmapproject/sqlmap/blob/65b6e7b4acb13a736614a1ab73b0908476f3c24a/LICENSE"
   },
@@ -134,8 +134,8 @@
     "commit": "da19527f9c82d8525e911ca3669fc456daeb50f2",
     "license": "MIT",
     "reuse": "optional_separate_process_install_no_upstream_source_in_redjohn_package",
-    "pins": "RedJohn/scripts/specialist-pins.json",
-    "license_notes": "See RedJohn/docs/query-specialists.md; proprietary redistribution not cleared for sqlmap; Arjun metadata conflict and GPL dicttoxml dependency recorded.",
+    "pins": "scripts/specialist-pins.json",
+    "license_notes": "See docs/query-specialists.md; proprietary redistribution not cleared for sqlmap; Arjun metadata conflict and GPL dicttoxml dependency recorded.",
     "license_sha256": "ffb8b51dc4186526fa4cc8226e458f8655dcfa2feed8e90a8543d77441b8e572",
     "license_file": "https://github.com/hahwul/dalfox/blob/da19527f9c82d8525e911ca3669fc456daeb50f2/LICENSE.txt"
   },
@@ -148,7 +148,7 @@
     "license_file": "https://raw.githubusercontent.com/Hackmanit/TInjA/a434f525798cdc942427b22894608a5d9181037b/LICENSE",
     "license_sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
     "reuse": "attributed_finite_expression_data_and_separate_optional_CLI",
-    "pins": "RedJohn/scripts/schema-oast-pins.json"
+    "pins": "scripts/schema-oast-pins.json"
   },
   {
     "repository": "https://github.com/schemathesis/schemathesis",
@@ -159,7 +159,7 @@
     "license_file": "https://raw.githubusercontent.com/schemathesis/schemathesis/76b10a59d248eaf578df82841edb48c8e25a2e44/LICENSE",
     "license_sha256": "3bd53b80e2c136e6350abe9e51e5c75af45bdf76430fcf9c7da66db954b87ddf",
     "reuse": "separate_optional_pinned_wheel_CLI",
-    "pins": "RedJohn/scripts/schema-oast-pins.json"
+    "pins": "scripts/schema-oast-pins.json"
   },
   {
     "repository": "https://github.com/projectdiscovery/interactsh",
@@ -170,6 +170,6 @@
     "license_file": "https://raw.githubusercontent.com/projectdiscovery/interactsh/a5b78b2f1d990cd18c85cc422f0e651cf204c464/LICENSE.md",
     "license_sha256": "cbcdaab87df3175107aa28915bd253cebdd618a49c9ac5d6c669c0b1cbebcacb",
     "reuse": "host_protocol_reimplementation_and_optional_official_test_receiver",
-    "pins": "RedJohn/scripts/schema-oast-pins.json"
+    "pins": "scripts/schema-oast-pins.json"
   }
 ]

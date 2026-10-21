@@ -28,7 +28,7 @@ source SHA `9f3a1a037b2f44bf1b503e2c796a0682f1ba146c`. Ugyanezen a forráson a
 integráció + 14 frontend + 21 Go**, 0 hiba/error/skip. A 207 Python-mock és a
 6 frontend fetch-dublőr külön címkézett; 3 Darwin-eset Linuxon nem alkalmazható,
 nem futott és nem sikeres teszt. A külön natív körben további 3 ismételt kernel
-orphan-recovery kontroll sikeres platformonként. [Részletes mérések és fájllista](redjohn-artifact-runtime-verification.md).
+orphan-recovery kontroll sikeres platformonként. [Részletes mérések és fájllista](archive/redjohn-artifact-runtime-verification.md).
 Az új teljes push-futás 2 vegyes ciklust mért (x64 19.281431 s, ARM64 16.866308 s);
 ez nem új 20 perces soak. A korábbi hosszú terhelés igazolása történeti marad.
 [Pontos hatókör](redjohn-artifact-runtime.md).
@@ -40,7 +40,7 @@ SHA-n a kézzel indított [39505094482 futás](https://github.com/akosdrx/redjoh
 minimum 1200 másodperces, ütemezési várakozást is tartalmazó ciklusablakkal.
 Mind a 15 invariant igaz; a teljes csomag platformonként 1558 regresszió +
 454 valódi integráció + 14 frontend + 21 Go, 0 hiba/error/skip.
-[A nyers időadatok különbsége, RSS-mérések, verziók, artifact-hashek és korlátok](redjohn-long-soak-3cc92d2.md).
+[A nyers időadatok különbsége, RSS-mérések, verziók, artifact-hashek és korlátok](archive/redjohn-long-soak-3cc92d2.md).
 
 ## Aktuális fejlesztési és igazolási határ
 
@@ -64,10 +64,10 @@ emelkedés **44,724,224 / 50,884,608 B**, teljes oka továbbra sincs igazolva;
 A [külön modelles futás](https://github.com/akosdrx/redjohn/actions/runs/39526571218)
 mindkét platformon hozzáféréshiány miatt **blokkolt**: nincs kijelölt modell és
 dedikált CI-secret; platformonként egy JUnit error, nulla valódi modellhívás.
-[Teljes fájllista, parancsok, rollback, nyers mérések és artifact-hashek](redjohn-resource-closure.md).
+[Teljes fájllista, parancsok, rollback, nyers mérések és artifact-hashek](archive/redjohn-resource-closure.md).
 
 A következő végrehajtott változtatások és az új igazolás követése:
-[teljes terhelés memóriakorlátja és tiszta Python-környezet](redjohn-resource-closure.md).
+[teljes terhelés memóriakorlátja és tiszta Python-környezet](archive/redjohn-resource-closure.md).
 Az alábbi régi baseline-táblák nyitott soraiból **nem aktuális hiány** a reviewed
 login/MFA/logout, GraphQL/CRUD workflow, inventory lifecycle, bővített charset/XML/
 multipart replay, bounded legacy cache és helyi anonim target-MCP. Ezek már
@@ -104,8 +104,8 @@ A korábbi `9ff92a8abf4e5ad516bef7b3ce4dd297ea82055c` source commit
 [39151591978 futása](https://github.com/akosdrx/redjohn/actions/runs/39151591978) és
 a `61f209e0d0e9bc094316017da0de613b907aeecf` forrás
 [39157069204 natív futása](https://github.com/akosdrx/redjohn/actions/runs/39157069204)
-megőrzött köztes mérföldkövek ([fázis 3](redjohn-github-actions-master-phase3.md),
-[fázis 4 natív](redjohn-github-actions-master-phase4-native.md)).
+megőrzött köztes mérföldkövek ([fázis 3](archive/redjohn-github-actions-master-phase3.md),
+[fázis 4 natív](archive/redjohn-github-actions-master-phase4-native.md)).
 A helyi Git `HEAD` (`115c7958232f1be5b34fe95159b21b86e85af06f`), `.git/index`
 (`95c507103b42959002663306e132127a1c2fbc4b0d3c04b4c2b97283ad8419db`) és
 privát MCP-konfiguráció (`~/.redjohn/mcp-servers.json`) végig változatlan maradt.
@@ -189,7 +189,7 @@ elveszett owner és hash-/forráslista-eltérés nincs. A külső RSS-csúcs
 857.22 / 1237.13 MiB, a teljes külső idő 825.99 / 1044.18 s.
 A resume-regresszió megtalálásakor az előző kört szándékosan megszakítottam;
 ezek a részleges JUnitok és mérések megmaradtak, nem teljes sikeres regressziók.
-A részletes [friss ellenőrzés](redjohn-host-binding-verification.md) külön jelöli
+A részletes [friss ellenőrzés](archive/redjohn-host-binding-verification.md) külön jelöli
 a valódi E2E-t és a tesztdublőröket; az alábbi resource-mérés történeti baseline.
 
 | Terület / master | Jelenlegi bizonyíték | A lezáráshoz még szükséges |
@@ -272,7 +272,7 @@ lezárt státusza **success**: x64 és ARM64 platformon egyaránt **1225 sikeres
 0 hibás, 0 skip**, ebből 320 valódi integráció. A Chromium–inventory–Nuclei,
 autentikált replay/session refresh, scanner-, scheduler-, kernel OOM- és cleanup-
 láncok ezen a konkrét SHA-n igazoltak: `57141b25ed32169e24d0065b4bc21a0422e83fab`.
-[Pontos SHA-k, mérések és korlátok](redjohn-github-actions-sandbox-verification.md).
+[Pontos SHA-k, mérések és korlátok](archive/redjohn-github-actions-sandbox-verification.md).
 Új teljes helyi Ubuntu-regresszió nem indult; Colima megmaradt célzott hibakeresésre.
 
 A forrás megőrzési baseline-ja 1506 meglévő fájlt, 70 aktív Python teszt/support

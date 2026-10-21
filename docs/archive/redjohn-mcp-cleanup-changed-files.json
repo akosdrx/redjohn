@@ -1,0 +1,252 @@
+{
+  "recorded_at": "2026-10-17T15:10:02.016087+00:00",
+  "basis": "Changes relative to this task start, not inherited Git restructuring. Private local config backup and generated caches/build/test data are excluded.",
+  "product_files_modified": 17,
+  "product_files_added": 2,
+  "original_active_tests_preserved": 52,
+  "source_functions_removed": 10,
+  "frontend_unused_removals": 2,
+  "lint_ignore_patterns_removed": 15,
+  "files": [
+    {
+      "path": "README.md",
+      "status": "modified",
+      "sha256": "f750a119022aa8e29672992014895f4e314afeaecd28a728a5cd452cc673dce9"
+    },
+    {
+      "path": "README.md",
+      "status": "modified",
+      "sha256": "4c48bf00fc4e853319bcb8858c89a1f6bd13b3ae0aefadd018a528837364cd16"
+    },
+    {
+      "path": "docs/mcp-configuration.md",
+      "status": "added",
+      "sha256": "b93e0fd9078eaedbed91868509cdc18e6cc7ac11adf8538e6fa41889b83ae974"
+    },
+    {
+      "path": "pyproject.toml",
+      "status": "modified",
+      "sha256": "0e4719e5ff2e5ddcb389dae247006d051782451405de09889317ba4ad88fa08a"
+    },
+    {
+      "path": "redjohn/interface/main.py",
+      "status": "modified",
+      "sha256": "84e137959ee2024448bec0c2e1019aa9f4c2ea60e2b56b1e63e9dfeb0945d0fb"
+    },
+    {
+      "path": "redjohn/interface/tui/internal/app/vulnerabilities.go",
+      "status": "modified",
+      "sha256": "b0ce7494e3266b17f6821ea2a8e034ed1dfe82318ed039777b26fa561893be98"
+    },
+    {
+      "path": "redjohn/interface/tui/runtime.py",
+      "status": "modified",
+      "sha256": "78a1130a027207890a381348d074af864b6b121103bd7e67da2df34dd97c22a5"
+    },
+    {
+      "path": "redjohn/interface/tui/sidecar.py",
+      "status": "modified",
+      "sha256": "b2a63e16c5edb2caeeabd4140ff87f055f7227c5bc7010f1b80784192f3d0d3f"
+    },
+    {
+      "path": "redjohn/interface/utils.py",
+      "status": "modified",
+      "sha256": "fe8b3fe99a7496f9e6a83d4895c6b20791d2decaf72938a6b093ad2a884925e2"
+    },
+    {
+      "path": "redjohn/interface/viewer/frontend/src/components/live/AgentGraph.tsx",
+      "status": "modified",
+      "sha256": "4c7aa47b940c86d86b91cf10833a7c423fd82e09261dcc8113bd078714f81a11"
+    },
+    {
+      "path": "redjohn/interface/viewer/frontend/src/components/vulnerability/IssueSidebar.tsx",
+      "status": "modified",
+      "sha256": "50602582bceb4b6ac3e2250f885461e336f9deccf55969a60cdc53ce808d6b61"
+    },
+    {
+      "path": "redjohn/report/sarif.py",
+      "status": "modified",
+      "sha256": "192364c3bc73a9e7004b787749eefad928e9aa504e7c37c936ffc36b21ef1bef"
+    },
+    {
+      "path": "redjohn/report/writer.py",
+      "status": "modified",
+      "sha256": "84c66354b27cd8958dcdf8d874527af5ca86f15981543007620e5db5be826fdd"
+    },
+    {
+      "path": "redjohn/telemetry/logging.py",
+      "status": "modified",
+      "sha256": "c69a8e72418645af3109fc44d6dcd2cba2407affd50a97bd8e52ba440fa33720"
+    },
+    {
+      "path": "redjohn/tools/hunt/tool.py",
+      "status": "modified",
+      "sha256": "253a59e639bebcc8697940508b7757e9193e5d1b11561ada4833e3e8a710685f"
+    },
+    {
+      "path": "redjohn/tools/mcp/__init__.py",
+      "status": "modified",
+      "sha256": "c3387ba05ab7ae60960c1c51f8d9247ee635919eb5e40c4115ee61a1b625c4a4"
+    },
+    {
+      "path": "redjohn/tools/mcp/loader.py",
+      "status": "modified",
+      "sha256": "7e6091d775e8c2d89e249cfc73c89bf211a6543afdb5a509d34fc173770d2d99"
+    },
+    {
+      "path": "scripts/install-kali.sh",
+      "status": "modified",
+      "sha256": "8cb53df44d7236ab9b5bbbe3eb844e4a50442b4140809132527bfd334f93190d"
+    },
+    {
+      "path": "tests/test_mcp_configuration.py",
+      "status": "added",
+      "sha256": "561c58215dfa3297650e5375797273dd5752991bc8847b6980231d96b840207c"
+    },
+    {
+      "path": "docs/measurements/mcp-cleanup-before.json",
+      "status": "added",
+      "sha256": "467e0da2613e585ec98ab0072df72c3ab25e7fdb2f55f08a2a80458761660c0d"
+    },
+    {
+      "path": "docs/measurements/mcp-cleanup-changed-format.txt",
+      "status": "added",
+      "sha256": "75b7030be9d7de96bf4e76e79b1f03f14af8899d169fd8d79564d59167d1ab80"
+    },
+    {
+      "path": "docs/measurements/mcp-cleanup-cli-help.txt",
+      "status": "added",
+      "sha256": "1afc8ab9c9e24ab4f7d104ae0def693ce0df056813480362c62c889a890291e5"
+    },
+    {
+      "path": "docs/measurements/mcp-cleanup-dead-code-audit.json",
+      "status": "added",
+      "sha256": "3f8f8cb4763b1c94f75ef5c3c0c780004e9f5dd91528b0e894b2c9f67f2b4201"
+    },
+    {
+      "path": "docs/measurements/mcp-cleanup-focused.junit.xml",
+      "status": "added",
+      "sha256": "472107494743599e2f72cddefe3f898671b4696d1383ff09bc174defa155272e"
+    },
+    {
+      "path": "docs/measurements/mcp-cleanup-format-baseline.txt",
+      "status": "added",
+      "sha256": "73315a757568acf37e1da290cd17b4a4399fc3ab0e63900546cd6c05b05022af"
+    },
+    {
+      "path": "docs/measurements/mcp-cleanup-format.txt",
+      "status": "added",
+      "sha256": "63d56bc5feb8e7ccf66383af6248ef375e37b6fd049bd33d4434179b2b0c11a7"
+    },
+    {
+      "path": "docs/measurements/mcp-cleanup-full-tests.txt",
+      "status": "added",
+      "sha256": "f7765e9a1fa98099de4b449970f18d72269a137fbd8cc5823d1660161c2cf19a"
+    },
+    {
+      "path": "docs/measurements/mcp-cleanup-full.junit.xml",
+      "status": "added",
+      "sha256": "9c35f42dce6bd6ed5d4c0603b16719f611c40c1a30648be52c472a383a09509f"
+    },
+    {
+      "path": "docs/measurements/mcp-cleanup-generated-cleanup.json",
+      "status": "added",
+      "sha256": "fe6d515f5d3114134398d3af565f9d896feb8132e2d3f05083abfeb586cf63b1"
+    },
+    {
+      "path": "docs/measurements/mcp-cleanup-go-tests.txt",
+      "status": "added",
+      "sha256": "42952d0b99d8ab8a13ec873bcca334c73ca7177fb07f0e74cd2084f46bd93ebe"
+    },
+    {
+      "path": "docs/measurements/mcp-cleanup-go-unused.json",
+      "status": "added",
+      "sha256": "397225ed766a6588452c3dbc951894ebe191e5b6b703f8a4c823a183ac3cf043"
+    },
+    {
+      "path": "docs/measurements/mcp-cleanup-go-vet.txt",
+      "status": "added",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/measurements/mcp-cleanup-health.json",
+      "status": "added",
+      "sha256": "78fd75a072da25cf44c80c495ccfa710c9d86f74e0f59adae76de20f4e75c61e"
+    },
+    {
+      "path": "docs/measurements/mcp-cleanup-local-config.json",
+      "status": "added",
+      "sha256": "47aa24d6e8a59cd4016e12ff1325e07176175d65fb75e4814899dc3cc14cc4b3"
+    },
+    {
+      "path": "docs/measurements/mcp-cleanup-mypy-baseline.txt",
+      "status": "added",
+      "sha256": "7ef9184a65afb2adf823b00bed34cd729d88ab82f38f7ead8ad9749aa75cc641"
+    },
+    {
+      "path": "docs/measurements/mcp-cleanup-mypy-changed.txt",
+      "status": "added",
+      "sha256": "ea86b325007280acd19b45856be8a6de07eacfe24a614d2ec7c33a6642498d73"
+    },
+    {
+      "path": "docs/measurements/mcp-cleanup-mypy-current.txt",
+      "status": "added",
+      "sha256": "7ef9184a65afb2adf823b00bed34cd729d88ab82f38f7ead8ad9749aa75cc641"
+    },
+    {
+      "path": "docs/measurements/mcp-cleanup-mypy.txt",
+      "status": "added",
+      "sha256": "0c4993ad7470f3c698cf74a4d8079e03ed9f3be2625e2195af1a98364676e59e"
+    },
+    {
+      "path": "docs/measurements/mcp-cleanup-preservation.json",
+      "status": "added",
+      "sha256": "1d8e3ab51c26d308fe0c6d2e4cc948d23479e03be54febfc289a78d786d07128"
+    },
+    {
+      "path": "docs/measurements/mcp-cleanup-protocol-e2e.json",
+      "status": "added",
+      "sha256": "ed61aa8df4656267a967bf79284b78edee000230b0261cfbbe3a2a591cfbdea2"
+    },
+    {
+      "path": "docs/measurements/mcp-cleanup-ruff.txt",
+      "status": "added",
+      "sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+    },
+    {
+      "path": "docs/measurements/mcp-cleanup-typescript-unused.txt",
+      "status": "added",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/measurements/mcp-cleanup-typescript-verification.json",
+      "status": "added",
+      "sha256": "2e90a909a4637d37fc9cf7721d6ac4a7341d2be3271f3f18da1e72900c79a46b"
+    },
+    {
+      "path": "docs/measurements/mcp-cleanup-verification-summary.json",
+      "status": "added",
+      "sha256": "8acd8bd7a0e33993ccacfbb64504b90df2f4cfe829c0adb614b8d592fe64cc9d"
+    },
+    {
+      "path": "docs/measurements/mcp-cleanup-viewer-build.txt",
+      "status": "added",
+      "sha256": "54e84ebe39af31ee83f5f049f7757f40adb48f686b30af7f4ee98b9b0b7f598b"
+    },
+    {
+      "path": "docs/measurements/mcp-cleanup.patch",
+      "status": "added",
+      "sha256": "753191976a00119fe690615886453ee781ecd8547c3b484813a2f865b09b99f9"
+    },
+    {
+      "path": "docs/redjohn-changed-files.md",
+      "status": "modified",
+      "sha256": "4e10b74ea23114336729303de6e87eb9b762e33c727cf6b2a81c85f63d91a04b"
+    },
+    {
+      "path": "docs/redjohn-mcp-cleanup-verification.md",
+      "status": "added",
+      "sha256": "b1a6598866757b2d7e73a991955934db633cb7527ddd5996669a2360378980c2"
+    }
+  ]
+}

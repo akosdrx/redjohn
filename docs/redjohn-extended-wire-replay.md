@@ -51,8 +51,7 @@ multipart regression. It does not prove the new v3 scanner chain or Linux
 namespace behavior:
 
 ```sh
-cd RedJohn
-../.venv/bin/python -m pytest -q tests/test_wire_encoding_xml.py \
+.venv/bin/python -m pytest -q tests/test_wire_encoding_xml.py \
   tests/test_extended_wire_replay_contract.py tests/test_replay_body_contract.py \
   tests/test_mime_replay_contract.py tests/test_body_token_refresh.py \
   tests/test_browser_post_capture.py -k 'not actual_chromium'

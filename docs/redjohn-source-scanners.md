@@ -9,7 +9,7 @@ capability discovery do not start either engine.
 Install explicitly on an Ubuntu x64/ARM64 test runner:
 
 ```sh
-PYTHON=python bash RedJohn/scripts/install-source-scanners.sh
+PYTHON=python bash scripts/install-source-scanners.sh
 ```
 
 The installer checks embedded SHA-256 pins for official PyPI/release archives
@@ -25,7 +25,7 @@ Install receipts retain archive, binary, each library SHA/size, engine license,
 version and source-commit identities. Bundled-library provenance is the pinned
 upstream wheel; independent package version/license attestations are not
 invented or claimed. No existing installation is overwritten.
-The pins are in `RedJohn/scripts/source-scanner-pins.json`.
+The pins are in `scripts/source-scanner-pins.json`.
 
 ## Scope and configuration
 
@@ -87,8 +87,7 @@ from the fixed command profiles.
 Execute with the existing assessment command:
 
 ```sh
-cd RedJohn
-../.venv/bin/python -m redjohn assess run --config /absolute/source-config.json --output /absolute/run
+.venv/bin/python -m redjohn assess run --config /absolute/source-config.json --output /absolute/run
 ```
 
 The CLI uses the configured policy owner as its caller. The configuration and
@@ -128,12 +127,12 @@ does not establish dynamic exploitability or confirmed impact.
 ## Verification commands and remaining mode limits
 
 ```sh
-PYTHONPATH=RedJohn .venv/bin/python -m pytest \
-  RedJohn/tests/test_source_tools_contract.py \
-  RedJohn/tests/test_source_scanner_installer.py -q
+PYTHONPATH=. .venv/bin/python -m pytest \
+  tests/test_source_tools_contract.py \
+  tests/test_source_scanner_installer.py -q
 
-REDJOHN_REQUIRE_SOURCE_SCANNER_E2E=1 PYTHONPATH=RedJohn .venv/bin/python -m pytest \
-  RedJohn/tests/test_source_tools_live.py -q
+REDJOHN_REQUIRE_SOURCE_SCANNER_E2E=1 PYTHONPATH=. .venv/bin/python -m pytest \
+  tests/test_source_tools_live.py -q
 ```
 
 The four native integration cases run real installed Semgrep/Trivy engines on

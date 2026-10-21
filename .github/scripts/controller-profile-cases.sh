@@ -12,7 +12,7 @@ for task_case in idle playwright_import tls_fixture synthetic_pressure traced co
   task_interval=0
   task_owner_timeout=240
   task_outer_timeout=5m
-  task_command=("$task_python" RedJohn/benchmarks/controller_probe.py --case "$task_case" --output "$GITHUB_WORKSPACE/artifacts/controller-$task_case")
+  task_command=("$task_python" benchmarks/controller_probe.py --case "$task_case" --output "$GITHUB_WORKSPACE/artifacts/controller-$task_case")
   if test "$task_case" = traced || test "$task_case" = compact || test "$task_case" = untraced; then
     if test "${REDJOHN_CONTROLLER_PROFILE_LONG:-0}" = 1 && test "$task_case" != compact; then
       task_cycles=120
@@ -25,10 +25,10 @@ for task_case in idle playwright_import tls_fixture synthetic_pressure traced co
     task_snapshot_mode=legacy
     if test "$task_case" = compact; then task_snapshot_mode=compact; fi
     if test "$task_case" = untraced; then task_tracing=off; fi
-    task_command=("$task_python" RedJohn/benchmarks/mixed_soak.py
+    task_command=("$task_python" benchmarks/mixed_soak.py
       --output "$GITHUB_WORKSPACE/artifacts/controller-$task_case"
       --nuclei-lock "$REDJOHN_NUCLEI_LOCK"
-      --httpx-receipt "$GITHUB_WORKSPACE/RedJohn/.tools/httpx/1.12.0/receipt.json"
+      --httpx-receipt "$GITHUB_WORKSPACE/.tools/httpx/1.12.0/receipt.json"
       --cycles "$task_cycles" --warmup 1 --interval-seconds "$task_interval" --minimum-seconds "$task_minimum"
       --allocation-tracing "$task_tracing" --snapshot-mode "$task_snapshot_mode" --controller-details)
   fi

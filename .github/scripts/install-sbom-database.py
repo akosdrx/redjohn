@@ -18,7 +18,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-PIN = ROOT / 'RedJohn/redjohn/assessment/notices/trivy-sbom-provenance.json'
+PIN = ROOT / 'redjohn/assessment/notices/trivy-sbom-provenance.json'
 REV = 'cbebf2ecd6df42d36463844a45e689afee51c70f'
 ARCHIVE_SHA = '801aff582c124af4969b69d5f574a8b81f5ec6e84d3938bfa169bffa596ee483'
 
@@ -41,7 +41,7 @@ def main():
     if os.environ.get('GITHUB_ACTIONS') != 'true':
         raise RuntimeError('explicit_hosted_ci_fixture_builder_only')
     pin = json.loads(PIN.read_text())
-    destination = ROOT / 'RedJohn/.tools/trivy-sbom-fixture'
+    destination = ROOT / '.tools/trivy-sbom-fixture'
     destination.mkdir(mode=0o700, parents=True, exist_ok=False)
     out = ROOT / 'artifacts/sbom-build'
     out.mkdir(mode=0o700, parents=True, exist_ok=True)

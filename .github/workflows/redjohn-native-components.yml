@@ -35,7 +35,7 @@ jobs:
             runner_arch: ARM64
             python: '3.12.3'
     env:
-      PYTHONPATH: ${{ github.workspace }}/RedJohn:${{ github.workspace }}/.github/scripts
+      PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/.github/scripts
       REDJOHN_TELEMETRY: '0'
       OPENAI_AGENTS_DISABLE_TRACING: '1'
       REDJOHN_REQUIRE_NETWORK_SCANNER_E2E: '1'
@@ -63,14 +63,14 @@ jobs:
           cache: pip
           cache-dependency-path: |
             .github/requirements-ci.lock
-            RedJohn/requirements-assessment.lock
-            RedJohn/pyproject.toml
+            requirements-assessment.lock
+            pyproject.toml
       - name: Set up the same locked Go toolchain and module cache
         id: go
         uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
         with:
           go-version: '1.25.1'
-          cache-dependency-path: RedJohn/redjohn/interface/tui/go.sum
+          cache-dependency-path: redjohn/interface/tui/go.sum
       - name: Bind source hashes and the explicit limited native scope
         if: ${{ !cancelled() && steps.python.outcome == 'success' }}
         run: |

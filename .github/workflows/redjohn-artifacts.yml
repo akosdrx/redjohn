@@ -35,7 +35,7 @@ jobs:
             runner_arch: ARM64
             python: '3.12.3'
     env:
-      PYTHONPATH: ${{ github.workspace }}/RedJohn:${{ github.workspace }}/.github/scripts
+      PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/.github/scripts
       REDJOHN_TELEMETRY: '0'
       OPENAI_AGENTS_DISABLE_TRACING: '1'
       REDJOHN_REQUIRE_ARTIFACT_E2E: '1'
@@ -63,16 +63,16 @@ jobs:
           cache: pip
           cache-dependency-path: |
             .github/requirements-ci.lock
-            RedJohn/requirements-assessment.lock
-            RedJohn/pyproject.toml
+            requirements-assessment.lock
+            pyproject.toml
       - name: Set up pinned Go and dependency cache for the official DB builder
         id: go
         uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
         with:
           go-version: '1.25.1'
           cache-dependency-path: |
-            RedJohn/redjohn/interface/tui/go.sum
-            RedJohn/redjohn/assessment/notices/trivy-sbom-provenance.json
+            redjohn/interface/tui/go.sum
+            redjohn/assessment/notices/trivy-sbom-provenance.json
       - name: Bind source and install locked Python dependencies
         id: dependencies
         run: |
@@ -89,8 +89,8 @@ jobs:
         if: ${{ !cancelled() && steps.system.outcome == 'success' && steps.go.outcome == 'success' }}
         run: |
           mkdir -p artifacts/tool-receipts
-          python .github/scripts/ci.py run --name artifact-trivy-install -- timeout 10m python RedJohn/scripts/install-source-scanners.py trivy
-          cp RedJohn/.tools/trivy/0.76.0/receipt.json artifacts/tool-receipts/trivy.json
+          python .github/scripts/ci.py run --name artifact-trivy-install -- timeout 10m python scripts/install-source-scanners.py trivy
+          cp .tools/trivy/0.76.0/receipt.json artifacts/tool-receipts/trivy.json
           python .github/scripts/ci.py run --name artifact-database-install -- timeout 10m python .github/scripts/install-sbom-database.py
       - name: Delegate only this job-owned cgroup and install its enforcing profile
         if: ${{ !cancelled() && steps.system.outcome == 'success' }}
@@ -102,7 +102,7 @@ jobs:
         uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
         with:
           path: ${{ runner.temp }}/wordpress-cache
-          key: wordpress-observe-ubuntu-24.04-${{ runner.arch }}-${{ hashFiles('RedJohn/scripts/wpscan-observe-runtime-pins.json', 'RedJohn/scripts/install-wpscan-observe.py') }}
+          key: wordpress-observe-ubuntu-24.04-${{ runner.arch }}-${{ hashFiles('scripts/wpscan-observe-runtime-pins.json', 'scripts/install-wpscan-observe.py') }}
       - name: Build the external observation runtime inside the enforcing profile
         if: ${{ !cancelled() && steps.sandbox.outcome == 'success' }}
         id: runtime

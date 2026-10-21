@@ -2,7 +2,7 @@
 # Reviewed native engines install sequentially, with receipts retained on CI.
 set -euo pipefail
 mkdir -p artifacts/tool-receipts
-PYTHON=python bash RedJohn/scripts/install-source-scanners.sh
+PYTHON=python bash scripts/install-source-scanners.sh
 python - <<'PY'
 import hashlib
 import json
@@ -10,7 +10,7 @@ from pathlib import Path
 
 versions = {}
 for tool, version in (("semgrep", "1.181.0"), ("trivy", "0.76.0")):
-    root = Path("RedJohn/.tools") / tool / version
+    root = Path(".tools") / tool / version
     receipt = root / "receipt.json"
     data = receipt.read_bytes()
     payload = json.loads(data)

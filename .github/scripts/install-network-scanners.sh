@@ -2,7 +2,7 @@
 # Install reviewed native engines sequentially and retain exact dependency evidence.
 set -euo pipefail
 mkdir -p artifacts/tool-receipts
-PYTHON=python bash RedJohn/scripts/install-network-scanners.sh
+PYTHON=python bash scripts/install-network-scanners.sh
 python - <<'PY'
 import hashlib
 import json
@@ -11,7 +11,7 @@ from pathlib import Path
 
 versions = {}
 for tool, version in (("naabu", "2.6.1"), ("dnsx", "1.3.1")):
-    root = Path("RedJohn/.tools") / tool / version
+    root = Path(".tools") / tool / version
     data = (root / "receipt.json").read_bytes()
     payload = json.loads(data)
     binary = root / tool

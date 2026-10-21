@@ -31,7 +31,7 @@ if test "$task_suite" = capability || test "$task_suite" = native-capability; th
   exec aa-exec -p "${REDJOHN_CI_APPARMOR_PROFILE:?}" -- \
     /usr/bin/setpriv --reuid="$SUDO_UID" --regid="$SUDO_GID" --init-groups \
     env USER="$SUDO_USER" LOGNAME="$SUDO_USER" \
-    PYTHONPATH="$task_workspace/RedJohn:$task_workspace/.github/scripts" \
+    PYTHONPATH="$task_workspace:$task_workspace/.github/scripts" \
     "$task_python" .github/scripts/capabilities.py "${task_capability_args[@]}"
 fi
 if test "$task_suite" = recovery-test; then
@@ -41,11 +41,11 @@ if test "$task_suite" = recovery-test; then
     if ! aa-exec -p "${REDJOHN_CI_APPARMOR_PROFILE:?}" -- \
       /usr/bin/setpriv --reuid="$SUDO_UID" --regid="$SUDO_GID" --init-groups \
       env USER="$SUDO_USER" LOGNAME="$SUDO_USER" \
-      PYTHONPATH="$task_workspace/RedJohn:$task_workspace/.github/scripts" \
+      PYTHONPATH="$task_workspace:$task_workspace/.github/scripts" \
       REDJOHN_OS_MEMORY_MEASUREMENTS="$task_workspace/artifacts/recovery-$task_repeat" \
       "$task_python" .github/scripts/ci.py run --name "memory-recovery-$task_repeat" -- \
       timeout --signal=TERM --kill-after=20s 90s "$task_python" -m pytest \
-      RedJohn/tests/test_os_memory_live.py::test_actual_orphan_is_killed_before_crashed_owner_capacity_is_reclaimed \
+      tests/test_os_memory_live.py::test_actual_orphan_is_killed_before_crashed_owner_capacity_is_reclaimed \
       -q -s -p no:cacheprovider -p pytest_evidence --ci-suite=integration \
       -o junit_family=xunit1 --junitxml="artifacts/recovery-$task_repeat.junit.xml" \
       --basetemp="$RUNNER_TEMP/redjohn-recovery-$task_repeat"; then
@@ -59,10 +59,10 @@ if test "$task_suite" = artifact-test; then
   exec aa-exec -p "${REDJOHN_CI_APPARMOR_PROFILE:?}" -- \
     /usr/bin/setpriv --reuid="$SUDO_UID" --regid="$SUDO_GID" --init-groups \
     env USER="$SUDO_USER" LOGNAME="$SUDO_USER" \
-    PYTHONPATH="$task_workspace/RedJohn:$task_workspace/.github/scripts" \
+    PYTHONPATH="$task_workspace:$task_workspace/.github/scripts" \
     "$task_python" .github/scripts/ci.py run --name python-integration -- \
     timeout --signal=TERM --kill-after=20s 12m "$task_python" -m pytest \
-    RedJohn/tests/test_wpscan_observe_live.py RedJohn/tests/test_trivy_sbom_live.py \
+    tests/test_wpscan_observe_live.py tests/test_trivy_sbom_live.py \
     -q -s -p no:cacheprovider -p pytest_evidence --ci-suite=integration \
     -o junit_family=xunit1 --junitxml=artifacts/integration.junit.xml \
     --basetemp="$RUNNER_TEMP/redjohn-artifact-e2e"
@@ -75,20 +75,20 @@ if test "$task_suite" = native; then
   for task_component in network service preparation memory cleanup-proof lab; do
     task_selection=()
     case "$task_component" in
-      network) task_file=RedJohn/tests/test_network_tools_live.py ;;
-      service) task_file=RedJohn/tests/test_service_tools_live.py ;;
-      preparation) task_file=RedJohn/tests/test_preparation_native.py ;;
-      cleanup-proof) task_file=RedJohn/tests/test_cleanup_quarantine_live.py ;;
-      lab) task_file=RedJohn/tests/test_lab_validation_live.py ;;
+      network) task_file=tests/test_network_tools_live.py ;;
+      service) task_file=tests/test_service_tools_live.py ;;
+      preparation) task_file=tests/test_preparation_native.py ;;
+      cleanup-proof) task_file=tests/test_cleanup_quarantine_live.py ;;
+      lab) task_file=tests/test_lab_validation_live.py ;;
       memory)
-        task_file=RedJohn/tests/test_owned_memory_live.py
+        task_file=tests/test_owned_memory_live.py
         task_selection=(-k 'not test_actual_browser_sdk_mcp_and_native_worker_inherit_the_owner_hard_fence')
         ;;
     esac
     if ! aa-exec -p "${REDJOHN_CI_APPARMOR_PROFILE:?}" -- \
       /usr/bin/setpriv --reuid="$SUDO_UID" --regid="$SUDO_GID" --init-groups \
       env USER="$SUDO_USER" LOGNAME="$SUDO_USER" \
-      PYTHONPATH="$task_workspace/RedJohn:$task_workspace/.github/scripts" \
+      PYTHONPATH="$task_workspace:$task_workspace/.github/scripts" \
       "$task_python" .github/scripts/ci.py run --name "native-$task_component" -- \
       timeout --signal=TERM --kill-after=20s 8m "$task_python" -m pytest \
       "$task_file" "${task_selection[@]}" -q -s -p no:cacheprovider \
@@ -107,7 +107,7 @@ fi
 if test "$task_suite" = soak; then
   exec "${task_profile[@]}" /usr/bin/setpriv --reuid="$SUDO_UID" --regid="$SUDO_GID" --init-groups \
     env USER="$SUDO_USER" LOGNAME="$SUDO_USER" \
-    PYTHONPATH="$task_workspace/RedJohn:$task_workspace/.github/scripts" \
+    PYTHONPATH="$task_workspace:$task_workspace/.github/scripts" \
     "$task_python" .github/scripts/ci.py run --name mixed-soak -- \
     timeout --signal=TERM --kill-after=20s 70m \
     "$task_python" -m redjohn.assessment.memory_exec \
@@ -116,19 +116,19 @@ if test "$task_suite" = soak; then
     --pool-state-directory "$RUNNER_TEMP/redjohn-soak-memory-pool" \
     --receipt "$task_workspace/artifacts/mixed-soak-owner/receipt.json" \
     --timeout-seconds 4140 -- \
-    "$task_python" RedJohn/benchmarks/mixed_soak.py \
+    "$task_python" benchmarks/mixed_soak.py \
     --output "$task_workspace/artifacts/mixed-soak" \
     --nuclei-lock "$REDJOHN_NUCLEI_LOCK" \
-    --httpx-receipt "$task_workspace/RedJohn/.tools/httpx/1.12.0/receipt.json" \
+    --httpx-receipt "$task_workspace/.tools/httpx/1.12.0/receipt.json" \
     --cycles "${REDJOHN_SOAK_CYCLES:?}" --warmup 1 --interval-seconds 10 \
     --minimum-seconds "${REDJOHN_SOAK_MINIMUM_SECONDS:?}" \
     --controller-details --snapshot-mode compact
 fi
 exec "${task_profile[@]}" /usr/bin/setpriv --reuid="$SUDO_UID" --regid="$SUDO_GID" --init-groups \
   env USER="$SUDO_USER" LOGNAME="$SUDO_USER" \
-  PYTHONPATH="$task_workspace/RedJohn:$task_workspace/.github/scripts" \
+  PYTHONPATH="$task_workspace:$task_workspace/.github/scripts" \
   "$task_python" .github/scripts/ci.py run --name "python-$task_suite" -- \
   timeout --signal=TERM --kill-after=20s 45m "$task_python" -m pytest \
-  RedJohn/tests -q -s -p no:cacheprovider -p pytest_evidence --ci-suite="$task_suite" \
+  tests -q -s -p no:cacheprovider -p pytest_evidence --ci-suite="$task_suite" \
   -o junit_family=xunit1 --junitxml="artifacts/$task_suite.junit.xml" \
   --basetemp="$RUNNER_TEMP/redjohn-$task_suite"

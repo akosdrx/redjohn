@@ -1,0 +1,432 @@
+{
+  "basis": "compared with SHA256 values in previous delivery redjohn-changed-files.json; new artifact paths explicitly enumerated",
+  "files": [
+    {
+      "path": ".gitignore",
+      "status": "modified",
+      "sha256": "7114c54f42990a4f4be37e180f6813e5e380cbe81639d8369a09549c6f16097f",
+      "continuation_status": "newly_recorded",
+      "previous_delivery_sha256": null
+    },
+    {
+      "path": "CHANGELOG.md",
+      "status": "added",
+      "sha256": "13874ab033bdc3e2112cc0a609fb5587e919ca2ffbe0dad0d76d6b8507713a33",
+      "continuation_status": "updated",
+      "previous_delivery_sha256": "cf41943da051d1cbcbd68e94806966fa45107efac73011eddac0d51afcf9ca6f"
+    },
+    {
+      "path": "README.md",
+      "status": "modified",
+      "sha256": "0fda2cb06b69ed4209f38512f30314e8774ac63e62b891016a8714986e7493d7",
+      "continuation_status": "updated",
+      "previous_delivery_sha256": "ab104d30c7bf7475bf62fc382a34bf4cda9c46bd068ebae64a1b50a3d8670368"
+    },
+    {
+      "path": ".gitignore",
+      "status": "added",
+      "sha256": "1fc51d26e27a7ea556fd4651b7b0a70c9543adcc541c161d9860f30f07410f68",
+      "continuation_status": "newly_recorded",
+      "previous_delivery_sha256": null
+    },
+    {
+      "path": "README.md",
+      "status": "modified",
+      "sha256": "be3b923a36cb48a3ba43de752849a744e45a2ce9a0005a5e57c59a7ee1d56cff",
+      "continuation_status": "updated",
+      "previous_delivery_sha256": "fc05a0f07de17a94fe1fc21f68afec21e614235721788052a428462e9a85f1f1"
+    },
+    {
+      "path": "docs/nuclei-engine-provenance.json",
+      "status": "added",
+      "sha256": "021e1e23fe6af91983c514b1810975c51d34b75cc9608554b2e6aad54a43899f",
+      "continuation_status": "newly_recorded",
+      "previous_delivery_sha256": null
+    },
+    {
+      "path": "docs/nuclei-integration.md",
+      "status": "added",
+      "sha256": "8c519d4978fa9dfea9ac759b8261bb4afa82195d90dd89540b5cdf3efc2b4366",
+      "continuation_status": "updated",
+      "previous_delivery_sha256": "299d4b96a00a4199721197b58374a607c8aeb9c43a6bc6bcb06cd1c0d32caab2"
+    },
+    {
+      "path": "docs/nuclei-live-measurements.json",
+      "status": "added",
+      "sha256": "570ddf27d2a8a65bff5f06f794d07748755c215d517dcc41abce934d703410d4",
+      "continuation_status": "newly_recorded",
+      "previous_delivery_sha256": null
+    },
+    {
+      "path": "docs/redjohn-browser-https-verification.md",
+      "status": "added",
+      "sha256": "507376271e31387c50802fafdaa227dc053455058358e5b3068121ba298bf2d0",
+      "continuation_status": "newly_recorded",
+      "previous_delivery_sha256": null
+    },
+    {
+      "path": "examples/nuclei-fixture/marker.yaml",
+      "status": "added",
+      "sha256": "fe1a0233b3a7dd804a0f8cc001dca51bbe441fa01d7306784f9076d10ec9c3b8",
+      "continuation_status": "newly_recorded",
+      "previous_delivery_sha256": null
+    },
+    {
+      "path": "redjohn/assessment/adapters.py",
+      "status": "added",
+      "sha256": "f8ea9d8b64c37152e9fffe6d00c959db5a536907d0dbb5d25a71ce960f0cb328",
+      "continuation_status": "updated",
+      "previous_delivery_sha256": "7da1a74e674d7a19ab05135ce0c9ed698fa05e9a79aeb4d846fd34b98a532323"
+    },
+    {
+      "path": "redjohn/assessment/browser.py",
+      "status": "added",
+      "sha256": "22335a15fc734b8d2fc226c9f68f2e0144e6be1f252022d7f4706eafb36abae7",
+      "continuation_status": "updated",
+      "previous_delivery_sha256": "01791e37caa4a0edb38518152195fa3f83e06ae9f242c9e9d3a2952237899f12"
+    },
+    {
+      "path": "redjohn/assessment/browser_proxy.py",
+      "status": "added",
+      "sha256": "c15f69b0d34b752ceacff579f01687993974869c8abece96ef7644982e0a3042",
+      "continuation_status": "updated",
+      "previous_delivery_sha256": "6ee6d6911718d0fa2cde5586371728eb5ae470dc274a9a42891a6e6a4a542e0f"
+    },
+    {
+      "path": "redjohn/assessment/browser_tls.py",
+      "status": "added",
+      "sha256": "cddb32dabb92bbc4290ef16aa343336b291794b1bb4a0760c16c9ba185b916ff",
+      "continuation_status": "newly_recorded",
+      "previous_delivery_sha256": null
+    },
+    {
+      "path": "redjohn/assessment/cli.py",
+      "status": "added",
+      "sha256": "817b14aa176199c23c77e15dddbd65241fe64479c96d4932eee7395ab3c5899c",
+      "continuation_status": "updated",
+      "previous_delivery_sha256": "0d02abf6cdd55f50f5a5b894a1273d34716cfd17e540dfebd2b86d4a615341f8"
+    },
+    {
+      "path": "redjohn/assessment/control.py",
+      "status": "added",
+      "sha256": "f7083cd5de7d0463ef2c6dde7beeab0d8cbf3ad5fcdcbcc0ebc89411470a8fea",
+      "continuation_status": "updated",
+      "previous_delivery_sha256": "b4a74b92a0239cd385a2f536c356c847de7b47df86f5b461535c37c95bdf55dc"
+    },
+    {
+      "path": "redjohn/assessment/https_verification.py",
+      "status": "added",
+      "sha256": "95521882273bd3eb6bcbee0d192d8bf4d591439685a154f8cea4be483eec802b",
+      "continuation_status": "newly_recorded",
+      "previous_delivery_sha256": null
+    },
+    {
+      "path": "redjohn/assessment/native_session.py",
+      "status": "added",
+      "sha256": "a5e18e541155af421eee1c99d56d9ee14a9c51b869954a211230355363fb043e",
+      "continuation_status": "updated",
+      "previous_delivery_sha256": "da85cab67df6f0de83074e94ee0bac0ed0599bc0eb4bb02f790717212a5e3ceb"
+    },
+    {
+      "path": "redjohn/assessment/persistent_rate_limit.py",
+      "status": "added",
+      "sha256": "be14cbc87b9b53e9ca8d5df99795eb092b5a84922713b3fee09ef6bfc4ead370",
+      "continuation_status": "newly_recorded",
+      "previous_delivery_sha256": null
+    },
+    {
+      "path": "redjohn/assessment/policy.py",
+      "status": "added",
+      "sha256": "17b6e9f86527d370831a5c4de3bd8d0c0a8813ffee0a4acf61f099d585405c4d",
+      "continuation_status": "updated",
+      "previous_delivery_sha256": "041ec9d42666f248747f3756f11d794b9b45add160f7b6283fc9311539acdeae"
+    },
+    {
+      "path": "redjohn/assessment/registry.py",
+      "status": "added",
+      "sha256": "e20b48a319548a6f85696a5ec39144855b0b316ea36fbbec3cda3bf0775d2602",
+      "continuation_status": "updated",
+      "previous_delivery_sha256": "a2aa27d81f4ab892862479fedf7f2205d9e727c2a584c9efe488ccc4d8bf0835"
+    },
+    {
+      "path": "redjohn/assessment/runtime.py",
+      "status": "added",
+      "sha256": "16814004ada2d8e684677fd62344a15f952bc3e4043351e711f0021aa68d9471",
+      "continuation_status": "updated",
+      "previous_delivery_sha256": "ef5cf0c672bcd221275038ae21010e8d207a6c8a586d6de31299de119abebd69"
+    },
+    {
+      "path": "redjohn/assessment/scheduler.py",
+      "status": "added",
+      "sha256": "3229d835853bd993d2b6dd8b98d66d8c0802cbdf37c8b08dd103c8f6a3c7a48a",
+      "continuation_status": "updated",
+      "previous_delivery_sha256": "f09be4313055df6f10aba6d1fd39ff1c7ef5adb5371940014214a7ff8bab0a0d"
+    },
+    {
+      "path": "redjohn/assessment/tls_fixture.py",
+      "status": "added",
+      "sha256": "0fc638ecebe12b319156e369aa2d2a75be7a86e81d925b45710ebf415fddfa08",
+      "continuation_status": "newly_recorded",
+      "previous_delivery_sha256": null
+    },
+    {
+      "path": "redjohn/tools/hunt/bounded_worker.py",
+      "status": "added",
+      "sha256": "24b3040531b2ea99b6e41e0a29ea4a3f8af4953f67bbf7ccb389d884427f9b4d",
+      "continuation_status": "updated",
+      "previous_delivery_sha256": "c4784d7e4bb1f94f683f6ec0632184aae4dd2cee04864cbb9c9910734a626b65"
+    },
+    {
+      "path": "redjohn/tools/hunt/nuclei.py",
+      "status": "added",
+      "sha256": "6bc477041e9b3a3d03c05a50a414e56e8da401e093e3082e1ec25a2c27eaec2e",
+      "continuation_status": "updated",
+      "previous_delivery_sha256": "98452872e4006b12966c0d5620c756306bd426665c3b581cf8b44c27cf5b9a34"
+    },
+    {
+      "path": "scripts/create-nuclei-fixture-lock.py",
+      "status": "added",
+      "sha256": "d6049a7a7e4ba70269c9d4b59b7d4150f37f0cd3189cbd0e9d3def6a36879370",
+      "continuation_status": "newly_recorded",
+      "previous_delivery_sha256": null
+    },
+    {
+      "path": "scripts/install-nuclei-pinned.py",
+      "status": "added",
+      "sha256": "e79e233182b72d970125b8d54d64920780d2feaa938399672ce564806c801156",
+      "continuation_status": "newly_recorded",
+      "previous_delivery_sha256": null
+    },
+    {
+      "path": "tests/test_assessment_browser.py",
+      "status": "added",
+      "sha256": "28d21bbfda395568b8b85a8c196617d041a3a58cb2689e7daa0525e1a8777398",
+      "continuation_status": "updated",
+      "previous_delivery_sha256": "d2e9976b9fda66479f0fd01a3229ec5ef3ae56cddd6073e160f59c0ce29833e4"
+    },
+    {
+      "path": "tests/test_assessment_browser_https.py",
+      "status": "added",
+      "sha256": "4851e0f79e318b2fff6b93b348fcc3e7fc0dc70101c656059cf23560c358ce25",
+      "continuation_status": "newly_recorded",
+      "previous_delivery_sha256": null
+    },
+    {
+      "path": "tests/test_assessment_browser_proxy_https.py",
+      "status": "added",
+      "sha256": "c73fa313a771257907034cacee803e60548d3a6dce5aaa937b102e416254bd3b",
+      "continuation_status": "newly_recorded",
+      "previous_delivery_sha256": null
+    },
+    {
+      "path": "tests/test_assessment_https_e2e.py",
+      "status": "added",
+      "sha256": "d5b947dc7b3ed413aa503b0b7114d42cb410515c444f9b249432840420cb8a6a",
+      "continuation_status": "newly_recorded",
+      "previous_delivery_sha256": null
+    },
+    {
+      "path": "tests/test_assessment_https_pipeline_failures.py",
+      "status": "added",
+      "sha256": "3e4922f70bc95c948ec058a6814500268b1db9112527e3607d83d7e7a35035e8",
+      "continuation_status": "newly_recorded",
+      "previous_delivery_sha256": null
+    },
+    {
+      "path": "tests/test_assessment_nuclei_cleanup_faults.py",
+      "status": "added",
+      "continuation_status": "newly_recorded",
+      "sha256": "5596aafa3d788a6af1556016fc7eeaad76ad65a730be2f5821484df878c2f0ce",
+      "previous_delivery_sha256": null
+    },
+    {
+      "path": "tests/test_assessment_persistent_rate_limit.py",
+      "status": "added",
+      "sha256": "8f6dacce13026ce6fe880f8756f31605aeb78ff51f52ab3bfb6b3bcc18e41ae6",
+      "continuation_status": "newly_recorded",
+      "previous_delivery_sha256": null
+    },
+    {
+      "path": "tests/test_assessment_registry_presence.py",
+      "status": "added",
+      "sha256": "e090d0233fd1599437af4971a68ba5ef2a6a0f1e7fbbdad240f3f7d36f7ab953",
+      "continuation_status": "newly_recorded",
+      "previous_delivery_sha256": null
+    },
+    {
+      "path": "tests/test_assessment_scheduler.py",
+      "status": "added",
+      "sha256": "914e030f1f16704a7b91b0dcd56db9e470f64653b0aa6da79c3e74e18bab636b",
+      "continuation_status": "updated",
+      "previous_delivery_sha256": "d986cd12ca2d918858d1bc319b1905928dabfd9e2238eedc6253edf9925e1ba8"
+    },
+    {
+      "path": "tests/test_hunt_nuclei.py",
+      "status": "added",
+      "sha256": "6575650d4e374eeeda2d07181bb53af03c9c5ff762f7822aa4b036f42fe13aae",
+      "continuation_status": "updated",
+      "previous_delivery_sha256": "e6148cedfd6866e8c0d7a844dec90ad73387cb451f0efb99dcad951912ca2d00"
+    },
+    {
+      "path": "tests/test_native_fixture_session.py",
+      "status": "added",
+      "sha256": "a81a462cac254e61f6062fd22c3ddc1ba380d9df200053fcaf95dc7bb844118b",
+      "continuation_status": "updated",
+      "previous_delivery_sha256": "6d9cd8c41ee567a17c6bc591287deb1ff7eedff38d46b768a10f40475712ff1a"
+    },
+    {
+      "path": "tests/test_nuclei_installer.py",
+      "status": "added",
+      "sha256": "980e9dffe31c6d8d9a611adc06c74119db5507be37bcafb0e62bd230ab1bc744",
+      "continuation_status": "newly_recorded",
+      "previous_delivery_sha256": null
+    },
+    {
+      "path": "tests/test_nuclei_live.py",
+      "status": "added",
+      "sha256": "20488e39d98bf03a617af0503f82a160ecb218d063f51fb196ff6b2d0bdf24bb",
+      "continuation_status": "updated",
+      "previous_delivery_sha256": "990d10099ffbadb4cf5f7dfc7418f96289fa9a469486a66b1bcf21b0957f8a3f"
+    },
+    {
+      "path": "tests/test_tls_fixture.py",
+      "status": "added",
+      "sha256": "002e9e0f1ebb7b892a80fe098da8106034e99b9288d4503400c4218672d5b2fd",
+      "continuation_status": "newly_recorded",
+      "previous_delivery_sha256": null
+    },
+    {
+      "path": "docs/measurements/https-e2e-final-cli.txt",
+      "status": "added",
+      "sha256": "8357c1528f5fcedf9fa6dafdb1c3e47f1e563a67f6a00348e05433a5925d126d",
+      "continuation_status": "newly_recorded",
+      "previous_delivery_sha256": null
+    },
+    {
+      "path": "docs/measurements/https-e2e-final.json",
+      "status": "added",
+      "sha256": "8357c1528f5fcedf9fa6dafdb1c3e47f1e563a67f6a00348e05433a5925d126d",
+      "continuation_status": "newly_recorded",
+      "previous_delivery_sha256": null
+    },
+    {
+      "path": "docs/measurements/https-e2e-suite.json",
+      "status": "added",
+      "sha256": "e2f10da231631669c50cf728e7024e592ef805cd07b8f21cabfab0a9fa22d200",
+      "continuation_status": "newly_recorded",
+      "previous_delivery_sha256": null
+    },
+    {
+      "path": "docs/measurements/https-nuclei-final-targeted-tests.txt",
+      "status": "added",
+      "sha256": "c10181e1886a857fdcb3417b1ef0b3e98454ee85778e5085aad7fb33e0748883",
+      "continuation_status": "newly_recorded",
+      "previous_delivery_sha256": null
+    },
+    {
+      "path": "docs/measurements/https-nuclei-tests.junit.xml",
+      "status": "added",
+      "sha256": "94e4fa7db36dbf9ad79d0763cfe4e4ffa66c5c7c38a2495c223888d3b3bb2ef3",
+      "continuation_status": "newly_recorded",
+      "previous_delivery_sha256": null
+    },
+    {
+      "path": "docs/measurements/https-nuclei-tests.txt",
+      "status": "added",
+      "sha256": "6f6406a18a70cfd23590aebcb182f6bb88fd260e76d594b141cef875f603f59f",
+      "continuation_status": "newly_recorded",
+      "previous_delivery_sha256": null
+    },
+    {
+      "path": "docs/measurements/https-nuclei-verification-summary.json",
+      "status": "added",
+      "sha256": "eba2aff9aa5aaf39980f60a1b528d3121de075a826dc007aacbf44da5536aaa6",
+      "continuation_status": "newly_recorded",
+      "previous_delivery_sha256": null
+    },
+    {
+      "path": "docs/measurements/nuclei-live-suite.json",
+      "status": "added",
+      "sha256": "53b0f4482ecf4f4e84d105cf2c7f8e95c1339d96fbc8fca6b72f11dbd5a6d4b1",
+      "continuation_status": "newly_recorded",
+      "previous_delivery_sha256": null
+    },
+    {
+      "path": "docs/redjohn-architecture.md",
+      "status": "added",
+      "sha256": "5659a61f9a913bc0f57c183629950bec7e9aafac042a502ae5929bde250bfdc5",
+      "continuation_status": "updated",
+      "previous_delivery_sha256": "422ac61fb8c19a05f9a37c9fd55d8fd80b9c12628cbe8a95d97dd84b3bf07bc9"
+    },
+    {
+      "path": "docs/redjohn-capabilities.json",
+      "status": "added",
+      "sha256": "fd6ae703b0283ca9cde42b0d14ede4a79b70c3c7b69a82c9d4d81e0550681bd3",
+      "continuation_status": "updated",
+      "previous_delivery_sha256": "1b2a22a2f47bd645621ba0d1c1ea721526f921535546b926e93970d1d7025944"
+    },
+    {
+      "path": "docs/redjohn-capabilities.md",
+      "status": "added",
+      "sha256": "e3a5a4d7bea2f34bacc60acfc4dfc4b6694cc08b7e1f96f1601bab9260f6764c",
+      "continuation_status": "updated",
+      "previous_delivery_sha256": "1410e7f12e0d97083dbdfebb4ecf1a16e8f80b719c5bbe6bb3598d19da8d3741"
+    },
+    {
+      "path": "docs/redjohn-changed-files.md",
+      "status": "added",
+      "sha256": "16524933290ee88f9cd04394bb70e6868527066e87f9c8da44c36e76b83d1104",
+      "continuation_status": "newly_recorded",
+      "previous_delivery_sha256": null
+    },
+    {
+      "path": "docs/redjohn-https-nuclei-verification.md",
+      "status": "added",
+      "sha256": "27887036b407a8b02bbe798306f8f664b2d27607cffd2006d8784452b6adb9d8",
+      "continuation_status": "newly_recorded",
+      "previous_delivery_sha256": null
+    },
+    {
+      "path": "docs/redjohn-initial-state.json",
+      "status": "added",
+      "sha256": "be198385b56cec20cbde67b5ee5d6dc7fba2b4329b1c2cf20c784e9aafb5f0bd",
+      "continuation_status": "newly_recorded",
+      "previous_delivery_sha256": null
+    },
+    {
+      "path": "docs/redjohn-requirements.md",
+      "status": "added",
+      "sha256": "2f6a40bd0011f9c56a8665a6b2efbc3324f02691d0e6c34e3feae76cc9f2002b",
+      "continuation_status": "updated",
+      "previous_delivery_sha256": "4fd3117f3739e1a1b35f16c68adaaa40a0404216cbbd1f68cbf391d25f17a7ff"
+    },
+    {
+      "path": "docs/redjohn-runbook.md",
+      "status": "added",
+      "sha256": "62ce36ded8821807dace044fbc37bfdba4dda303c0a3a6caf9fc9c0e5001bd02",
+      "continuation_status": "updated",
+      "previous_delivery_sha256": "f4c985c511760d57e0bddd74eedc7076d6d0304a14f8ed78158cafa6496a234f"
+    },
+    {
+      "path": "docs/redjohn-schemas.json",
+      "status": "added",
+      "sha256": "44bef322366abd00142da85a5d9891bcd08eb2b09ad43c41507c7acb3141b915",
+      "continuation_status": "updated",
+      "previous_delivery_sha256": "e933527a01ecc4be7036d13ffcc4a85949771ff1b66e8f18804a51b91f1d4c06"
+    },
+    {
+      "path": "docs/redjohn-verification.md",
+      "status": "added",
+      "sha256": "46b2755c31dd1249c507de8bc1714ef70dd6e8fa8c0a1a9dd85215e080853ab0",
+      "continuation_status": "updated",
+      "previous_delivery_sha256": "6a9ebd07a04ae22598234f07571c53e5c47170e525d7d4fcbcc1958b7bb0b687"
+    },
+    {
+      "path": "docs/third-party-references.json",
+      "status": "added",
+      "sha256": "603020db3a683d6e1b3a55dd7b794dad4aaf51e95269886e51f81a3c12ac2ccf",
+      "continuation_status": "updated",
+      "previous_delivery_sha256": "0b672bd9036395809213781b0d05ca25e6187d347aca9862906dd8628b5021ed"
+    }
+  ]
+}

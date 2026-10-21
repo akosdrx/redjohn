@@ -78,7 +78,7 @@ jobs:
             runner_arch: ARM64
             python: '3.12.3'
     env:
-      PYTHONPATH: ${{ github.workspace }}/RedJohn:${{ github.workspace }}/.github/scripts
+      PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/.github/scripts
       REDJOHN_TELEMETRY: '0'
       OPENAI_AGENTS_DISABLE_TRACING: '1'
       REDJOHN_REQUIRE_REMOTE_E2E: '1'
@@ -98,7 +98,7 @@ jobs:
       REDJOHN_RESOURCE_POOL_PATH: ${{ github.workspace }}/.ci-state/redjohn-resources.sqlite3
       REDJOHN_OS_MEMORY_MEASUREMENTS: ${{ github.workspace }}/artifacts/os-memory
       REDJOHN_DNS_FIXTURE_NAME: redjohn-owned-fixture.test
-      REDJOHN_NUCLEI_LOCK: ${{ github.workspace }}/RedJohn/.tools/nuclei/3.11.1/fixture-lock.json
+      REDJOHN_NUCLEI_LOCK: ${{ github.workspace }}/.tools/nuclei/3.11.1/fixture-lock.json
       REDJOHN_AUTH_SCHEMA_MEASUREMENTS: ${{ github.workspace }}/artifacts/authenticated-schema-oast.json
       REDJOHN_SCHEMA_OAST_MEASUREMENTS: ${{ github.workspace }}/artifacts/schema-oast.json
       REDJOHN_SPECIALIST_MEASUREMENTS: ${{ github.workspace }}/artifacts/specialists.json
@@ -136,8 +136,8 @@ jobs:
           cache: pip
           cache-dependency-path: |
             .github/requirements-ci.lock
-            RedJohn/requirements-assessment.lock
-            RedJohn/pyproject.toml
+            requirements-assessment.lock
+            pyproject.toml
       - name: Set up Node and lockfile-based npm cache
         if: ${{ !cancelled() }}
         id: node
@@ -145,7 +145,7 @@ jobs:
         with:
           node-version: '22.14.0'
           cache: npm
-          cache-dependency-path: RedJohn/redjohn/interface/viewer/frontend/package-lock.json
+          cache-dependency-path: redjohn/interface/viewer/frontend/package-lock.json
       - name: Set up Go and module cache
         if: ${{ !cancelled() }}
         id: go
@@ -153,8 +153,8 @@ jobs:
         with:
           go-version: '1.25.1'
           cache-dependency-path: |
-            RedJohn/redjohn/interface/tui/go.sum
-            RedJohn/redjohn/assessment/notices/trivy-sbom-provenance.json
+            redjohn/interface/tui/go.sum
+            redjohn/assessment/notices/trivy-sbom-provenance.json
       - name: Reject dirty source and record commit-bound input hashes
         if: ${{ !cancelled() && steps.python.outcome == 'success' }}
         run: |
@@ -169,30 +169,30 @@ jobs:
       - name: Verify Python source quality and strict types
         if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
         run: |
-          python .github/scripts/ci.py run --name python-lint -- python -m ruff check RedJohn/redjohn
-          python .github/scripts/ci.py run --name python-types --cwd RedJohn -- timeout 8m python -m mypy redjohn --no-incremental
-          python .github/scripts/ci.py run --name capability-catalog -- python RedJohn/scripts/update-capability-matrix.py --check
+          python .github/scripts/ci.py run --name python-lint -- python -m ruff check redjohn
+          python .github/scripts/ci.py run --name python-types --cwd . -- timeout 8m python -m mypy redjohn --no-incremental
+          python .github/scripts/ci.py run --name capability-catalog -- python scripts/update-capability-matrix.py --check
       - name: Test the CI evidence contracts
         if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
         run: python .github/scripts/ci.py run --name ci-contracts -- python -m unittest discover -s .github/tests -v
       - name: Install frontend dependencies and check the actual TypeScript sources
         if: ${{ !cancelled() && steps.node.outcome == 'success' && steps.python.outcome == 'success' }}
         run: |
-          python .github/scripts/ci.py run --name frontend-install --cwd RedJohn/redjohn/interface/viewer/frontend -- timeout 10m npm ci
-          python .github/scripts/ci.py run --name frontend-types --cwd RedJohn/redjohn/interface/viewer/frontend -- npx --no-install tsc --noEmit
-          python .github/scripts/ci.py run --name frontend-tests --cwd RedJohn/redjohn/interface/viewer/frontend -- npm test -- --test-reporter=junit --test-reporter-destination="$GITHUB_WORKSPACE/artifacts/frontend.junit.xml"
-          python .github/scripts/ci.py run --name frontend-build --cwd RedJohn/redjohn/interface/viewer/frontend -- npm run build
+          python .github/scripts/ci.py run --name frontend-install --cwd redjohn/interface/viewer/frontend -- timeout 10m npm ci
+          python .github/scripts/ci.py run --name frontend-types --cwd redjohn/interface/viewer/frontend -- npx --no-install tsc --noEmit
+          python .github/scripts/ci.py run --name frontend-tests --cwd redjohn/interface/viewer/frontend -- npm test -- --test-reporter=junit --test-reporter-destination="$GITHUB_WORKSPACE/artifacts/frontend.junit.xml"
+          python .github/scripts/ci.py run --name frontend-build --cwd redjohn/interface/viewer/frontend -- npm run build
       - name: Vet, race-test and build the actual Go TUI
         if: ${{ !cancelled() && steps.go.outcome == 'success' && steps.python.outcome == 'success' }}
         run: |
-          python .github/scripts/ci.py run --name go-vet --cwd RedJohn/redjohn/interface/tui -- timeout 10m go vet ./...
-          python .github/scripts/ci.py run --name go-tests --cwd RedJohn/redjohn/interface/tui -- timeout 15m go test -p 2 -race -count=1 -json ./...
+          python .github/scripts/ci.py run --name go-vet --cwd redjohn/interface/tui -- timeout 10m go vet ./...
+          python .github/scripts/ci.py run --name go-tests --cwd redjohn/interface/tui -- timeout 15m go test -p 2 -race -count=1 -json ./...
           mkdir -p artifacts/build
-          python .github/scripts/ci.py run --name go-build --cwd RedJohn/redjohn/interface/tui -- timeout 10m go build -trimpath -o "$GITHUB_WORKSPACE/artifacts/build/redjohn-tui" ./cmd/redjohn-tui
+          python .github/scripts/ci.py run --name go-build --cwd redjohn/interface/tui -- timeout 10m go build -trimpath -o "$GITHUB_WORKSPACE/artifacts/build/redjohn-tui" ./cmd/redjohn-tui
       - name: Build the Python distribution using the existing packaging hook
         if: ${{ !cancelled() && steps.go.outcome == 'success' && steps.dependencies.outcome == 'success' }}
         run: |
-          python .github/scripts/ci.py run --name python-wheel -- timeout 10m python -m pip wheel --no-deps --no-build-isolation ./RedJohn --wheel-dir artifacts/build
+          python .github/scripts/ci.py run --name python-wheel -- timeout 10m python -m pip wheel --no-deps --no-build-isolation . --wheel-dir artifacts/build
           python .github/scripts/ci.py run --name python-wheel-license -- python .github/scripts/verify-wheel.py
       - name: Cache version-pinned Chromium downloads
         if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
@@ -205,7 +205,7 @@ jobs:
         uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
         with:
           path: ${{ runner.temp }}/wordpress-cache
-          key: wordpress-observe-ubuntu-24.04-${{ runner.arch }}-${{ hashFiles('RedJohn/scripts/wpscan-observe-runtime-pins.json', 'RedJohn/scripts/install-wpscan-observe.py') }}
+          key: wordpress-observe-ubuntu-24.04-${{ runner.arch }}-${{ hashFiles('scripts/wpscan-observe-runtime-pins.json', 'scripts/install-wpscan-observe.py') }}
       - name: Install Chromium and reviewed optional scanners sequentially
         if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
         id: engines

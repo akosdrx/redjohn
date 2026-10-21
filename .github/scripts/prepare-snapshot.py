@@ -10,7 +10,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 EXCLUDED = {"node_modules", ".tools", "__pycache__", ".pytest_cache", ".mypy_cache",
-            ".ruff_cache", ".venv", "build", "dist", "bin", "measurements", "screenshots"}
+            ".ruff_cache", ".venv", "build", "dist", "bin", "archive", "measurements", "screenshots"}
 PATTERNS = {
     "private_key_material": re.compile(rb"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----[\r\n]+[A-Za-z0-9+/=]{32}"),
     "github_token": re.compile(rb"(?:gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{50,})"),
@@ -25,7 +25,7 @@ DOCUMENT_JSON = frozenset({
 
 def selected():
     files = set()
-    for directory in ("RedJohn", ".github", "docs"):
+    for directory in ("redjohn", "tests", "scripts", "benchmarks", "examples", ".github", "docs"):
         for path in (ROOT / directory).rglob("*"):
             relative = path.relative_to(ROOT)
             if any(part in EXCLUDED for part in relative.parts):
@@ -42,7 +42,11 @@ def selected():
                     or path.name == ".DS_Store"):
                 continue
             files.add(relative.as_posix())
-    for name in ("README.md", "CHANGELOG.md", ".gitignore", "REDJOHN_FULL_BUILD_MASTER_PROMPT_HU.md"):
+    for name in (
+        "README.md", "CHANGELOG.md", "LICENSE", "THIRD_PARTY_NOTICES.md",
+        "pyproject.toml", "requirements-assessment.lock", "redjohn.spec",
+        ".gitignore", ".env.example",
+    ):
         if (ROOT / name).is_file():
             files.add(name)
     return sorted(files)

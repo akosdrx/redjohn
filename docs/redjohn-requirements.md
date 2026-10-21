@@ -8,7 +8,7 @@
 
 
 **Aktuális lezárási kör:** [környezet, globális workload-memóriakorlát,
-memória-attribúció és valódi modelles CLI/TUI](redjohn-resource-closure.md).
+memória-attribúció és valódi modelles CLI/TUI](archive/redjohn-resource-closure.md).
 A legfrissebb lezárt forrás a `fc1f70dceffa23db653e3bd24d40e27aa7947b21`:
 [teljes x64/ARM64 futás](https://github.com/akosdrx/redjohn/actions/runs/39526474772),
 platformonként 1585 regresszió (ebből 208 mock), 456 valódi integráció,
@@ -66,14 +66,14 @@ engine/download nem az. Dokumentum létezése nem végrehajtás.
 A korábbi loopback-mérések történeti baseline-ok. A jelenlegi remote HTTPS
 implementáció Linux kernelhatárt és exact-request host-only auth-replayt ad;
 az owned non-loopback Linux lánc eredményét a
-[külön mérési jegyzőkönyv](redjohn-remote-auth-verification.md) igazolja.
+[külön mérési jegyzőkönyv](archive/redjohn-remote-auth-verification.md) igazolja.
 A namespace-only teszt nem helyettesíti a browser–inventory–scheduler–Nuclei láncot.
-A jelenlegi [POST/session bővítés](../RedJohn/docs/post-refresh-replay.md) külön
+A jelenlegi [POST/session bővítés](post-refresh-replay.md) külön
 capture-reservationt, v2 bodyvaultot és explicit refresh-jobot ad; a hozzá tartozó
-[aktuális mérési jegyzőkönyv](redjohn-post-refresh-verification.md) külön workload.
-Az új [Chromium POST/body-token út](../RedJohn/docs/browser-post-body-tokens.md)
+[aktuális mérési jegyzőkönyv](archive/redjohn-post-refresh-verification.md) külön workload.
+Az új [Chromium POST/body-token út](browser-post-body-tokens.md)
 valódi browser-forgalmat és privát automatic-approval rule-t használ;
-[külön mérési jegyzőkönyv](redjohn-browser-token-verification.md) tartozik hozzá.
+[külön mérési jegyzőkönyv](archive/redjohn-browser-token-verification.md) tartozik hozzá.
 
 | Master | Implementáció / modul | Teszt / bizonyíték | Állapot és nyitott rész |
 |---|---|---|---|
@@ -110,9 +110,9 @@ nem pusztán „nincs bináris”. A tudatos alternatívák `deferred_not_requir
 Egy futás hiányzó dependency/credential miatt `blocked`; ez egyik esetben sem
 `no_finding_observed`. A test stub önmagában nem változtat capability státuszt.
 
-Current vertical slice: [ffuf / assessment Web View](redjohn-ffuf-verification.md), covering master 4/8/12/13/17/20. Full master acceptance remains partial.
+Current vertical slice: [ffuf / assessment Web View](archive/redjohn-ffuf-verification.md), covering master 4/8/12/13/17/20. Full master acceptance remains partial.
 
-2026-10-18 continuation: [httpx / Katana / VulnX verification](redjohn-projectdiscovery-verification.md), with pinned workers, durable scheduler, verified HTTPS/provider egress and explicit URI/JS/platform gaps. Earlier measurements remain historical evidence.
+2026-10-18 continuation: [httpx / Katana / VulnX verification](archive/redjohn-projectdiscovery-verification.md), with pinned workers, durable scheduler, verified HTTPS/provider egress and explicit URI/JS/platform gaps. Earlier measurements remain historical evidence.
 
 ## 2026-10-18: Arjun / sqlmap / Dalfox folytatás
 
@@ -129,7 +129,7 @@ Az új specialisták támogatott inputja GET/query. POST/JSON/form/multipart
 mutáció, named-actor Dalfox/browser és stored/DOM-only XSS külön unsupported;
 a korábbi Nuclei POST/session integráció megmarad. A teljes master prompt
 elfogadása továbbra sem állítható. Eredmények és blokkolók:
-[aktuális mérési jegyzőkönyv](redjohn-specialists-verification.md).
+[aktuális mérési jegyzőkönyv](archive/redjohn-specialists-verification.md).
 
 
 ### 2026-10-18: selected TInjA / Schemathesis / Interactsh
@@ -139,14 +139,14 @@ pinned TInjA 1.2.0 / Schemathesis 4.31.1, and a host Interactsh 1.4.1 protocol
 client with an owned receiver and durable late polls. Scanner/callback signals
 remain candidates. Broad API/GraphQL, body/auth mutation and public DNS OAST
 are separate coverage gaps. See `docs/redjohn-schema-oast-verification.md`
-and `RedJohn/docs/schema-oast-adapters.md` for current evidence and bounds.
+and `docs/schema-oast-adapters.md` for current evidence and bounds.
 
 ## Authenticated schema/OAST continuation (2026-10-18)
 
 Selected named POST JSON/form/multipart fields, private byte-preserving transport,
 protected body tokens, same-actor refresh and fresh-capture children are implemented
 in `assessment/input_replay.py`, `schema_tools.py`, `oast.py`, `browser_workflow.py`.
-Actual verification and explicit blocked/unsupported boundaries: [report](redjohn-authenticated-schema-oast-verification.md).
+Actual verification and explicit blocked/unsupported boundaries: [report](archive/redjohn-authenticated-schema-oast-verification.md).
 
 ## MIME and restart continuation (2026-10-18)
 
@@ -155,5 +155,5 @@ charset and quoted multipart boundary representations while preserving raw
 headers and body bytes. Legacy approvals retain their exact contract. CLI
 deadline denials now expose a safe constant reason; absolute authorization
 expiry remains enforced. Native specialist admission stops immediately after a
-complete trusted authentication failure. See the [runbook](../RedJohn/docs/mime-replay-and-restart.md)
-and [actual verification](redjohn-mime-restart-verification.md).
+complete trusted authentication failure. See the [runbook](mime-replay-and-restart.md)
+and [actual verification](archive/redjohn-mime-restart-verification.md).

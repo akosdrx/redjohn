@@ -8,7 +8,7 @@ and composing an unconfigured runtime do not start scanner processes.
 Install explicitly on a Linux x64/ARM64 runner:
 
 ```sh
-PYTHON=python bash RedJohn/scripts/install-network-scanners.sh
+PYTHON=python bash scripts/install-network-scanners.sh
 ```
 
 The installer verifies official release archive SHA256, exact source commit and
@@ -40,7 +40,7 @@ queries. Network policy is explicit and independent:
   },
   "naabu": {
     "binary": {
-      "path": "/absolute/RedJohn/.tools/naabu/2.6.1/naabu",
+      "path": "/absolute/.tools/naabu/2.6.1/naabu",
       "version": "2.6.1",
       "sha256": "<receipt binary_sha256>"
     }
@@ -123,17 +123,16 @@ the listener, including Python 3.13 cancellation behavior.
 ## Execution and verification
 
 ```sh
-cd RedJohn
-../.venv/bin/python -m redjohn assess run --config /absolute/network.json --output /absolute/run
+.venv/bin/python -m redjohn assess run --config /absolute/network.json --output /absolute/run
 ```
 
 ```sh
-PYTHONPATH=RedJohn .venv/bin/python -m pytest \
-  RedJohn/tests/test_network_broker_contract.py \
-  RedJohn/tests/test_network_tools_contract.py -q
+PYTHONPATH=. .venv/bin/python -m pytest \
+  tests/test_network_broker_contract.py \
+  tests/test_network_tools_contract.py -q
 
-REDJOHN_REQUIRE_NETWORK_SCANNER_E2E=1 PYTHONPATH=RedJohn python -m pytest \
-  RedJohn/tests/test_network_tools_live.py -q
+REDJOHN_REQUIRE_NETWORK_SCANNER_E2E=1 PYTHONPATH=. python -m pytest \
+  tests/test_network_tools_live.py -q
 ```
 
 The broker tests use actual owned loopback sockets, TCP DNS and SQLite; they do

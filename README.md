@@ -1,142 +1,141 @@
 # RedJohn (`rjkali`) — Native Kali Linux Edition
 
-Real ffuf discovery in the durable scheduler and assessment Web View: [runbook](RedJohn/docs/ffuf-discovery.md), [E2E evidence and images](docs/redjohn-ffuf-verification.md).
+Autonomous security assessment, vulnerability verification, and penetration
+testing platform built for **Kali Linux**: a durable Python assessment core,
+Go Bubble Tea TUI, and local Web Viewer. The CLI, TUI, and viewer share the same
+`AssessmentStore`, `Scheduler`, and `Control API`.
 
-Autonomous security assessment, vulnerability verification, and penetration testing platform built natively for **Kali Linux** (Docker-free local runtime + Go Bubble Tea TUI + Web Viewer).
+## Repository layout
 
-Source lives in `RedJohn/` — CLI, Go TUI, and web viewer.
+Everything lives in this repository root:
 
-## Persistent bounded assessment core
-
-The new `rj assess` path adds actual Playwright/Chromium discovery, persistent
-SQLite inventory and fair job scheduling, bounded evidence/cache/resource
-control, and the existing Nuclei integration with explicit engine/template locks.
-Optional tools are selected individually. Missing tools are coverage gaps.
-
-Independent assessment controllers now share host admission; an approved Linux
-run can request a real cgroup memory/pids backstop. Safe pre-send contention can
-wait durably and resume in the same controller. See the [resource runbook](RedJohn/docs/shared-resources-and-os-memory.md)
-and the [complete remaining-work ledger](docs/redjohn-completion-status.md).
-
-MCP connections are operator-managed: startup and the Kali installer never add
-CVE/OSINT servers or rewrite the MCP configuration. The native RedJohn tools and
-[custom MCP support](RedJohn/docs/mcp-configuration.md) remain available.
-
-With an explicit [`continuous_replay` mapping](RedJohn/docs/continuous-refresh-replay.md),
-the running durable scheduler continues session refresh → fresh Chromium capture →
-selected Nuclei replay without restarting the coordinator.
-Its optional [bounded session recovery](RedJohn/docs/automatic-session-recovery.md)
-detects verified 401/private expiry and admits refresh under persistent limits.
-
-The explicit `browser_post_capture` capability captures real application-generated
-Chromium JSON/form/multipart POSTs under private automatic-approval rules. Startup
-reconciles each current actor/revision into the durable queue. Reviewed body-token
-bindings update only selected fields after refresh; actual fresh browser capture
-is required before replay. See [browser capture and body-token refresh](RedJohn/docs/browser-post-body-tokens.md).
-
-The governed path supports owned HTTP(S) loopback labs and a Linux remote-HTTPS
-path with kernel-attested worker namespaces, exact origin/IP allowlists and a
-controller-owned inspection proxy. Upstream CA/hostname validation and request
-admission remain strict. The existing Nuclei adapter uses explicit engine/template
-locks and host-only credentials bound to an observed request, actor and session.
-Authenticated POST replay preserves approved JSON, form and multipart bytes up to
-64 KiB. Exact policy allowlists, private vault v2 approval and durable sent-request
-evidence are required. Capture and explicit session-refresh jobs use fenced SQLite
-state; lost responses never trigger automatic resends. See [POST/session workflow](RedJohn/docs/post-refresh-replay.md).
-
-From the repository root, prepare the optional engine once, then run the real
-Chromium → observed inventory → Nuclei → fixed-control/restart demonstration:
-
-```bash
-.venv/bin/python RedJohn/scripts/install-nuclei-pinned.py
-.venv/bin/python RedJohn/scripts/create-nuclei-fixture-lock.py
-cd RedJohn
-../.venv/bin/python -m redjohn.assessment https-demo --output ../redjohn_runs/https-e2e
-cd ..
+```text
+redjohn/                 Python package, adapters, scheduler, TUI, viewer
+tests/                   unit, contract, and real-integration tests
+scripts/                 installers, pinned-tool installers, maintenance
+docs/                    current runbooks, contracts, and archived evidence
+.github/                 CI workflows, scripts, policies, and fixtures
+benchmarks/              soak and allocator diagnostics
+examples/                reviewed assessment configurations
+pyproject.toml           package, tool, and test configuration
 ```
 
-The installer verifies the pinned official Nuclei v3.11.1 release, preserves
-existing installations, and downloads no upstream template collection. Tests and
-scheduled jobs never install it automatically. The demo contacts only its own
-HTTPS fixture; its harmless marker demonstrates integration, not a real CVE/RCE.
-It persists pending work, resumes in separate CLI processes, and checks an
-explicit fixed-control retest. Reports distinguish missing/blocked capabilities
-from completed negative checks. Remote browser/scanner jobs remain blocked on
-hosts without working Linux namespace enforcement. The owned non-loopback Linux
-fixture passed the previous GET/HEAD browser/inventory/authenticated Nuclei/restart
-E2E; [measurements and limits](docs/redjohn-remote-auth-verification.md) retain the
-browser's partial coverage and candidate-only finding status. The legacy
-interactive agent remains a separate workflow. A local/non-web target that has
-no approved assessment binding is refused unless the operator explicitly passes
-`--unconfined-legacy`; web/API targets continue under the host-bound policy.
-Current remediation evidence: [remediation status](docs/redjohn-remediation-status.md).
-See [audit](docs/redjohn-implementation-audit.md),
-[runbook](docs/redjohn-runbook.md), [POST replay/session refresh](RedJohn/docs/post-refresh-replay.md),
-[remote egress/authenticated replay](RedJohn/docs/remote-egress-auth.md),
-and [requirements](docs/redjohn-requirements.md).
-
-## Key Features on Kali Linux
-
-- **Docker-Free Native Kali Runtime (`local` backend):** Runs directly on Kali Linux (`UnixLocalSandboxSession`) with zero Docker dependency.
-- **Native Kali Tool & Wordlist Integration:**
-  - Automatically resolves Kali tools (`nmap`, `nuclei`, `ffuf`, `httpx-toolkit`, `sqlmap`, `wpscan`, `subfinder`, `gobuster`, `nikto`, `zaproxy`, `msfconsole`, `caido-cli`, `playwright`).
-  - Automatic `httpx` -> `httpx-toolkit` and `zap.sh` -> `zaproxy` shims in `~/.redjohn/kali-shims` so Python `httpx` never collides with ProjectDiscovery `httpx-toolkit`.
-  - Pre-configured environment variables and read-only sandbox grants for `/usr/share/seclists`, `/usr/share/wordlists` (`rockyou.txt`), `/usr/share/nmap/scripts`, and `/usr/share/exploitdb`.
-- **Skills:** twelve existing English contracts are preserved, plus 47 English lazy
-  assessment contracts with explicit implemented/unsupported capability mapping.
-  Original-source and translated-content hashes are separate. Skill presence does
-  not imply that a scanner adapter is available.
-- **Native CVE & Exploit Intelligence (`lookup_cve`):**
-  - Parallel correlation of NIST NVD CVSS v3.1/v4.0, FIRST EPSS (30-day exploit probability), CISA KEV, and GitHub PoC repositories with Composite Risk Score (`0–100`) and SSVC v2 decision tree (`Act` / `Attend` / `Track*` / `Track`).
-- **Pre-Compiled Linux Go TUI Binaries:**
-  - Includes statically linked Bubble Tea TUI binaries for both `linux/amd64` (`redjohn/bin/redjohn-tui-linux-amd64`) and `linux/arm64` (`redjohn/bin/redjohn-tui-linux-arm64`).
-
----
-
-## Quick Install on Kali Linux
+## Install on Kali Linux
 
 ```bash
 git clone https://github.com/akosdrx/redjohn.git rjkali
 cd rjkali
-./RedJohn/scripts/install-kali.sh
+./scripts/install-kali.sh
 ```
 
-The installer uses the repository-root `.venv`, installs the governed
-`[browser]` extra, and downloads Playwright Chromium. The system Chromium is
-kept for the separate legacy `agent-browser` path.
+The installer creates the repository-root `.venv`, installs the governed
+`[browser]` extra, and downloads Playwright Chromium. System Chromium remains
+available only for the separate legacy `agent-browser` path.
 
----
+## Bounded assessment
+
+`rj assess` provides real Playwright/Chromium discovery, persistent SQLite
+inventory, fair job scheduling, bounded evidence/cache/resources, and the
+existing Nuclei integration with explicit engine/template locks. Optional tools
+are selected individually; missing tools remain coverage gaps.
+
+Independent controllers share host admission. An approved Linux run can request
+a real cgroup-v2 memory/PID backstop. Pre-send contention waits durably and
+resumes in the same controller. See the [resource runbook](docs/shared-resources-and-os-memory.md)
+and the [completion ledger](docs/redjohn-completion-status.md).
+
+The governed path supports owned HTTP(S) loopback labs and a Linux remote-HTTPS
+path with kernel-attested worker namespaces, exact origin/IP allowlists, and a
+controller-owned inspection proxy. Upstream CA/hostname validation and request
+admission remain strict. Authenticated POST replay preserves approved JSON,
+form, and multipart bytes up to 64 KiB. Private vault v2 approval and durable
+sent-request evidence are required. Capture and session-refresh jobs use fenced
+SQLite state; lost responses are never automatically resent.
+
+With an explicit [`continuous_replay` mapping](docs/continuous-refresh-replay.md),
+the durable scheduler continues session refresh → fresh Chromium capture →
+selected Nuclei replay without restarting the coordinator. Optional
+[bounded session recovery](docs/automatic-session-recovery.md) detects verified
+401/private expiry and admits refresh under persistent limits.
+
+See [POST/session workflow](docs/post-refresh-replay.md),
+[browser capture and body-token refresh](docs/browser-post-body-tokens.md),
+[remote egress/authenticated replay](docs/remote-egress-auth.md), and
+[browser verification](docs/archive/redjohn-browser-verification.md).
+
+## MCP
+
+MCP connections are operator-managed. RedJohn reads `~/.redjohn/mcp-servers.json`
+(or `REDJOHN_MCP_CONFIG`) without creating or rewriting it. No CVE or OSINT MCP
+server is installed by default; native `lookup_cve` and `hunt` tools remain
+available. See [custom MCP configuration](docs/mcp-configuration.md).
+
+## Optional assessment adapters
+
+- httpx, Katana, and VulnX: [configuration and limits](docs/projectdiscovery-adapters.md)
+- ffuf and Web View: [runbook](docs/ffuf-discovery.md)
+- Arjun, sqlmap, Dalfox: [query specialists](docs/query-specialists.md)
+- TInjA, Schemathesis, Interactsh: [schema/OAST adapters](docs/schema-oast-adapters.md)
+- source and artifact scanners: [source scanners](docs/redjohn-source-scanners.md)
+
+Missing optional binaries are explicit blocked capabilities, not negative
+vulnerability results.
 
 ## Usage
 
 ```bash
-# Launch interactive Bubble Tea TUI:
+# Interactive TUI
 rj
-# (or: redjohn)
 
-# Launch real-time Web Viewer in browser:
+# Web Viewer
 redjohn view
 
-# Run against a target directly:
+# Direct target
 rj -t https://target.example.com
 
-# Headless / CI mode:
+# Headless mode
 redjohn -n -t https://target.example.com --scan-mode deep
 ```
 
-### Arjun, sqlmap és Dalfox — kijelölt tartós feladatok
+For local/non-web targets without an approved assessment binding, the legacy SDK
+path requires the explicit `--unconfined-legacy` flag. Web/API targets continue
+under the host-bound policy.
 
-A RedJohn opcionális GET/query specialistákat és külön, újraindítás után is
-folytatható Chromium XSS-megerősítést tartalmaz. A motorok csak kijelölt jobnál
-indulnak, közös scope/egress/kérés/erőforrás-korláttal. Telepítés, inputhatárok,
-licencfeltételek és indítás: [használati leírás](RedJohn/docs/query-specialists.md).
-A valódi binárisos és a kontraktusteszteket a [mérési jegyzőkönyv](docs/redjohn-specialists-verification.md) különíti el.
+## Optional Nuclei fixture engine
 
-TInjA / Schemathesis / Interactsh selected profiles and durable late polling:
-[verification](docs/redjohn-schema-oast-verification.md),
-[adapter contract](RedJohn/docs/schema-oast-adapters.md).
+From the repository root:
 
-Authenticated TInjA/Schemathesis/OAST selected POST fields and bounded session recovery: [RedJohn/docs/authenticated-schema-oast.md](RedJohn/docs/authenticated-schema-oast.md).
+```bash
+.venv/bin/python scripts/install-nuclei-pinned.py
+.venv/bin/python scripts/create-nuclei-fixture-lock.py
+.venv/bin/python -m redjohn.assessment https-demo --output redjohn_runs/https-e2e
+```
 
-Byte-preserving MIME/charset variants and persistent CLI deadline diagnostics:
-[RedJohn/docs/mime-replay-and-restart.md](RedJohn/docs/mime-replay-and-restart.md).
+The installer verifies the pinned Nuclei v3.11.1 release without replacing an
+existing installation or downloading a template collection. The demo uses real
+Chromium and Nuclei with strict TLS validation, persists the queue across CLI
+processes, and verifies a fixed control. Its marker is integration evidence,
+not a CVE/RCE reproduction.
+
+## Tests and CI
+
+```bash
+PYTHONPATH=. .venv/bin/python -m pytest tests -q
+(cd redjohn/interface/viewer/frontend && npm test && npm run build)
+(cd redjohn/interface/tui && go vet ./... && go test -race -count=1 ./...)
+```
+
+CI runs the Ubuntu x64/ARM64 matrix, native component smoke, artifact E2E, and
+controller-memory attribution. See [the remediation status](docs/redjohn-remediation-status.md)
+for commit-bound results and open items.
+
+## Documentation
+
+- [Architecture](docs/redjohn-architecture.md)
+- [Runbook](docs/redjohn-runbook.md)
+- [Requirements](docs/redjohn-requirements.md)
+- [Completion status](docs/redjohn-completion-status.md)
+- [Remediation and verification](docs/redjohn-remediation-status.md)
+- [Capability catalogue](docs/redjohn-capabilities.md)
+- [Implementation audit](docs/redjohn-implementation-audit.md)
+- [Skill coverage](docs/redjohn-skill-coverage.md)

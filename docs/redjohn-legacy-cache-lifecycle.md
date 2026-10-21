@@ -74,11 +74,11 @@ being reported as completed cleanup.
 From the repository root:
 
 ```sh
-PYTHONPATH=RedJohn .venv/bin/python -m pytest \
-  RedJohn/tests/test_legacy_cache_lifecycle.py \
-  RedJohn/tests/test_legacy_cache_live.py \
-  RedJohn/tests/test_host_binding_contract.py \
-  RedJohn/tests/test_runner_assessment_contract.py -q
+PYTHONPATH=. .venv/bin/python -m pytest \
+  tests/test_legacy_cache_lifecycle.py \
+  tests/test_legacy_cache_live.py \
+  tests/test_host_binding_contract.py \
+  tests/test_runner_assessment_contract.py -q
 ```
 
 `test_legacy_cache_live.py` exercises a real owned loopback HTTP server, twelve

@@ -1,8 +1,8 @@
 # Indítás, konfiguráció, újraindítás és hibaelhárítás
 
-Current [ffuf / Web View runbook](../RedJohn/docs/ffuf-discovery.md): explicit pinned installation, approved paths, kernel egress, restart/QoS deduplication and `redjohn view --assessment-dir`.
+Current [ffuf / Web View runbook](ffuf-discovery.md): explicit pinned installation, approved paths, kernel egress, restart/QoS deduplication and `redjohn view --assessment-dir`.
 
-A [korlátozott automatikus session-helyreállítás](../RedJohn/docs/automatic-session-recovery.md)
+A [korlátozott automatikus session-helyreállítás](automatic-session-recovery.md)
 explicit `continuous_replay.session_recovery` mellett kezeli a teljes 401-et és
 az igazolt privát lejáratot. A tartós budget/cooldown hiányt vagy bizonytalan
 mutáló kimenetelt nem kerüli meg. A valódi Linux-csoport külön futtatható:
@@ -10,11 +10,11 @@ mutáló kimenetelt nem kerüli meg. A valódi Linux-csoport külön futtatható
 ```sh
 REDJOHN_REQUIRE_REMOTE_E2E=1 \
 REDJOHN_AUTOMATIC_SESSION_MEASUREMENTS=/tmp/redjohn-automatic-session.json \
-PYTHONPATH=RedJohn .venv/bin/python -m pytest \
-  RedJohn/tests/test_automatic_session_recovery_pipeline.py -q -s
+PYTHONPATH=. .venv/bin/python -m pytest \
+  tests/test_automatic_session_recovery_pipeline.py -q -s
 ```
 
-Az [explicit continuous workflow](../RedJohn/docs/continuous-refresh-replay.md)
+Az [explicit continuous workflow](continuous-refresh-replay.md)
 a futó schedulerben kapcsolja össze a sikeres refresh-t, friss Chromium-capture-t
 és a kijelölt Nuclei-replayt. A szülő és az outbox, illetve a gyermekjobok és a
 nyugtázás atomiak; `--max-jobs` minden végrehajtott lépést számol.
@@ -22,8 +22,8 @@ nyugtázás atomiak; `--max-jobs` minden végrehajtott lépést számol.
 ```sh
 REDJOHN_REQUIRE_REMOTE_E2E=1 \
 REDJOHN_CONTINUOUS_REFRESH_MEASUREMENTS=/tmp/redjohn-continuous-refresh.json \
-PYTHONPATH=RedJohn .venv/bin/python -m pytest \
-  RedJohn/tests/test_continuous_refresh_pipeline.py -q -s
+PYTHONPATH=. .venv/bin/python -m pytest \
+  tests/test_continuous_refresh_pipeline.py -q -s
 ```
 
 A parancsok a repository gyökeréből futnak. A már működő `.venv` megmaradt;
@@ -32,7 +32,7 @@ A Linux ARM64 ellenőrzőkörnyezet Chromium-verziója 145.0.7632.0. Az install
 parancs **dependency-előkészítés**, a verziók a lockfájlban szerepelnek.
 
 ```bash
-.venv/bin/python -m pip install -e './RedJohn[browser]'
+.venv/bin/python -m pip install -e '.[browser]'
 .venv/bin/python -m playwright install chromium
 ```
 
@@ -59,16 +59,15 @@ A régi adatokat nem törli. A `health` csak capabilityt vizsgál; motorokat nem
 ## Valódi HTTPS → inventory → Nuclei → tartós folytatás
 
 A következő parancsok első két sorát a repository gyökeréből futtasd. Az installer
-az ellenőrzött hivatalos v3.11.1 motort a `RedJohn/.tools/nuclei/3.11.1/` alá
+az ellenőrzött hivatalos v3.11.1 motort a `.tools/nuclei/3.11.1/` alá
 telepíti, globális binárist vagy meglévő destinationt nem ír felül. A már sikeres
 telepítést nem kell ismételni. A második parancs a saját ártalmatlan fixture
 külön content-lockját állítja elő, abszolút helyi útvonalakkal.
 
 ```bash
-.venv/bin/python RedJohn/scripts/install-nuclei-pinned.py
-.venv/bin/python RedJohn/scripts/create-nuclei-fixture-lock.py
-cd RedJohn
-../.venv/bin/python -m redjohn.assessment https-demo --output ../redjohn_runs/https-e2e
+.venv/bin/python scripts/install-nuclei-pinned.py
+.venv/bin/python scripts/create-nuclei-fixture-lock.py
+.venv/bin/python -m redjohn.assessment https-demo --output ../redjohn_runs/https-e2e
 cd ..
 ```
 
@@ -83,7 +82,7 @@ markerhiány alapján negatív. Ez integrációs bizonyíték, nem CVE-/RCE-bizo
 Az outputban `.state/agents.db`, JSON/HTML riport és
 `https-e2e-measurements.json` keletkezik. A mérések a tényleges processzeket,
 kérésszámot, tartós request budgetet, restart utáni duplikációt és proof levelt
-rögzítik; a végrehajtott eredményeket az [ellenőrzési jegyzőkönyv](redjohn-verification.md)
+rögzítik; a végrehajtott eredményeket az [ellenőrzési jegyzőkönyv](archive/redjohn-verification.md)
 adja meg. A fixture CA-/kulcsfájljai csak a futás idejére élnek, a rendszer
 truststore-ja nem módosul. Az output `fixture-config.json` fájlja ezért a demo
 lezárása után nem használható változtatás nélkül élő célként: a fixture és CA-ja
@@ -95,13 +94,13 @@ attesztáció nélkül nem nyitja fel. Az upstream proxy HTTP/1.1-es subsetet ke
 
 ## Konfigurált helyi lab és tartós folytatás
 
-Másold a `RedJohn/examples/assessment-local.json` fájlt, és a saját, előzetesen
+Másold a `examples/assessment-local.json` fájlt, és a saját, előzetesen
 engedélyezett loopback labod pontos originjét/portját add meg. Az ott szereplő
 `127.0.0.1:3000` példa, a repository nem indít oda önkényesen szolgáltatást.
 
 ```bash
 .venv/bin/python -m redjohn.assessment run \
-  --config RedJohn/examples/assessment-local.json \
+  --config examples/assessment-local.json \
   --output redjohn_runs/approved-lab --max-jobs 16
 ```
 
@@ -166,14 +165,14 @@ Az induló current-identityhez privát credential/start-anchor kell; üres vault
 helyettesít loginfolyamatot.
 
 ```bash
-PYTHONPATH=RedJohn .venv/bin/python -m redjohn.assessment run \
+PYTHONPATH=. .venv/bin/python -m redjohn.assessment run \
   --config /absolute/private/assessment.json \
   --output /absolute/redjohn-runs/approved-assessment --max-jobs 1
 
 REDJOHN_REQUIRE_REMOTE_E2E=1 \
 REDJOHN_BROWSER_TOKEN_MEASUREMENTS=/tmp/redjohn-browser-token.json \
-PYTHONPATH=RedJohn .venv/bin/python -m pytest \
-  RedJohn/tests/test_browser_token_pipeline.py -q -s
+PYTHONPATH=. .venv/bin/python -m pytest \
+  tests/test_browser_token_pipeline.py -q -s
 ```
 
 A reviewzott `body_tokens` deklaráció csak a kiválasztott JSON-stringet,
@@ -184,9 +183,9 @@ A fix `multipart/form-data; boundary=REDJOHN_HOST_REPLAY_BOUNDARY_V1` template-h
 és a meglévő body-sentinel mellé a host injektálja az aktuális privát értékeket.
 
 A teljes privát séma, limitek, bootstrap és recovery:
-[browser/body-token workflow](../RedJohn/docs/browser-post-body-tokens.md).
+[browser/body-token workflow](browser-post-body-tokens.md).
 Az aktuális, valódi Chromium-lánc mérését az
-[új jegyzőkönyv](redjohn-browser-token-verification.md) külön tartalmazza;
+[új jegyzőkönyv](archive/redjohn-browser-token-verification.md) külön tartalmazza;
 a korábbi HTTPX capture-mérés ettől nem válik browser-bizonyítékká.
 
 ## Távoli HTTPS és autentikált Nuclei-replay
@@ -221,39 +220,39 @@ frissül; régi job/capture nem íródik át, új revisionhöz friss observation
 Bodyba ágyazott token csak explicit body_tokens bindinggal frissül; provider-refresh-token
 automatikus rotációja, XML replay,
 valamint interaktív secretbeállító wizard nincs. A teljes séma és SDK-példa:
-[POST/session workflow](../RedJohn/docs/post-refresh-replay.md).
+[POST/session workflow](post-refresh-replay.md).
 
 Redirect, más URL/metódus, lejárt vagy eltérő actor/tenant/session nem negatív
 check; nincs anonim fallback vagy ismeretlen mutáló kérés automatikus újraküldése.
 A namespace- és TLS-határokat a
-[remote/auth dokumentum](../RedJohn/docs/remote-egress-auth.md) rögzíti.
+[remote/auth dokumentum](remote-egress-auth.md) rögzíti.
 
 A POST/refresh lánc külön futtatandó a korábbi GET/HEAD E2E mellett:
 
 ```bash
 REDJOHN_REQUIRE_REMOTE_E2E=1 \
 REDJOHN_POST_REFRESH_MEASUREMENTS=/tmp/redjohn-post-refresh.json \
-PYTHONPATH=RedJohn .venv/bin/python -m pytest \
-  RedJohn/tests/test_post_refresh_pipeline.py -q -s
+PYTHONPATH=. .venv/bin/python -m pytest \
+  tests/test_post_refresh_pipeline.py -q -s
 ```
 
-A végleges aktuális eredményt a [POST/session mérési jegyzőkönyv](redjohn-post-refresh-verification.md)
+A végleges aktuális eredményt a [POST/session mérési jegyzőkönyv](archive/redjohn-post-refresh-verification.md)
 őrzi; a lenti korábbi GET/HEAD parancsok külön workloadot igazolnak.
 
 Az előkészített Linux környezetben a valódi ellenőrzés:
 
 ```bash
-PYTHONPATH=RedJohn .venv/bin/python -m pytest \
-  RedJohn/tests/test_assessment_egress.py -q -s
+PYTHONPATH=. .venv/bin/python -m pytest \
+  tests/test_assessment_egress.py -q -s
 
 REDJOHN_REQUIRE_REMOTE_E2E=1 \
 REDJOHN_REMOTE_E2E_MEASUREMENTS=/tmp/redjohn-remote-auth-e2e.json \
-PYTHONPATH=RedJohn .venv/bin/python -m pytest \
-  RedJohn/tests/test_remote_authenticated_pipeline.py -q -s
+PYTHONPATH=. .venv/bin/python -m pytest \
+  tests/test_remote_authenticated_pipeline.py -q -s
 
-PYTHONPATH=RedJohn .venv/bin/python -m pytest \
-  RedJohn/tests/test_nuclei_auth_live.py \
-  RedJohn/tests/test_assessment_auth_replay.py -q -s
+PYTHONPATH=. .venv/bin/python -m pytest \
+  tests/test_nuclei_auth_live.py \
+  tests/test_assessment_auth_replay.py -q -s
 ```
 
 A remote fixture a teszt saját HTTPS-szolgáltatása valódi, nem loopback lokális
@@ -262,7 +261,7 @@ Linux/bwrap/Chromium/Nuclei esetén failt ad, nem skipet. A namespace-only eredm
 a helyi auth-engine teszt és a teljes remote browser–inventory–scheduler–Nuclei
 lánc külön bizonyíték. A korábbi loopback-jegyzőkönyvek történeti baseline-ok.
 A sikeres Linux lánc kérésszáma, kontrolljai és coverage-határai a
-[remote/auth mérési jegyzőkönyvben](redjohn-remote-auth-verification.md) vannak.
+[remote/auth mérési jegyzőkönyvben](archive/redjohn-remote-auth-verification.md) vannak.
 
 Linuxon célszerű dedikált systemd scope-ban futtatni a mérést, hogy más build/
 download folyamat ne terhelje ugyanazt a cgroupot. A memóriaadmission a process-
@@ -279,11 +278,11 @@ ezért nincs itt elvégzett CI-futtatást igazoló állítás; a Linux VM-teszt 
 
 A meglévő `hunt` útvonalhoz külön engine- és teljes bundle-lock kell.
 Séma, támogatott template subset, API, parser/partial szabályok:
-[Nuclei-integráció](../RedJohn/docs/nuclei-integration.md).
+[Nuclei-integráció](nuclei-integration.md).
 Telepített motor nélkül ne készíts fiktív lockot. A fenti explicit pinned installer
 a tényleges hivatalos executable-t, MIT licencet és provenance receiptet menti,
 a fixture-lock pedig csak a saját reviewed marker template-et engedélyezi.
-A `RedJohn/scripts/install-kali.sh` külön meglévő motort/templates-t használ;
+A `scripts/install-kali.sh` külön meglévő motort/templates-t használ;
 templatefrissítés csak explicit `REDJOHN_UPDATE_NUCLEI_TEMPLATES=1` installkori
 döntés. Kampány közben nincs engine-/template-update.
 
@@ -298,32 +297,32 @@ nem negatív. HTTPS-hez a controller által kötött, upstream TLS-t ellenőrző
 
 ```bash
 # A jelenleg elérhető teljes Python-tesztkészlet:
-.venv/bin/python -m pytest RedJohn/tests -q
+.venv/bin/python -m pytest tests -q
 
 # Valódi Chromium + a valódi browser/persistent-pipeline integráció:
 REDJOHN_BROWSER_SOAK_CYCLES=20 .venv/bin/python -m pytest \
-  RedJohn/tests/test_assessment_browser.py \
-  RedJohn/tests/test_assessment_pipeline.py -q
+  tests/test_assessment_browser.py \
+  tests/test_assessment_pipeline.py -q
 
 # SQLite/policy/cache/skills és fault/kontraktus tesztek:
-.venv/bin/python -m pytest RedJohn/tests/test_assessment_scheduler.py \
-  RedJohn/tests/test_assessment_resource_control.py \
-  RedJohn/tests/test_assessment_intelligence.py \
-  RedJohn/tests/test_assessment_skills.py -q
+.venv/bin/python -m pytest tests/test_assessment_scheduler.py \
+  tests/test_assessment_resource_control.py \
+  tests/test_assessment_intelligence.py \
+  tests/test_assessment_skills.py -q
 
 # Valódi Chromium HTTPS + per-request proxy, majd tartós Nuclei E2E:
-.venv/bin/python -m pytest RedJohn/tests/test_assessment_browser_https.py \
-  RedJohn/tests/test_assessment_browser_proxy_https.py \
-  RedJohn/tests/test_assessment_https_e2e.py \
-  RedJohn/tests/test_assessment_https_pipeline_failures.py -q
+.venv/bin/python -m pytest tests/test_assessment_browser_https.py \
+  tests/test_assessment_browser_proxy_https.py \
+  tests/test_assessment_https_e2e.py \
+  tests/test_assessment_https_pipeline_failures.py -q
 
 # Valódi pinned Nuclei-engine, saját HTTP(S) fixture (nem telepít dependencyt):
-.venv/bin/python -m pytest RedJohn/tests/test_nuclei_live.py -q -rs
+.venv/bin/python -m pytest tests/test_nuclei_live.py -q -rs
 
 # Mock scanner + valódi supervisor-processz; külön mock installer download:
-.venv/bin/python -m pytest RedJohn/tests/test_hunt_nuclei.py \
-  RedJohn/tests/test_native_fixture_session.py \
-  RedJohn/tests/test_nuclei_installer.py -q
+.venv/bin/python -m pytest tests/test_hunt_nuclei.py \
+  tests/test_native_fixture_session.py \
+  tests/test_nuclei_installer.py -q
 
 # Hosszabb, foreground helyi pipeline-mérés (a tényleges időt jelenti):
 .venv/bin/python -m redjohn.assessment demo --cycles 100 \

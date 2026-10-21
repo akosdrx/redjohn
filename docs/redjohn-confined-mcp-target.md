@@ -76,7 +76,7 @@ not manufacture a vulnerability finding.
 
 ## Reproduced checks
 
-Actual Linux file: `RedJohn/tests/test_mcp_target_live.py`:
+Actual Linux file: `tests/test_mcp_target_live.py`:
 
 - Queued job survives complete owner/runtime close and reopen, then performs a
   real HTTPS MCP read through the persistent scheduler. A second job uses the

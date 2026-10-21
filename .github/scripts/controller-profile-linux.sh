@@ -13,5 +13,5 @@ printf '%s' "$$" > "$REDJOHN_TEST_CGROUP_ROOT/launcher-soak/cgroup.procs"
 exec aa-exec -p "${REDJOHN_CI_APPARMOR_PROFILE:?}" -- \
   /usr/bin/setpriv --reuid="$SUDO_UID" --regid="$SUDO_GID" --init-groups \
   env USER="$SUDO_USER" LOGNAME="$SUDO_USER" \
-  PYTHONPATH="$task_workspace/RedJohn:$task_workspace/.github/scripts" \
+  PYTHONPATH="$task_workspace:$task_workspace/.github/scripts" \
   bash .github/scripts/controller-profile-cases.sh "$1"

@@ -2,13 +2,13 @@
 # Downloads only the reviewed optional kube-bench executable/license; no audit.
 set -euo pipefail
 mkdir -p artifacts/tool-receipts
-python RedJohn/scripts/install-preparation-pinned.py --tool kube-bench
+python scripts/install-preparation-pinned.py --tool kube-bench
 python - <<'PY'
 import hashlib
 import json
 from pathlib import Path
 
-root = Path("RedJohn/.tools/kube-bench/0.16.0")
+root = Path(".tools/kube-bench/0.16.0")
 raw = (root / "provenance.json").read_bytes()
 receipt = json.loads(raw)
 digest = hashlib.sha256((root / "kube-bench").read_bytes()).hexdigest()

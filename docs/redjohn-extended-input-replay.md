@@ -97,16 +97,16 @@ x64/ARM64 matrix. The full Actions integration selection includes this file and
 requires real capabilities. Live cloud/Kubernetes account access remains
 deferred by the owner and is unrelated to these owned TLS fixtures.
 
-Example focused commands from `RedJohn/` (dependencies and pinned tools must
+Example focused commands from `` (dependencies and pinned tools must
 already be installed):
 
 ```sh
-../.venv/bin/python -m pytest -q tests/test_extended_input_replay_contract.py
-../.venv/bin/python -m pytest -q tests/test_extended_input_replay_live.py \
+.venv/bin/python -m pytest -q tests/test_extended_input_replay_contract.py
+.venv/bin/python -m pytest -q tests/test_extended_input_replay_live.py \
   -k 'loopback and not multipart'
-../.venv/bin/python -m pytest -q tests/test_extended_input_replay_live.py \
+.venv/bin/python -m pytest -q tests/test_extended_input_replay_live.py \
   -k 'loopback and multipart'
-../.venv/bin/python -m pytest -q tests/test_extended_input_replay_live.py \
+.venv/bin/python -m pytest -q tests/test_extended_input_replay_live.py \
   -k refresh_recapture
 ```
 

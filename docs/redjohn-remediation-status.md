@@ -8,7 +8,7 @@ commitból előálló eredmények használhatók.
 ## Kanonikus forrás
 
 - Commit: `9d3de449301532e839d74708604865056232daaf`
-- A commit a teljes `RedJohn/`, `.github/`, `docs/` és a szükséges gyökérfájlok
+- A commit a teljes ``, `.github/`, `docs/` és a szükséges gyökérfájlok
   kanonikus fáját tartalmazza.
 - A worktree a commit után tiszta; a `.venv`, `node_modules`, `.tools`, cache-ek
   és runtime adatbázisok nincsenek verziókezelve.
@@ -20,7 +20,7 @@ Környezet: macOS arm64, Python 3.13.16, Node 24.21.0, Go 1.27.1.
 
 | Ellenőrzés | Eredmény |
 |---|---|
-| `PYTHONPATH=RedJohn .venv/bin/python -m pytest RedJohn/tests -q` | **1931 passed, 138 skipped, 0 failed** (17:44) |
+| `PYTHONPATH=. .venv/bin/python -m pytest tests -q` | **1931 passed, 138 skipped, 0 failed** (17:44) |
 | `.github` CI-szerződés tesztek | **61 passed** |
 | `npm test` | **14 passed, 0 failed** |
 | `npm run build` | sikeres; a commitolt static bundle változatlan |
@@ -56,7 +56,7 @@ További commit-azonosított hosted futások:
 
 ## Javított területek
 
-- **P0 forrásintegritás:** a Git-index és a worktree kanonikus `RedJohn/` fája
+- **P0 forrásintegritás:** a Git-index és a worktree kanonikus `` fája
   szinkronban van; nincs lowercase `redjohn/` duplikáció.
 - **P0 CI-bizonyíték:** a `ci.py preflight` és `snapshot` dirty vagy untracked
   forrás esetén non-zero exit; a workflow-k a snapshot előtt preflightot

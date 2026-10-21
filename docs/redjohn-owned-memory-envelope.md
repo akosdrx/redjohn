@@ -21,10 +21,10 @@ host-wide controls or adopt an unknown group. Bubblewrap and unprivileged user
 and mount namespaces are also required. A missing prerequisite blocks the
 requested profile; it never falls back to a software memory estimate.
 
-From `RedJohn/`, a lightweight launch example is:
+From ``, a lightweight launch example is:
 
 ```sh
-../.venv/bin/python -m redjohn.assessment.memory_exec \
+.venv/bin/python -m redjohn.assessment.memory_exec \
   --delegated-root /sys/fs/cgroup/OPERATOR_DELEGATED_ROOT \
   --memory-budget-mib 1024 \
   --aggregate-budget-mib 4096 \

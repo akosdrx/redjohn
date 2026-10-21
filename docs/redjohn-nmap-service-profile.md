@@ -100,7 +100,7 @@ applicable license determination rather than an invented permission.
 The explicit CI-owned fixture build is:
 
 ```sh
-python RedJohn/scripts/install-service-scanners.py nmap --owned-fixture-build
+python scripts/install-service-scanners.py nmap --owned-fixture-build
 ```
 
 It checks the exact source and license hashes, safely extracts regular files
@@ -117,13 +117,13 @@ identity, not a reproducible upstream binary or independent signature.
 ## Verification and current limits
 
 ```sh
-PYTHONPATH=RedJohn .venv/bin/python -m pytest \
-  RedJohn/tests/test_service_tools_contract.py \
-  RedJohn/tests/test_service_egress_contract.py \
-  RedJohn/tests/test_service_scanner_installer.py -q
+PYTHONPATH=. .venv/bin/python -m pytest \
+  tests/test_service_tools_contract.py \
+  tests/test_service_egress_contract.py \
+  tests/test_service_scanner_installer.py -q
 
-REDJOHN_REQUIRE_SERVICE_SCANNER_E2E=1 PYTHONPATH=RedJohn python -m pytest \
-  RedJohn/tests/test_service_tools_live.py -q
+REDJOHN_REQUIRE_SERVICE_SCANNER_E2E=1 PYTHONPATH=. python -m pytest \
+  tests/test_service_tools_live.py -q
 ```
 
 The contracts distinguish actual owned sockets/SQLite/helper cleanup from
