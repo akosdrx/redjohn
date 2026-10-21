@@ -1,0 +1,1995 @@
+{
+  "recorded_at": "2026-10-18T13:34:45.262354+00:00",
+  "scope": "Host-bound assessment integration; historical Git restructuring preserved",
+  "production_python_changed": 14,
+  "python_test_files_added": 7,
+  "new_test_cases": 43,
+  "new_actual_integration_cases": 5,
+  "new_contract_or_fault_cases": 38,
+  "active_original_tests_unchanged": 76,
+  "runtime_state_excluded": true,
+  "source_manifest_sha256": "bb5ed5f58756dedc64f67a71ae8a668cb84d3a7c9e0764aa34a26d847879b8e6",
+  "verification": "docs/redjohn-host-binding-verification.md",
+  "files": [
+    {
+      "path": "RedJohn/docs/host-bound-assessment.md",
+      "sha256": "a100238ffaf7908dc9292be8c4185f97a2cd03705f5193c5abc773c8b3f938d0",
+      "bytes": 7434
+    },
+    {
+      "path": "RedJohn/redjohn/agents/prompts/scope.jinja",
+      "sha256": "ae6d80e7ba3f543c5ee39fccf3b16b4e5a2fef0596025d8f60fbb712e372e0e8",
+      "bytes": 3631
+    },
+    {
+      "path": "RedJohn/redjohn/assessment/cli.py",
+      "sha256": "2b29890e8d34d4c9bb2003279453ae363f2154e379e969ad33e0464a22344d37",
+      "bytes": 18656
+    },
+    {
+      "path": "RedJohn/redjohn/assessment/configuration.py",
+      "sha256": "27ed34df87da812a8af37d82872c502495ba058cab890e16392a590dddcd2bbe",
+      "bytes": 12368
+    },
+    {
+      "path": "RedJohn/redjohn/assessment/control.py",
+      "sha256": "afdd4183f7aea88e2cdb99258a5410abdf1ada09292641dbc7f5225dd011957c",
+      "bytes": 10728
+    },
+    {
+      "path": "RedJohn/redjohn/assessment/host.py",
+      "sha256": "01e6132d3ce70c6bdb1a3cccfae0817f5b9920da62af8574ef20510f3e35b81e",
+      "bytes": 10367
+    },
+    {
+      "path": "RedJohn/redjohn/assessment/host_binding.py",
+      "sha256": "ff14ebdb450a656ecadda8c714213500ea6f4804315a98c3f93ab1ce829651ab",
+      "bytes": 12893
+    },
+    {
+      "path": "RedJohn/redjohn/assessment/policy.py",
+      "sha256": "01b3841be0f08fa6286b05f1bdcc8f026f916d157e73d17dedcea1d5eac3cc4e",
+      "bytes": 12672
+    },
+    {
+      "path": "RedJohn/redjohn/assessment/runtime.py",
+      "sha256": "a5d5d2617f63d35009640c3150c80ba1b9ecdf5c34240ef18cf0e223801c20cf",
+      "bytes": 16900
+    },
+    {
+      "path": "RedJohn/redjohn/assessment/scheduler.py",
+      "sha256": "c295526fd99b3d4b0710db37afdc47f4727c93e680deaa0b20472326f1e70717",
+      "bytes": 30083
+    },
+    {
+      "path": "RedJohn/redjohn/assessment/store.py",
+      "sha256": "9ce1c857bc9bffb3dbc11734947b151abfc6bc79ddbb87f9ca71461c1176fc0e",
+      "bytes": 83699
+    },
+    {
+      "path": "RedJohn/redjohn/core/runner.py",
+      "sha256": "954bc702a1cc14a440a31938f280fa9c1fe8b3c335d1d82e205ba8fd986459f5",
+      "bytes": 30282
+    },
+    {
+      "path": "RedJohn/redjohn/interface/cli.py",
+      "sha256": "64eb13182663157dc22877d472e0d22a531b28b2daa12980c35bc81739968c24",
+      "bytes": 8804
+    },
+    {
+      "path": "RedJohn/redjohn/interface/cli_args.py",
+      "sha256": "c803c123c91654551ddd2f47df4b04ca262de21c51b1dd019309616ddb3b0eeb",
+      "bytes": 21447
+    },
+    {
+      "path": "RedJohn/redjohn/interface/tui/runtime.py",
+      "sha256": "64e3082ca1dac02637dc42eb676add6de3654083bb63da431ab0f8f549df9cc4",
+      "bytes": 20348
+    },
+    {
+      "path": "RedJohn/redjohn/runtime/session_manager.py",
+      "sha256": "b5ef0f29e7b0ef70b88f80b473dc90ca1240784e0d344efc66718c488deffce1",
+      "bytes": 20550
+    },
+    {
+      "path": "RedJohn/tests/test_host_assessment_contract.py",
+      "sha256": "76758790a856cbe40693e4ffd19bc72f74ddcea8c6a40f2d68fe85e4118bd5e1",
+      "bytes": 3557
+    },
+    {
+      "path": "RedJohn/tests/test_host_assessment_live.py",
+      "sha256": "3062576c8d735274fea18b614725d50e2881b9c3c39d3044e93863b1a2e0569d",
+      "bytes": 6935
+    },
+    {
+      "path": "RedJohn/tests/test_host_binding_contract.py",
+      "sha256": "82f4d4b28fe8df0dae283cc0c8e6fced590f4ecd7a707d1ab654519f520c8eca",
+      "bytes": 8400
+    },
+    {
+      "path": "RedJohn/tests/test_host_binding_failures.py",
+      "sha256": "7817b0654c7f7e7c8a72fd6e92c449ef101bf2a6eb9e39815b68bb8fc5645b25",
+      "bytes": 3127
+    },
+    {
+      "path": "RedJohn/tests/test_host_job_contract.py",
+      "sha256": "a433e2e26c51ea0edbe4ea72474156324dd5f62a1cd7e80d971eee5b3816ae9a",
+      "bytes": 2194
+    },
+    {
+      "path": "RedJohn/tests/test_host_lifecycle_live.py",
+      "sha256": "c44da65d43191dd6c22c3f00be138fd6bd9a37a9c5363d197cf7bc7b6a6ab83c",
+      "bytes": 4645
+    },
+    {
+      "path": "RedJohn/tests/test_runner_assessment_contract.py",
+      "sha256": "dcf51126622bcbeb29c20326bca58d82b3e51af1fc323686c6367bec7d91a134",
+      "bytes": 11476
+    },
+    {
+      "path": "docs/measurements/host-binding/changed-python-files.json",
+      "sha256": "9357d13953ad4b73da5c9fa8db91e5d676a47c52510839b2bae3378f4de47f8d",
+      "bytes": 3522
+    },
+    {
+      "path": "docs/measurements/host-binding/full-suite-sampler.py.txt",
+      "sha256": "5b5d8288eeb79501187528774fac5318f9bc15cbb154a873e3312ced44ee9551",
+      "bytes": 6579
+    },
+    {
+      "path": "docs/measurements/host-binding/generated-cleanup.json",
+      "sha256": "59e84e6f8fa051de7866d4686bf3bcb5764f33b769dbe26e3b3bd07a03df53a0",
+      "bytes": 8801
+    },
+    {
+      "path": "docs/measurements/host-binding/github-access.json",
+      "sha256": "703b09737e0ba083e747915e8d7694ad319a06115123e89acac2ee74a06ab9a7",
+      "bytes": 340
+    },
+    {
+      "path": "docs/measurements/host-binding/legacy-cache-before.json",
+      "sha256": "b78240a6805e3f63994366790249b0ab229cad40663ccb31e364b503b0e8c4ff",
+      "bytes": 733
+    },
+    {
+      "path": "docs/measurements/host-binding/legacy-cache-probe.py.txt",
+      "sha256": "44416cd6f883b0be6f8d642c9e0b112bbb8eb174867a9d21eb68a44c7b21dd74",
+      "bytes": 2133
+    },
+    {
+      "path": "docs/measurements/host-binding/linux-before-resume-fix/auth-interactsh-form-fixed-loopback.json",
+      "sha256": "9a7834162f78be36d893206278caca5270c4edfbf80016e9ce1ae36fa48a4364",
+      "bytes": 9404
+    },
+    {
+      "path": "docs/measurements/host-binding/linux-before-resume-fix/auth-interactsh-form-fixed-remote.json",
+      "sha256": "7e4ae9ee0bf5d1f51ba6be67203d1e064d20f71b966072f1b2f6ac27969f7aaf",
+      "bytes": 9404
+    },
+    {
+      "path": "docs/measurements/host-binding/linux-before-resume-fix/auth-interactsh-form-positive-loopback.json",
+      "sha256": "3ed174b44a1c66feb5008c5bdc9b8d1cc2aae529602dc44a9288bf0e209fb835",
+      "bytes": 2919
+    },
+    {
+      "path": "docs/measurements/host-binding/linux-before-resume-fix/auth-interactsh-form-positive-remote.json",
+      "sha256": "b1b2bf1df336ec54f1e87850906467540ade8ec2b7bc83593891a9f9b5d5d865",
+      "bytes": 2920
+    },
+    {
+      "path": "docs/measurements/host-binding/linux-before-resume-fix/auth-interactsh-json-fixed-loopback.json",
+      "sha256": "ee7a75b20ed1205b57947be359c4982314fffb8e6feb0432618a57d36c3c6d72",
+      "bytes": 9401
+    },
+    {
+      "path": "docs/measurements/host-binding/linux-before-resume-fix/auth-interactsh-json-fixed-remote.json",
+      "sha256": "8659658ce0ab5b03fcd3ebacedf79d6beb8d8dc2e6a6ba2b2951591dd71aa4c0",
+      "bytes": 9402
+    },
+    {
+      "path": "docs/measurements/host-binding/linux-before-resume-fix/auth-interactsh-json-positive-loopback.json",
+      "sha256": "b8a4978a65ead38e1a0054bc201930ffe2bda523384ec9963775e633ecd2e66f",
+      "bytes": 2916
+    },
+    {
+      "path": "docs/measurements/host-binding/linux-before-resume-fix/auth-interactsh-json-positive-remote.json",
+      "sha256": "d446be75edcf7a9b046bc6e38e3d19a1aee95102d1a4faba753301b587da4f4c",
+      "bytes": 2918
+    },
+    {
+      "path": "docs/measurements/host-binding/linux-before-resume-fix/auth-interactsh-multipart-fixed-loopback.json",
+      "sha256": "128504c9ae10e118c67d97bd4ccd37c567e43a4c1d632809cbc12f0da10ebe39",
+      "bytes": 9402
+    },
+    {
+      "path": "docs/measurements/host-binding/linux-before-resume-fix/auth-interactsh-multipart-fixed-remote.json",
+      "sha256": "794469c1eba1b523b0578d0ffa406718b36cc605dd49d0a22fb295c54b1f9b93",
+      "bytes": 9402
+    },
+    {
+      "path": "docs/measurements/host-binding/linux-before-resume-fix/auth-interactsh-multipart-positive-loopback.json",
+      "sha256": "6aea1e19daa2b298281986e005447e99c12bb5668eafce8036463a656be0e4a4",
+      "bytes": 2915
+    },
+    {
+      "path": "docs/measurements/host-binding/linux-before-resume-fix/auth-interactsh-multipart-positive-remote.json",
+      "sha256": "7fefdc50bfeae763d86e602d5c28c7afec2fffbd475bfec4872ebd4988e28364",
+      "bytes": 2916
+    },
+    {
+      "path": "docs/measurements/host-binding/linux-before-resume-fix/auth-schemathesis-form-fixed-loopback.json",
+      "sha256": "26236a001650b2a631ce62e1f6b41f4f3ebd6df369abc85f95e7bf97448819a4",
+      "bytes": 3934
+    },
+    {
+      "path": "docs/measurements/host-binding/linux-before-resume-fix/auth-schemathesis-form-fixed-remote.json",
+      "sha256": "a74f826a55e1934879e583277925a97ffa1696cb5e70b960795f20815c3a9c80",
+      "bytes": 5479
+    },
+    {
+      "path": "docs/measurements/host-binding/linux-before-resume-fix/auth-schemathesis-form-positive-loopback.json",
+      "sha256": "7fe0d51aac5f411288388216204d4dc97b65e3cef5943b06868afeb765dd374e",
+      "bytes": 4465
+    },
+    {
+      "path": "docs/measurements/host-binding/linux-before-resume-fix/auth-schemathesis-form-positive-remote.json",
+      "sha256": "6a1668e8ae12e7de84f468c8739b5a2893973d0b4bdf0b8df5910e7ac55ac1d6",
+      "bytes": 6004
+    },
+    {
+      "path": "docs/measurements/host-binding/linux-before-resume-fix/auth-schemathesis-json-fixed-loopback.json",
+      "sha256": "f4accd0e5c38c090ab0012d5e57beb68fcdeff53974c29fe327fad7ab3bf3e40",
+      "bytes": 3918
+    },
+    {
+      "path": "docs/measurements/host-binding/linux-before-resume-fix/auth-schemathesis-json-fixed-remote.json",
+      "sha256": "d6ee9d901a99fe07f6f1f60b550b835b2a7d61f6af570d172e90199a3c3bd738",
+      "bytes": 5459
+    },
+    {
+      "path": "docs/measurements/host-binding/linux-before-resume-fix/auth-schemathesis-json-positive-loopback.json",
+      "sha256": "814ff472463d7e4e046be5face83310eec287fac4a89824686d29339c24c51a0",
+      "bytes": 4448
+    },
+    {
+      "path": "docs/measurements/host-binding/linux-before-resume-fix/auth-schemathesis-json-positive-remote.json",
+      "sha256": "8008808fae751458cad184133304510625f040812607ada7e5a7171bee97c0f5",
+      "bytes": 5987
+    },
+    {
+      "path": "docs/measurements/host-binding/linux-before-resume-fix/auth-schemathesis-multipart-fixed-loopback.json",
+      "sha256": "5230131107c23be552e6355d82982da48300b0b8cba5b300753e4329b99765d9",
+      "bytes": 3975
+    },
+    {
+      "path": "docs/measurements/host-binding/linux-before-resume-fix/auth-schemathesis-multipart-fixed-remote.json",
+      "sha256": "b4f6aa617654552a2f0b13dfa6c56ccf11d551da2e5de34ef54fa90daabe0d74",
+      "bytes": 5510
+    },
+    {
+      "path": "docs/measurements/host-binding/linux-before-resume-fix/auth-schemathesis-multipart-positive-loopback.json",
+      "sha256": "eaa9f2dfb41a9ba2b36f92b7ca0f2611bd73376a055057952cd27bd6dc1e0b62",
+      "bytes": 4501
+    },
+    {
+      "path": "docs/measurements/host-binding/linux-before-resume-fix/auth-schemathesis-multipart-positive-remote.json",
+      "sha256": "d8f8e297292f7129d7aac12100840c9c31e07af76a42b0c963b50a127ab9a0f4",
+      "bytes": 6041
+    },
+    {
+      "path": "docs/measurements/host-binding/linux-before-resume-fix/auth-tinja-form-fixed-loopback.json",
+      "sha256": "490e3274a878d411297e6a5c00da555d5ac13d4581a6fbd0a6cc3aae7c53519e",
+      "bytes": 3832
+    },
+    {
+      "path": "docs/measurements/host-binding/linux-before-resume-fix/auth-tinja-form-fixed-remote.json",
+      "sha256": "356ff497f6cac6fb8831cb6034edede269b3870f8a26ddec7532ea1d5f65a8fa",
+      "bytes": 5374
+    },
+    {
+      "path": "docs/measurements/host-binding/linux-before-resume-fix/auth-tinja-form-positive-loopback.json",
+      "sha256": "9b35a79d6ce1193f077d4e8b83d63524c091633e8d4434d1d2c12cbdc23149ee",
+      "bytes": 4340
+    },
+    {
+      "path": "docs/measurements/host-binding/linux-before-resume-fix/auth-tinja-form-positive-remote.json",
+      "sha256": "aef90d7630f98fc811a502de2bc26adfe90c548610894d933f3d4fdaaf71dac3",
+      "bytes": 5883
+    },
+    {
+      "path": "docs/measurements/host-binding/linux-before-resume-fix/auth-tinja-json-fixed-loopback.json",
+      "sha256": "ceffe910a78bdfd1320d9f7bd525ee0aacd79b137bc197311f04acae1a118ba3",
+      "bytes": 3814
+    },
+    {
+      "path": "docs/measurements/host-binding/linux-before-resume-fix/auth-tinja-json-fixed-remote.json",
+      "sha256": "e12058b974ffe8dc80fc4ab3a5ce2df01ca5fcd345db0b1f34845d736cba323e",
+      "bytes": 5356
+    },
+    {
+      "path": "docs/measurements/host-binding/linux-before-resume-fix/auth-tinja-json-positive-loopback.json",
+      "sha256": "184872e74473ee978f89e24143f73dca342a39c3ba81d467bfdd90e02860c2d3",
+      "bytes": 4324
+    },
+    {
+      "path": "docs/measurements/host-binding/linux-before-resume-fix/auth-tinja-json-positive-remote.json",
+      "sha256": "d2c0dba56bee68e955898f9dd0d763bddc8e65afa5bcfd615a5f72be398c34ba",
+      "bytes": 5864
+    },
+    {
+      "path": "docs/measurements/host-binding/linux-before-resume-fix/auth-tinja-multipart-fixed-loopback.json",
+      "sha256": "cf11c8677936ead28c4cf5decadb3164f0ce352de00f4e29b81e21d4a0fbb0ce",
+      "bytes": 3866
+    },
+    {
+      "path": "docs/measurements/host-binding/linux-before-resume-fix/auth-tinja-multipart-fixed-remote.json",
+      "sha256": "a0ad89472c45f71c07a3f2089690b1b68ad7ffdcfa264695c23c69f711c3bace",
+      "bytes": 5408
+    },
+    {
+      "path": "docs/measurements/host-binding/linux-before-resume-fix/auth-tinja-multipart-positive-loopback.json",
+      "sha256": "c468490534269f9da0710ae0c62a976b709521d55db2caa7ab5bd459e658ea0d",
+      "bytes": 4376
+    },
+    {
+      "path": "docs/measurements/host-binding/linux-before-resume-fix/auth-tinja-multipart-positive-remote.json",
+      "sha256": "13a6e7767cb2588f649d12584ab48d661cc25593843847b9580b97349cf98e96",
+      "bytes": 5916
+    },
+    {
+      "path": "docs/measurements/host-binding/linux-before-resume-fix/cli-refresh-interactsh-loopback.json",
+      "sha256": "381ff382280369aac654accc4a94a0e3a04d66c85c764ef16fa9515fa7660f79",
+      "bytes": 14319
+    },
+    {
+      "path": "docs/measurements/host-binding/linux-before-resume-fix/cli-refresh-schemathesis-loopback.json",
+      "sha256": "d5e90572c2756a06e836c4193b8524dbc76b0a5ab2d04863de54771379130e02",
+      "bytes": 17709
+    },
+    {
+      "path": "docs/measurements/host-binding/linux-before-resume-fix/cli-refresh-tinja-loopback.json",
+      "sha256": "ff7d03c9bf86f2ef9331eab2fb805a1917263e9278cca6b23906d60f8bab5d49",
+      "bytes": 17548
+    },
+    {
+      "path": "docs/measurements/host-binding/linux-before-resume-fix/command.json",
+      "sha256": "450c7433ecbeb96efbc3e2a2bfef498ae5b89cfa48d79b4545bdce37fc185ab8",
+      "bytes": 3210
+    },
+    {
+      "path": "docs/measurements/host-binding/linux-before-resume-fix/https.json",
+      "sha256": "900b45946e9d67228549ff6241eae1da2b64c6660d1b6599d1615422082738ed",
+      "bytes": 3327
+    },
+    {
+      "path": "docs/measurements/host-binding/linux-before-resume-fix/interruption.json",
+      "sha256": "c0582e95468c38c5fe145fb4193711e827fa20ac84f6ea6d61d17f2162677544",
+      "bytes": 276
+    },
+    {
+      "path": "docs/measurements/host-binding/linux-before-resume-fix/late-post-after-refresh-form.json",
+      "sha256": "3f72c03910d3835a1f9e0a74a91a6acea6e3cd912881465f238665ed52b4d91d",
+      "bytes": 10651
+    },
+    {
+      "path": "docs/measurements/host-binding/linux-before-resume-fix/late-post-after-refresh-json.json",
+      "sha256": "4de4ead3327fe95592a968a5ba4dc4f225846e28539932b09da7ead3f1746a19",
+      "bytes": 10656
+    },
+    {
+      "path": "docs/measurements/host-binding/linux-before-resume-fix/late-post-after-refresh-multipart.json",
+      "sha256": "20185028a8a1bcc8007cd4ba1846c92235d6dda4c227472db3eb849ce1976c57",
+      "bytes": 10656
+    },
+    {
+      "path": "docs/measurements/host-binding/linux-before-resume-fix/memory.json",
+      "sha256": "ed2a20c91c9ea822689784db073be7e3ca49a455181f11da6341fa203b632ce8",
+      "bytes": 656
+    },
+    {
+      "path": "docs/measurements/host-binding/linux-before-resume-fix/mypy.txt",
+      "sha256": "e71733897737b5a6fec4640d8b7cab3d0e5252340a6f556eadfe106c7ad72b72",
+      "bytes": 107
+    },
+    {
+      "path": "docs/measurements/host-binding/linux-before-resume-fix/refresh-interactsh-form.json",
+      "sha256": "605c9ac8ca0153b6aa96b16d48e8cb321495b989d49a2547dca378c388c18790",
+      "bytes": 14010
+    },
+    {
+      "path": "docs/measurements/host-binding/linux-before-resume-fix/refresh-interactsh-json.json",
+      "sha256": "945d702d009bd39cfcd390edb7ee6e730a21af306b87ab12f9c48679b52ca4d6",
+      "bytes": 14136
+    },
+    {
+      "path": "docs/measurements/host-binding/linux-before-resume-fix/refresh-interactsh-multipart.json",
+      "sha256": "ce5423001fee49199822838c54d4f1918b28b2202c42ea32b532b44bb9a2369d",
+      "bytes": 14494
+    },
+    {
+      "path": "docs/measurements/host-binding/linux-before-resume-fix/refresh-schemathesis-form.json",
+      "sha256": "d63133866959d71937ed4cff6387eca7085ee8185eeaed28f330d9b1814b6184",
+      "bytes": 15530
+    },
+    {
+      "path": "docs/measurements/host-binding/linux-before-resume-fix/refresh-schemathesis-json.json",
+      "sha256": "e51039c657a803494a97061561cf3ab8c443c4e8f37a2c4990ac59bbaeb2877a",
+      "bytes": 17413
+    },
+    {
+      "path": "docs/measurements/host-binding/linux-before-resume-fix/refresh-tinja-form.json",
+      "sha256": "9c7ec1ffc061825a9daec6dae13226bff95e95b50a8980e49e4d5f6d9a72d878",
+      "bytes": 15382
+    },
+    {
+      "path": "docs/measurements/host-binding/linux-before-resume-fix/refresh-tinja-json.json",
+      "sha256": "296de38aee741be6e87c97a1ad78ec5b316e91cdf8979e318eb0a750a5845768",
+      "bytes": 17258
+    },
+    {
+      "path": "docs/measurements/host-binding/linux-before-resume-fix/refresh-tinja-multipart.json",
+      "sha256": "5298f19d38a21d56c49d847e0160ee1eef118313c72ab18e82435ffaa6ec48c5",
+      "bytes": 17403
+    },
+    {
+      "path": "docs/measurements/host-binding/linux-before-resume-fix/tests.junit.xml",
+      "sha256": "a06c4cd8b60fa9e805fb4bd08c0a0054632ed43e04205e9ea2645ad7a14958d8",
+      "bytes": 63723
+    },
+    {
+      "path": "docs/measurements/host-binding/linux-before-resume-fix/tests.txt",
+      "sha256": "4c8b20d6bb04967547870bd4a328e6979391d8ed539065f9dc55e7b3e7849341",
+      "bytes": 6078
+    },
+    {
+      "path": "docs/measurements/host-binding/linux-launch.sh.txt",
+      "sha256": "509395a9a15c007f90f2e290bc7062a3b6cb281d623488e5b24c962326311cbc",
+      "bytes": 661
+    },
+    {
+      "path": "docs/measurements/host-binding/linux-targeted.sh.txt",
+      "sha256": "fc101c51e1deee24a875d231e7b8167b3c1e501b3940c38b1ade021060047129",
+      "bytes": 1164
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/auth-interactsh-form-fixed-loopback.json",
+      "sha256": "b2b8cb4588cd5d1139dfd0a91fc8be287a195c6de58a18cbab4070f8ddba7613",
+      "bytes": 9403
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/auth-interactsh-form-fixed-remote.json",
+      "sha256": "4c929c92a8d9e7ac59134613b9e507683ffb2d0c27e9bfe9d13424500ec877c7",
+      "bytes": 9403
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/auth-interactsh-form-positive-loopback.json",
+      "sha256": "b08d0c1bc0e8b87aaa18dd6dc9f38be0740e7af13f4fffab69d869cccc7ab858",
+      "bytes": 2917
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/auth-interactsh-form-positive-remote.json",
+      "sha256": "bef3e25e6b1d39b5f3dda16c44f430dcb3952e42238e79bb563032d108f9dc83",
+      "bytes": 2917
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/auth-interactsh-json-fixed-loopback.json",
+      "sha256": "dfc389a8409aa39ed675e35c0460d823f443904ef3d7679d303debe9353c9763",
+      "bytes": 9400
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/auth-interactsh-json-fixed-remote.json",
+      "sha256": "ff7382d228a3f5ae2fd54b3eb338530d60234f35f09ea403c85ee2b629392ebf",
+      "bytes": 9398
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/auth-interactsh-json-positive-loopback.json",
+      "sha256": "34481c08c44c9e3c7e755a4a86f3db2a15603456a278592ae2d01cbc0b6a2613",
+      "bytes": 2918
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/auth-interactsh-json-positive-remote.json",
+      "sha256": "8a5d47706f4971d7b5fa627fe0a22ec54403ba366c209ce6c6b8378988bbdc54",
+      "bytes": 2918
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/auth-interactsh-multipart-fixed-loopback.json",
+      "sha256": "2316b0e45ac59da42821dd09afd867c373f0eea4be72bcdf9769a39fe4eeb100",
+      "bytes": 9402
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/auth-interactsh-multipart-fixed-remote.json",
+      "sha256": "452769a4d74c7b0c241a600857e067786b686c8de6f96ed48f0d1312082a08c1",
+      "bytes": 9402
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/auth-interactsh-multipart-positive-loopback.json",
+      "sha256": "f7c3d150bc3c9f77f1ac48184696014afcc1df9ca6368baebca501b6c75f767d",
+      "bytes": 2919
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/auth-interactsh-multipart-positive-remote.json",
+      "sha256": "50d25c8bf167add2a3e5ef81a5c8518de759b88425ec4fcbf7581e9fefa5615f",
+      "bytes": 2917
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/auth-schemathesis-form-fixed-loopback.json",
+      "sha256": "1fc653baa1abef621fefca98eef5f7bfd86ed6949e3eef8d8fc90e59a58dbf4a",
+      "bytes": 3940
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/auth-schemathesis-form-fixed-remote.json",
+      "sha256": "75dc07aaef5d5843c8ea417a9767f4f6002a456cd6a4177c82c1cc75c059b3a9",
+      "bytes": 5478
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/auth-schemathesis-form-positive-loopback.json",
+      "sha256": "b8bb9b3e001d22203ebda123a97f7cfcbbaa4d275e7c02993529a26ab3719abe",
+      "bytes": 4462
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/auth-schemathesis-form-positive-remote.json",
+      "sha256": "8c11b9c2d83615dd53de27c80ca9f221ea9e1cfecbcedbc532876e8471fd77d9",
+      "bytes": 6007
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/auth-schemathesis-json-fixed-loopback.json",
+      "sha256": "fb7f8d7ac6f771ce52e15b4568f0dab43ea3d2349de1d1e1a42873d5ed48612a",
+      "bytes": 3922
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/auth-schemathesis-json-fixed-remote.json",
+      "sha256": "53a4f164d20d30db8ad6644688412c00d572092807f51e2d7f78cd9ae82b2f16",
+      "bytes": 5463
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/auth-schemathesis-json-positive-loopback.json",
+      "sha256": "7b99f3cc3ccfb15b97f3edce5f1e685721ba3fd9d838972b5440400838479928",
+      "bytes": 4447
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/auth-schemathesis-json-positive-remote.json",
+      "sha256": "1f7ba680d7b5e658eeb228ea7d5f975182e37805a1775599040b7b6a089f7e9e",
+      "bytes": 5987
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/auth-schemathesis-multipart-fixed-loopback.json",
+      "sha256": "f9084626173f70b096acff9399f425f63ff47cca83ec64c220e4cfded10536ea",
+      "bytes": 3970
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/auth-schemathesis-multipart-fixed-remote.json",
+      "sha256": "e83463a1158dd601441bc134c7f2f625a0fb118fbfeadba26087abab828b2365",
+      "bytes": 5510
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/auth-schemathesis-multipart-positive-loopback.json",
+      "sha256": "5edf49183d202fbf03d324465c8e8eb54483c558d78b6f091a83d39e5a017f80",
+      "bytes": 4500
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/auth-schemathesis-multipart-positive-remote.json",
+      "sha256": "37505a9a2e14bacc73c4291582e2562e5d81457e5aded47457612383df5ddeb5",
+      "bytes": 6040
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/auth-tinja-form-fixed-loopback.json",
+      "sha256": "923cfa598f795f58f2ea41f9d80dd1778fb3590cf19ee9ec5072e092785b5da5",
+      "bytes": 3834
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/auth-tinja-form-fixed-remote.json",
+      "sha256": "cfa2f4225f6d5347600ef0ba96335878a0f2b096cb786eb960032bd1e542dcc9",
+      "bytes": 5374
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/auth-tinja-form-positive-loopback.json",
+      "sha256": "6b36d3932c38a12b0b18c5bf54bcb648ef403e984d3ac8bf544de34ff6c80908",
+      "bytes": 4340
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/auth-tinja-form-positive-remote.json",
+      "sha256": "b9a26d10c0e9efe850e6042bc749a2231ba45276ccfe203eaa7140136c5178f4",
+      "bytes": 5882
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/auth-tinja-json-fixed-loopback.json",
+      "sha256": "ba39e820014828b5805de36a7fa57a43198daf9f5a53bcd276c7be14fd99df54",
+      "bytes": 3816
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/auth-tinja-json-fixed-remote.json",
+      "sha256": "bcb280b52a25d4063e8a67648d1850d384b392e599cfc33010156636589c7f75",
+      "bytes": 5356
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/auth-tinja-json-positive-loopback.json",
+      "sha256": "d7ae51efded08fb4e9069af114fa59ae75c8ea2709201abd3547c6de9338bf4c",
+      "bytes": 4326
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/auth-tinja-json-positive-remote.json",
+      "sha256": "4bcb98f3ae999af0efebc851be31f10fa04ccdc6962647ec00990930615a5d78",
+      "bytes": 5862
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/auth-tinja-multipart-fixed-loopback.json",
+      "sha256": "0377aaffa0687b6195639a47024f816aee64193b0fca1f000add3b0f8a95c3f2",
+      "bytes": 3868
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/auth-tinja-multipart-fixed-remote.json",
+      "sha256": "7223fc8b64522087fcd7d19284a30b59bba112138d513850e16187fd603482d5",
+      "bytes": 5407
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/auth-tinja-multipart-positive-loopback.json",
+      "sha256": "e2aebd89543afb9adbb041b955e2178f43b6a5a79cb77a64e8204e6c98ccfb76",
+      "bytes": 4376
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/auth-tinja-multipart-positive-remote.json",
+      "sha256": "0bb2691b681036738ee0fb8d7630177ad39944931330eb41c1c668c83e003361",
+      "bytes": 5916
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/auth.json",
+      "sha256": "23f762c7fe1150613a58dc078fb03e9429885785895a5442850df8d642095fd3",
+      "bytes": 2226
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/automatic-session.json",
+      "sha256": "e4782a50244e273597db6ce8be8f454ffbc1ea295495f48db24eb71523015ed9",
+      "bytes": 366503
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/browser-tokens.json",
+      "sha256": "7e56dccc64fc83e52dc336c373e9162693b4fbf7c5a3cbe4acd6f848b471cf91",
+      "bytes": 93310
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/cli-refresh-interactsh-loopback.json",
+      "sha256": "1c7c3443f911ab84892202089f207ea20a290459992af20fbe983d2b05bb9731",
+      "bytes": 14323
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/cli-refresh-interactsh-remote.json",
+      "sha256": "639f93c94f7b0b1601c1c31e670be7faf4e129cc408a5054acd9f5ce91193bf5",
+      "bytes": 16813
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/cli-refresh-schemathesis-loopback.json",
+      "sha256": "60bea98a9110f05ef17b0818d00f438fc15291228889c35cd1582c9392313866",
+      "bytes": 17709
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/cli-refresh-schemathesis-remote.json",
+      "sha256": "80e6c9b0d5bce262eb3fa6fb5589ab6b016d4044b72dc30b5a637fa633f0dcda",
+      "bytes": 23279
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/cli-refresh-tinja-loopback.json",
+      "sha256": "07b0c68fefe034a4ce9d7ce2f074f15d47066b782ae039d57505cc7c908e20dc",
+      "bytes": 17550
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/cli-refresh-tinja-remote.json",
+      "sha256": "c1626a71f3ccc4f3c3ec636aead08fb8954f9fd0e35548530ffa35f52f529905",
+      "bytes": 23120
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/command.json",
+      "sha256": "4330d4d1683c676ff3b6d2e8f060f0be2490c855a9f74cfe61a54e5b2b5bb1a7",
+      "bytes": 3216
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/continuous-refresh.json",
+      "sha256": "c8ce71cdc07d5ea5a7233cd979b814fa472c29c16382f60befced4c21d7c210e",
+      "bytes": 75133
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/dns-https.json",
+      "sha256": "270839fc74c99b02f86cd5d24f9966d1204c034404e6c7a85c78a9ce5b850c76",
+      "bytes": 8153
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/ffuf-loopback.json",
+      "sha256": "ea2790c7ab63b9eec074e508626f3d918b5d9d7c25398cd7665169277e2fe193",
+      "bytes": 13076
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/ffuf-remote.json",
+      "sha256": "33f24da850ac5bc3c0e2c715665a6c4b073294a6210152f5ce12a92cf2b6eb53",
+      "bytes": 17596
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/https.json",
+      "sha256": "6ea98016dc9a51123f73bbfae39958a9223e165f80b7929d539aaaa155be23f2",
+      "bytes": 3326
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/interactsh-auto-late.json",
+      "sha256": "8ff7763500a709ae7365b673e9749a89951d5ef2fd00a34ceb4bd3493433a590",
+      "bytes": 11010
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/interactsh-first-auto-late.json",
+      "sha256": "9c2bde8892380cd72b5e76758d2974b8b7678cbf90eb4339f6b2d520d6ffbd53",
+      "bytes": 2024
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/interactsh-first-fixed.json",
+      "sha256": "a7f4929c92bdca586ce0768fc2d1d477e237d59e0a8b379a0da77296c019b41f",
+      "bytes": 2025
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/interactsh-first-late.json",
+      "sha256": "0c4482d190192e5d4eb52fd06b757f11cde87f1c0b257b64f7e3a687f75e9b5b",
+      "bytes": 2022
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/interactsh-first-positive.json",
+      "sha256": "ec8f0fcce29b9ecc1bed175b6822f73b8f4a37949bdb846aa7ef3f533e8b017d",
+      "bytes": 2480
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/interactsh-fixed.json",
+      "sha256": "48dcda375e4f244a034ded0ced4d12465e3adc4f4fb51fbd8ddeae7f5fc7badc",
+      "bytes": 17467
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/interactsh-late.json",
+      "sha256": "35b0a42695c89257cc2dced0140adbf2ab57eb0f13e3d65b850b19b354eb35b7",
+      "bytes": 8694
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/interactsh-positive.json",
+      "sha256": "5e39f802a578450462f778786ab86c1bd742791f5d6ef2c5f72f087a68c43478",
+      "bytes": 6370
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/interactsh-real-process-crash.json",
+      "sha256": "503dd63ab82bf66817786e9b764d519d5c8c5fa813f6c429a0404e0fc6c55603",
+      "bytes": 2157
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/late-post-after-refresh-form.json",
+      "sha256": "aa59872f5bb2c536bf10e8a27f7fc3f015ac370e3aff0f12a69a83a00a503e8b",
+      "bytes": 10653
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/late-post-after-refresh-json.json",
+      "sha256": "afb87e1e17e8328b28e8adffa0c34f19f0bfe4a6180d82099c1ab8a04524fc56",
+      "bytes": 10655
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/late-post-after-refresh-multipart.json",
+      "sha256": "50840378c1491af86882f9766ab315cc1917c228df50d32f83056356f56edb09",
+      "bytes": 10656
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/memory.json",
+      "sha256": "a109887f5a192a7b2c87a1728a45e9451db60b57ea02a3f7334432e538b14f5a",
+      "bytes": 658
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/mime-auth-interactsh-form-fixed-loopback.json",
+      "sha256": "8391b6fbf41392ad38933176ca4d06d1b4fd8ef9f2f7cb5f19848747d7596ee3",
+      "bytes": 9403
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/mime-auth-interactsh-form-fixed-remote.json",
+      "sha256": "d0a5daec56bdef5d71163678d79dc13c2137e4fbb8c941d5029c7e7b34176a9e",
+      "bytes": 9405
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/mime-auth-interactsh-form-positive-loopback.json",
+      "sha256": "e027dedd74960607f838ed2a7a97d2320f650107b7e659d8bd314f97fbd5b93b",
+      "bytes": 2917
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/mime-auth-interactsh-form-positive-remote.json",
+      "sha256": "2803aa5837a13e875e87167d53ba3facf493da0cfdf7766cf53addcab21d2e7f",
+      "bytes": 2917
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/mime-auth-interactsh-json-fixed-loopback.json",
+      "sha256": "c72f159a364b07eaced6f55204d051a9752aeed56860ca15cd62b9948bb85190",
+      "bytes": 9405
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/mime-auth-interactsh-json-fixed-remote.json",
+      "sha256": "0a7090f818c8e211cdfd92954db1fd2216237bef950c071d6b16e4ebeb33457d",
+      "bytes": 9402
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/mime-auth-interactsh-json-positive-loopback.json",
+      "sha256": "d63b28b3c22922000aa331711dc48ceddbd2362656a8a25a78f392ebde47f19a",
+      "bytes": 2917
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/mime-auth-interactsh-json-positive-remote.json",
+      "sha256": "1ef439db363fd91274b51353f89082e2949c2a77d2a3e7f84cf4d7c2fd3e8b95",
+      "bytes": 2920
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/mime-auth-interactsh-multipart-fixed-loopback.json",
+      "sha256": "926d9a188d7cbbef4eaaea31b6ad26ce4d5c108352869444e2236132a548fcdc",
+      "bytes": 9405
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/mime-auth-interactsh-multipart-fixed-remote.json",
+      "sha256": "70778ef0dd342575aa30b4cbe114ddd27f91f5693a0dc59c037efcceaa4bd967",
+      "bytes": 9403
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/mime-auth-interactsh-multipart-positive-loopback.json",
+      "sha256": "439e5b222523790e5e34841fae8d3f7155dd59e84ef457bd07eb4dab4dcfc3c0",
+      "bytes": 2919
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/mime-auth-interactsh-multipart-positive-remote.json",
+      "sha256": "bc15a730c7413241bf577471d1fe16b4713e202a946feed3221d5135c0e72820",
+      "bytes": 2915
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/mime-auth-schemathesis-form-fixed-loopback.json",
+      "sha256": "7911f0bc45983ee5122cae4cb7b96bf48ac2f40c53f8e2203ead384147872fc1",
+      "bytes": 3952
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/mime-auth-schemathesis-form-fixed-remote.json",
+      "sha256": "64eca93522fab92d38635a558a95375cc5423073f20328fcbd639060991716e1",
+      "bytes": 5492
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/mime-auth-schemathesis-form-positive-loopback.json",
+      "sha256": "75a1c0c5d6e5237a5daad2f672b73ce11f7044cfe3a04f4d57c84301a79465e3",
+      "bytes": 4477
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/mime-auth-schemathesis-form-positive-remote.json",
+      "sha256": "7b2f046a77b0beed497c97d1bd9a33bed7a907a547326179b59072bfbbb6179c",
+      "bytes": 6014
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/mime-auth-schemathesis-json-fixed-loopback.json",
+      "sha256": "6a885f0d8f2d3957092ec0b61973b1be9e5ceb133d66236c128258eb5051e73b",
+      "bytes": 3942
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/mime-auth-schemathesis-json-fixed-remote.json",
+      "sha256": "9551521274e3546f1ddfbbb818e71e642913114c117f15d8194e12a6a4179a12",
+      "bytes": 5482
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/mime-auth-schemathesis-json-positive-loopback.json",
+      "sha256": "43c1301ab841d7a77dbf91a506f357c1655d476396c8c9a6ae936dcd3d51fc8e",
+      "bytes": 4468
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/mime-auth-schemathesis-json-positive-remote.json",
+      "sha256": "95341edc9ecbcc2bf21ac9d3abdb32a06d16d73ccbe64a75ea0e2142275774eb",
+      "bytes": 6008
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/mime-auth-schemathesis-multipart-fixed-loopback.json",
+      "sha256": "dd7883361fc3cd1a6ff995f43df05df2b7842bd7f6dd3d5847632a3ded6d1281",
+      "bytes": 3977
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/mime-auth-schemathesis-multipart-fixed-remote.json",
+      "sha256": "7103125c54f519996463cd624d874563d05b06e712225468f929cc08aafe618d",
+      "bytes": 5516
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/mime-auth-schemathesis-multipart-positive-loopback.json",
+      "sha256": "7770b72ce487e6029f83b67e9db875a8d949b624113c48ae71e3f270c0d46aa1",
+      "bytes": 4503
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/mime-auth-schemathesis-multipart-positive-remote.json",
+      "sha256": "9076c48f17546820354539911f196d276ee2ad9eb63e9f93ae1a9e833301b6ef",
+      "bytes": 6043
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/mime-auth-tinja-form-fixed-loopback.json",
+      "sha256": "d9105268fa6bff7baed8484937fe01cc7c79e14a6bace566510c06fd0f4d0baa",
+      "bytes": 3846
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/mime-auth-tinja-form-fixed-remote.json",
+      "sha256": "f63c3b05843e42cc7df5808a7dc18509146cccc5d47abebb7ae981096bc55dba",
+      "bytes": 5389
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/mime-auth-tinja-form-positive-loopback.json",
+      "sha256": "273974d1c81d38cf9aa813a6afa040f1792d2ae31a63ed95779634a9950e1361",
+      "bytes": 4356
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/mime-auth-tinja-form-positive-remote.json",
+      "sha256": "9d2e5a139fd3c764c32c57ccbe316a309e891cb1a4139a528a38973620914e4a",
+      "bytes": 5895
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/mime-auth-tinja-json-fixed-loopback.json",
+      "sha256": "611a3aacc856c27603534eb9e4c89cb03b33c4d8ced9078baefe7d39ea49d9e7",
+      "bytes": 3832
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/mime-auth-tinja-json-fixed-remote.json",
+      "sha256": "9dc89067a734aec8af1421ea4c0d598af8060d49fd31a666726aede2bf24e314",
+      "bytes": 5377
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/mime-auth-tinja-json-positive-loopback.json",
+      "sha256": "fde35f8d7c3d949af30e77bad9f6cd4fd2c1573e2fd7a9776ff06ecd1a1b76d5",
+      "bytes": 4342
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/mime-auth-tinja-json-positive-remote.json",
+      "sha256": "d4afce0d25efda86dd4e2e2f6266fbf66803d6fe0328436e503657411168ebf4",
+      "bytes": 5881
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/mime-auth-tinja-multipart-fixed-loopback.json",
+      "sha256": "d70b7dc5658b149e2e82544413f63112fb61fadafda3ca7336758ab9cad370c5",
+      "bytes": 3871
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/mime-auth-tinja-multipart-fixed-remote.json",
+      "sha256": "5a3a461d3a3adeb64d15b16c312dffa909ecae63af9ec8c3f6c7ab901f719af8",
+      "bytes": 5412
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/mime-auth-tinja-multipart-positive-loopback.json",
+      "sha256": "e33f74cfa6cf496e52c5b46ae474ee86c83e4260dca4114c436c53ccc911086c",
+      "bytes": 4382
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/mime-auth-tinja-multipart-positive-remote.json",
+      "sha256": "5cd61b94dc5116dffdd6a0dc28b9073d5f2b1d698e69eba8a2198100ee7cf604",
+      "bytes": 5920
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/mime-refresh-interactsh-form.json",
+      "sha256": "71e94cced0830dd2fb91e41f611c8754e48a2e350f6713379868dc2d559452e4",
+      "bytes": 14016
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/mime-refresh-interactsh-json.json",
+      "sha256": "9408e8f8b671e9496fdd9334771b9f503fce41cb9a496b476d06db15e8f3d2f5",
+      "bytes": 14135
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/mime-refresh-interactsh-multipart.json",
+      "sha256": "0b500380fc71c059e4654887a90d0758f4ebf05a3c690e69bcfa9353433fba35",
+      "bytes": 14494
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/mime-refresh-schemathesis-form.json",
+      "sha256": "4133e1b390d1748b56dda2f45579ed6d84eeeaefa4541e350b1ac94a5f5e3611",
+      "bytes": 15544
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/mime-refresh-schemathesis-json.json",
+      "sha256": "9ffba238ed003f2c8ffe7b9cde8ce0a9cbf7f756721c58f5322ed7df0adc507a",
+      "bytes": 17456
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/mime-refresh-schemathesis-multipart.json",
+      "sha256": "176afca24ee297173af277e98fab980faf8fb838d7107762f0bc26740058f307",
+      "bytes": 17666
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/mime-refresh-tinja-form.json",
+      "sha256": "1f3c3062b088a8cec1264c8384f2a38e79995c1de36eb6ae0f8977e570957178",
+      "bytes": 15396
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/mime-refresh-tinja-json.json",
+      "sha256": "68533b156f83f9e262226b2fe74081c2b4f1b027fab8400df94f39642ed10ec2",
+      "bytes": 17301
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/mime-refresh-tinja-multipart.json",
+      "sha256": "548a1fbf1c22b4eb4c6c2dfb8ebd2365f1f6e58a32be9a59170c5cf50d3897cc",
+      "bytes": 17410
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/mypy.txt",
+      "sha256": "e71733897737b5a6fec4640d8b7cab3d0e5252340a6f556eadfe106c7ad72b72",
+      "bytes": 107
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/nuclei-mime.json",
+      "sha256": "c73a2908d189619c21a8f6825171d0be3c16b83a76cff821678ffd7906b3b9d0",
+      "bytes": 93446
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/nuclei.json",
+      "sha256": "b0f940d1e681b07ddb7099080a5d43bdc7cfb61fd109087b1fc1b6231f545c3f",
+      "bytes": 849
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/os-memory/chromium-nuclei-cli-e2e.json",
+      "sha256": "fd9183448f3f864ba456c597334ae3961551dd25fd843454911a1700544cb97d",
+      "bytes": 3587
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/os-memory/cli-oom.json",
+      "sha256": "756d30abd2cc88de3033f21e9fb3331a67cc9de6a012244bf5afcc872d2ba7f6",
+      "bytes": 504
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/os-memory/cross-campaign-automatic-resume.json",
+      "sha256": "0b26d4879fdab4bbdf2d4fb1558222c6741f9117e194b32d12833f20b5a3fd8d",
+      "bytes": 703
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/os-memory/cross-campaign-browser-scheduler.json",
+      "sha256": "55370104b264ca0f8755ca0ea8d39e8f58da271260b1932a8d1a2a2c68ccbdfd",
+      "bytes": 611
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/os-memory/oom-controller.json",
+      "sha256": "698ff76fefd65664e49cfc31895c90823575d5fff1599409d88bc347b0ab4ab8",
+      "bytes": 255
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/os-memory/oom-descendant.json",
+      "sha256": "407036ae612365c31cd1adc8847b32eab382863b8736e4e9861801c1abbe95e5",
+      "bytes": 255
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/os-memory/owner-crash-recovery.json",
+      "sha256": "245bbd2754e0f29de846f7a43c55558c74c8ed05e09d9d64022c46ebb8d795f3",
+      "bytes": 960
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/post-refresh.json",
+      "sha256": "d1c767303f137d9064c67c5d4c69d2900534285e7bf1d290c985063583fb908a",
+      "bytes": 69671
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/post.json",
+      "sha256": "1d44a304cd9d012b9e22f6dfce51e72f1c8173fdfe219b438a1318103b1f8ece",
+      "bytes": 2796
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/processes-after.json",
+      "sha256": "8ed674042a036849612ae9b7f43c5e85b3bcb06151e6b520731e648696d236ca",
+      "bytes": 75
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/projectdiscovery-loopback.json",
+      "sha256": "3e3a875aa25baba49993fa01435334bf35076c3c797e872d9dcee291eb4c482b",
+      "bytes": 16640
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/projectdiscovery-remote.json",
+      "sha256": "bf62731bd350a7ca7aae8403cb323af9008e797c2214b62e80631c939e3f863c",
+      "bytes": 20890
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/refresh-interactsh-form.json",
+      "sha256": "8e76348342ec3aa653d5d3ffc3039e64308d5d58f020ca45f62f096d1894084a",
+      "bytes": 14014
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/refresh-interactsh-json.json",
+      "sha256": "1ddd13910278eadb242158b04df06bf4523d45744f36a232e1a849f6ada21e4b",
+      "bytes": 14136
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/refresh-interactsh-multipart.json",
+      "sha256": "0b2b886571b4e5ac9d370357c194e44ac726c6eff7e0e4f363c4986fc585dd57",
+      "bytes": 14482
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/refresh-schemathesis-form.json",
+      "sha256": "05cb17cedb0e86617c24cec5946fd130ed5d81220ab59cb0158252a30d0b22ae",
+      "bytes": 15534
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/refresh-schemathesis-json.json",
+      "sha256": "aed6ab6d40a7168d3c321345f8b91e35cd8ccc9384066b51cadd066910ddc904",
+      "bytes": 17420
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/refresh-schemathesis-multipart.json",
+      "sha256": "b0f535671d1b26ce6f5405767e7eb8bf05625f51bd53bfe67f1fc621d2c61e5d",
+      "bytes": 17658
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/refresh-tinja-form.json",
+      "sha256": "d33f8697c1a030efa50b08b5b0828fb4478da2445af993af5558b70a408459cc",
+      "bytes": 15380
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/refresh-tinja-json.json",
+      "sha256": "31bb931d1a77ec58b552cf76fc248116e7c4686570c2b1bfa37540152f623de6",
+      "bytes": 17259
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/refresh-tinja-multipart.json",
+      "sha256": "af155cd429280146d76eee62caee5117accec835306b736fecc4928a9a02783b",
+      "bytes": 17401
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/remote.json",
+      "sha256": "15f696fa5d763a3e1f2e60dd0755905676d8bf0cabe172c83254a45a1b88ce35",
+      "bytes": 47680
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/resources-after.json",
+      "sha256": "de72238f5f0cfaaf25a4881c2b711c9e0ae40a6f3e8c55aef2cae3f6e16b5237",
+      "bytes": 500
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/restart-deadline.json",
+      "sha256": "68b094cc8dc15183cfdc37410146cb1a2ac36d2cc0fbcbb61ab878b92016e98d",
+      "bytes": 180
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/schemathesis-loopback-fixed.json",
+      "sha256": "665a1263366066c21d73cb6c162c2a375edf564e0300d6dcaaa41ed279b46ab9",
+      "bytes": 3223
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/schemathesis-loopback-positive.json",
+      "sha256": "e87d50524232bfc9bd0999496168d9e821b4346f8ba3c20767e0048ba49e7332",
+      "bytes": 3722
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/schemathesis-remote-fixed.json",
+      "sha256": "d61a75423b8777efc52c3c2326750459ddf8781f8f9da90f18c61b266f61f05b",
+      "bytes": 4666
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/schemathesis-remote-positive.json",
+      "sha256": "3408fe1bc6ed173466c79d6df5c49aa2d37a2a02e9c59c2eadd7a8c282b66258",
+      "bytes": 5162
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/specialists-loopback-fixed.json",
+      "sha256": "f7a3595c8c129e471d734172014a251542737f247d3d63c5d9b2ead6c0262c5a",
+      "bytes": 5868
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/specialists-loopback-positive.json",
+      "sha256": "a6e86609ca38b235ea2fa200b30cf3912ec8990adbccb3743989814b9c423068",
+      "bytes": 8971
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/specialists-remote-fixed.json",
+      "sha256": "0c231ba8b7daf2943e9a356e3d54c7bdfaae026a0880a3ad04731cb14d96c6ef",
+      "bytes": 10486
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/specialists-remote-positive.json",
+      "sha256": "c1cfb1ed93ffac26e546468febe5ed575eec562c059fcef56dc2e22869c67077",
+      "bytes": 14685
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/tests.junit.xml",
+      "sha256": "1877da4637205f20d8a536ba69a6d7b0b0c98b40edbd51e1d2b9e186427cb6fc",
+      "bytes": 199970
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/tests.txt",
+      "sha256": "6f118a7b67ae9e6a3e7c9318edb4b05ca8db0ca7ce38b3a8b929d2add3fa1ca8",
+      "bytes": 8895
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/tinja-loopback-fixed.json",
+      "sha256": "9e29c4b7c5c7e6d090b353572394e7ba8b4f7fbeea109811b18b66a022da6bb8",
+      "bytes": 3121
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/tinja-loopback-positive.json",
+      "sha256": "8a1d268df3697e5c4903ff1a77c355915b18de0d6d765e423569459e2bb99a86",
+      "bytes": 3607
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/tinja-remote-fixed.json",
+      "sha256": "b99654a1c70b5c7e4d6fd80312bf925c1c47c7248ba741a256422e087b8461c4",
+      "bytes": 4562
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/tinja-remote-positive.json",
+      "sha256": "f96064fc9c5b6d5a5d3f8764119da9dcd289d24285ec724a696087a43ed3580d",
+      "bytes": 5047
+    },
+    {
+      "path": "docs/measurements/host-binding/linux/vulnx-public.json",
+      "sha256": "80c8318baf3cfa7b10d4cfe0824cfc8763e733ef591e4f5a604f07a48e8b73c3",
+      "bytes": 4841
+    },
+    {
+      "path": "docs/measurements/host-binding/macos-before-resume-fix/auth-interactsh-form-fixed-loopback.json",
+      "sha256": "dcab3203b0115aad0a21ad7b748a368bbd718125734661fd7f4fe2dbd904562a",
+      "bytes": 9389
+    },
+    {
+      "path": "docs/measurements/host-binding/macos-before-resume-fix/auth-interactsh-form-positive-loopback.json",
+      "sha256": "7d629b1584f9705fb1d9a5308bb741f00f833c8ca14ea05031919bff4d8a01b2",
+      "bytes": 2918
+    },
+    {
+      "path": "docs/measurements/host-binding/macos-before-resume-fix/auth-interactsh-json-fixed-loopback.json",
+      "sha256": "630442fb163a53562f5ecc9f46eb728f81bd8c17d36cadc9477c6f110a71c23f",
+      "bytes": 9390
+    },
+    {
+      "path": "docs/measurements/host-binding/macos-before-resume-fix/auth-interactsh-json-positive-loopback.json",
+      "sha256": "e897b6ce64d3890a9da2de2c22208feedb5227aa572da652f1ae47663c5dfdfc",
+      "bytes": 2918
+    },
+    {
+      "path": "docs/measurements/host-binding/macos-before-resume-fix/auth-interactsh-multipart-fixed-loopback.json",
+      "sha256": "7bd649c89b11e1ecf53713266825c0f6b6cff7aa18c5be8f0b69b3010f15d058",
+      "bytes": 9392
+    },
+    {
+      "path": "docs/measurements/host-binding/macos-before-resume-fix/auth-interactsh-multipart-positive-loopback.json",
+      "sha256": "f87ca4b58945d5c2d754dbd99fa51d0b062cd76a9a4b565cbc291b200e58da64",
+      "bytes": 2917
+    },
+    {
+      "path": "docs/measurements/host-binding/macos-before-resume-fix/auth-schemathesis-form-fixed-loopback.json",
+      "sha256": "0f0eab3ef938e23e107dd9e3a3ad8866b6bb8fd5d0b135a6690441da6a06a60f",
+      "bytes": 3937
+    },
+    {
+      "path": "docs/measurements/host-binding/macos-before-resume-fix/auth-schemathesis-form-positive-loopback.json",
+      "sha256": "53ee1934a45b3ed29720a7eb4f91accba9bc0c3c41bad6a8f66fcd19451b4e70",
+      "bytes": 4462
+    },
+    {
+      "path": "docs/measurements/host-binding/macos-before-resume-fix/auth-schemathesis-json-fixed-loopback.json",
+      "sha256": "e050895967b5f4324d719bd57571e24e8ccb14088aa5eccb4e949a86ba96335d",
+      "bytes": 3918
+    },
+    {
+      "path": "docs/measurements/host-binding/macos-before-resume-fix/auth-schemathesis-json-positive-loopback.json",
+      "sha256": "0c11212bb3b4feafb977339a0ee2e72227323f84e914a390504163c59d944640",
+      "bytes": 4443
+    },
+    {
+      "path": "docs/measurements/host-binding/macos-before-resume-fix/auth-schemathesis-multipart-fixed-loopback.json",
+      "sha256": "17c9346af6eafbad4f56736f547bd241163dccbebfc0b9fe800d4bc602ae0479",
+      "bytes": 3969
+    },
+    {
+      "path": "docs/measurements/host-binding/macos-before-resume-fix/auth-schemathesis-multipart-positive-loopback.json",
+      "sha256": "81df092c65ec4fc80e0a570d8889a8569e9f79ba81ed2369c18c3e868f50b153",
+      "bytes": 4495
+    },
+    {
+      "path": "docs/measurements/host-binding/macos-before-resume-fix/auth-tinja-form-fixed-loopback.json",
+      "sha256": "0f9d29e2f9770d236afe43dd20102bfe519979f720b02d23a692685b755625c7",
+      "bytes": 3829
+    },
+    {
+      "path": "docs/measurements/host-binding/macos-before-resume-fix/auth-tinja-form-positive-loopback.json",
+      "sha256": "26dbbd74220666b858f77458ea0f0abdbaa8fb20d8c0e5f32b7cfd1c4d1395b6",
+      "bytes": 4340
+    },
+    {
+      "path": "docs/measurements/host-binding/macos-before-resume-fix/auth-tinja-json-fixed-loopback.json",
+      "sha256": "a4f50621ffb38dbb553733fdd8f3be60ce53e04a85d26b29c2ff70b8daf14443",
+      "bytes": 3813
+    },
+    {
+      "path": "docs/measurements/host-binding/macos-before-resume-fix/auth-tinja-json-positive-loopback.json",
+      "sha256": "aceb1cd298b9bbc93414759625b4faaf7b14cae09f42c40015d9008390d1ee56",
+      "bytes": 4319
+    },
+    {
+      "path": "docs/measurements/host-binding/macos-before-resume-fix/auth-tinja-multipart-fixed-loopback.json",
+      "sha256": "9b85e46d5749e2d1d609ec60cf0a52e2d770d092785a945a70905dab5ba6cd67",
+      "bytes": 3866
+    },
+    {
+      "path": "docs/measurements/host-binding/macos-before-resume-fix/auth-tinja-multipart-positive-loopback.json",
+      "sha256": "64a3c4db7db857c1fac189263d4291a3d0d23a269f769c134a2302e6962e552e",
+      "bytes": 4369
+    },
+    {
+      "path": "docs/measurements/host-binding/macos-before-resume-fix/command.json",
+      "sha256": "fe4b8d6329fa68e9500c933b8df36c9b7617cfe674d2087c5ae2a021687d8cd9",
+      "bytes": 3590
+    },
+    {
+      "path": "docs/measurements/host-binding/macos-before-resume-fix/https.json",
+      "sha256": "643d24d1d1dc01a075e1e3f12b5f6327ce1d84d559b3d38d61759dfca9dfd276",
+      "bytes": 3313
+    },
+    {
+      "path": "docs/measurements/host-binding/macos-before-resume-fix/interruption.json",
+      "sha256": "d4a616f7e23641481f99b067d83736a1a5b15f49294f71e843038b3f6decdfde",
+      "bytes": 295
+    },
+    {
+      "path": "docs/measurements/host-binding/macos-before-resume-fix/late-post-after-refresh-form.json",
+      "sha256": "27260a9eafca50b74fccd648ff07793e8dc3ffee6d3f47cb6816696d6043d4b6",
+      "bytes": 10642
+    },
+    {
+      "path": "docs/measurements/host-binding/macos-before-resume-fix/late-post-after-refresh-json.json",
+      "sha256": "89bcc136281849a8eda40c1c3042c6fc4eabde53982cd0e4eceaf9a46041b5b3",
+      "bytes": 10649
+    },
+    {
+      "path": "docs/measurements/host-binding/macos-before-resume-fix/late-post-after-refresh-multipart.json",
+      "sha256": "11976e224919676ca868695149179d641276dcdea47c72f29b3e4d4e551bc50f",
+      "bytes": 10642
+    },
+    {
+      "path": "docs/measurements/host-binding/macos-before-resume-fix/memory.json",
+      "sha256": "5b5590d35b150bf52f0bd7d8595d332b71d4a56cc45898d8ed0850d48ef20213",
+      "bytes": 654
+    },
+    {
+      "path": "docs/measurements/host-binding/macos-before-resume-fix/mypy.txt",
+      "sha256": "e71733897737b5a6fec4640d8b7cab3d0e5252340a6f556eadfe106c7ad72b72",
+      "bytes": 107
+    },
+    {
+      "path": "docs/measurements/host-binding/macos-before-resume-fix/refresh-interactsh-form.json",
+      "sha256": "f49792443968c280da0794d270830a1acc8463a7927683a33de2fdb835899736",
+      "bytes": 14005
+    },
+    {
+      "path": "docs/measurements/host-binding/macos-before-resume-fix/refresh-interactsh-json.json",
+      "sha256": "1ee9b0067e9a5c63f9c4e8636b48b01a46f8e5a3f04c12174205c7d4576e7ec9",
+      "bytes": 14121
+    },
+    {
+      "path": "docs/measurements/host-binding/macos-before-resume-fix/refresh-interactsh-multipart.json",
+      "sha256": "887379c36bd70e6a7389578d73bc3a142cdb1738ed6ef7748e9965124027f87b",
+      "bytes": 14480
+    },
+    {
+      "path": "docs/measurements/host-binding/macos-before-resume-fix/refresh-schemathesis-form.json",
+      "sha256": "9d56fc341c01cb6b6669203fd9b2e17b41fc516b0d0cdd5a64a0439716ed8872",
+      "bytes": 15524
+    },
+    {
+      "path": "docs/measurements/host-binding/macos-before-resume-fix/refresh-schemathesis-json.json",
+      "sha256": "db570e9f5e98d509ed65866560cb6b0c92ec7ab78d604c17f84ef295ac778877",
+      "bytes": 17409
+    },
+    {
+      "path": "docs/measurements/host-binding/macos-before-resume-fix/refresh-schemathesis-multipart.json",
+      "sha256": "b5162e8b574cfe9b419da3020248a4b7653f761deaee73bea7a8cca2c7dd708f",
+      "bytes": 17647
+    },
+    {
+      "path": "docs/measurements/host-binding/macos-before-resume-fix/refresh-tinja-form.json",
+      "sha256": "d92f89abbccd92111ccf4d0e26aecddfa533bd5bb5b7fa9735172ff51558a5c0",
+      "bytes": 15369
+    },
+    {
+      "path": "docs/measurements/host-binding/macos-before-resume-fix/refresh-tinja-json.json",
+      "sha256": "f62e9e874acb726b46a3cb5a0eefe4c9072b7954b4dfb53712cffb40b09493d7",
+      "bytes": 17246
+    },
+    {
+      "path": "docs/measurements/host-binding/macos-before-resume-fix/refresh-tinja-multipart.json",
+      "sha256": "9b35354676813cc49c20f9df99e19b22dd59071f156cc8aed5404da2df002bcb",
+      "bytes": 17393
+    },
+    {
+      "path": "docs/measurements/host-binding/macos-before-resume-fix/ruff.txt",
+      "sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+      "bytes": 19
+    },
+    {
+      "path": "docs/measurements/host-binding/macos-before-resume-fix/tests.junit.xml",
+      "sha256": "d3da6af0edf05b0a82d6e009b48b190c1ca9ab9c141fd40bb439b950e9b4b94b",
+      "bytes": 63728
+    },
+    {
+      "path": "docs/measurements/host-binding/macos-before-resume-fix/tests.txt",
+      "sha256": "d348565476fc0a3558f4cb8fd6a17fdea3fbe9d9e8b1920aa896f0315d3d3bf8",
+      "bytes": 2121
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/auth-interactsh-form-fixed-loopback.json",
+      "sha256": "e56ca980b74b6045a1ac72ae759873722d6aba63a018b84cfd0f49ad0861ffa5",
+      "bytes": 9392
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/auth-interactsh-form-positive-loopback.json",
+      "sha256": "55d3ffa5b897f94508052a5cccd27181ef54fc3cb13a7a3d94522fc7db43cdc6",
+      "bytes": 2915
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/auth-interactsh-json-fixed-loopback.json",
+      "sha256": "6524e27fddd8a0dd20e70c286935f4711e97839cb0f6e0dcca8d0113dfef076f",
+      "bytes": 9393
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/auth-interactsh-json-positive-loopback.json",
+      "sha256": "77809b8ecd228547927fa698150bb5a8212fa9aa553b50cb9db53cd14981e987",
+      "bytes": 2913
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/auth-interactsh-multipart-fixed-loopback.json",
+      "sha256": "4fb379c579bb7936f198bb810439a0d99d5ce5f19ce6408106d8e5a291edd077",
+      "bytes": 9390
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/auth-interactsh-multipart-positive-loopback.json",
+      "sha256": "5a076df084e0e6eb43821689ed7640a897481d14798449320dbb79b19bc29461",
+      "bytes": 2914
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/auth-schemathesis-form-fixed-loopback.json",
+      "sha256": "5a119f8e1f1528df7df0ddf50906e3d8463aea4b2eb5ca7301b6fb7c21722465",
+      "bytes": 3936
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/auth-schemathesis-form-positive-loopback.json",
+      "sha256": "88fba6b3d2feb1195aa2f22f4a8b9f64b2543b5b539bfdb78b347001c928bd19",
+      "bytes": 4464
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/auth-schemathesis-json-fixed-loopback.json",
+      "sha256": "98974825302079a17c866a3194645ca61552bb18121a45e95a43cf863e4fa420",
+      "bytes": 3913
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/auth-schemathesis-json-positive-loopback.json",
+      "sha256": "785e8a4c1ec0737932242b011e3a75bf057a24ad31405b3680bff5996b8dde7b",
+      "bytes": 4444
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/auth-schemathesis-multipart-fixed-loopback.json",
+      "sha256": "cc80853047d09cf4eaa803b69b0a7919a9fe94b5783c9c35677dc245b372ff7f",
+      "bytes": 3970
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/auth-schemathesis-multipart-positive-loopback.json",
+      "sha256": "04b6eba46f295d5b1cdb85c0eed2ab3f0a6d0526bf37a85ac4e704c424776766",
+      "bytes": 4498
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/auth-tinja-form-fixed-loopback.json",
+      "sha256": "1a399af4cd2e48a63e400488b6f11f13e1c6a9ebb75da278ab5ffcf04edf51a2",
+      "bytes": 3827
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/auth-tinja-form-positive-loopback.json",
+      "sha256": "4a962f61b0b0559d9d6cb2b55dd87f9562f4dbec61286d112b8a8863c9179ccd",
+      "bytes": 4339
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/auth-tinja-json-fixed-loopback.json",
+      "sha256": "5ec7e506dae04c99aa9171ff74fd459acc97d84506ed114fd68174447966fcdc",
+      "bytes": 3811
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/auth-tinja-json-positive-loopback.json",
+      "sha256": "02244728beac808a8d276a0bfa0d58f22684d6855a11b95c1cbf63fbcdc29f27",
+      "bytes": 4317
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/auth-tinja-multipart-fixed-loopback.json",
+      "sha256": "8bc24824e8625cba5bc8461785bfbeca23c9fa1dafff4d89d579cbba128c9baa",
+      "bytes": 3865
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/auth-tinja-multipart-positive-loopback.json",
+      "sha256": "b27e2226851b848788f9b9080e9eb218ca47bd50175140480d2b446ea2407a60",
+      "bytes": 4371
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/auth.json",
+      "sha256": "b08cd112e1f972557f872e025fbc286b1451c60240129eed1d14f0dcdcf3f288",
+      "bytes": 2227
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/cli-refresh-interactsh-loopback.json",
+      "sha256": "2830e7d4e3c55e53764075aabb1d1f9e6b755b7aa97eb643faa73e2e6b472225",
+      "bytes": 14303
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/cli-refresh-schemathesis-loopback.json",
+      "sha256": "d16f24789d3a794727cf7b750e2298a43d57a3853ef918edbba29053eee6a3e6",
+      "bytes": 17693
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/cli-refresh-tinja-loopback.json",
+      "sha256": "ee504cd369808db26b54fc3a06aa4c011c562a27faa1ea85789def8fdc01fbcd",
+      "bytes": 17534
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/command.json",
+      "sha256": "4a97cc45310da8e60a59053bba35f2be5a07f1cce99b2012902eee186925ca41",
+      "bytes": 3596
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/ffuf-loopback.json",
+      "sha256": "723d719935d30778b3ec7248cced125fcd701269ca04d6ae85bd10dd3527fa2b",
+      "bytes": 13025
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/https.json",
+      "sha256": "17abf1b4bd0adbb8734964f43dfda2c08b52a178e66cbd54db972f81bb3178b7",
+      "bytes": 3312
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/interactsh-auto-late.json",
+      "sha256": "7e8d180e896a9f3b1d94819b54bbc933b366df5289b608ae75f8aea4af656732",
+      "bytes": 11016
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/interactsh-first-auto-late.json",
+      "sha256": "ce100cfa52813421de905b4709b7c671e9e806be80e58c3148efba05efd57334",
+      "bytes": 2024
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/interactsh-first-fixed.json",
+      "sha256": "677dbce6ebb97134129b99b00e9c406e2fc3a1add48edf478ca023205e6f333d",
+      "bytes": 2023
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/interactsh-first-late.json",
+      "sha256": "934b86e4e6eaeee6be828cc27cff4053538c77ea764c4baa180c093b001164a7",
+      "bytes": 2022
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/interactsh-first-positive.json",
+      "sha256": "df3b76672ca90719249afc99d3c74ddd264ad19d67b0a4071683c0e983555424",
+      "bytes": 2482
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/interactsh-fixed.json",
+      "sha256": "af5fda9bbfd8ddbb5783445d87bed6829b16a81605a76bfee41e96516e1e6d9c",
+      "bytes": 17467
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/interactsh-late.json",
+      "sha256": "11be791b1c4a9f2f0c02c1961096d0e0173d2d6c4a2b95bae10cd5b48299c20c",
+      "bytes": 8699
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/interactsh-positive.json",
+      "sha256": "81ef285900eb57697eba536bb2554c64b262b428ec7b0c9783b2f413bc102b64",
+      "bytes": 6376
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/interactsh-real-process-crash.json",
+      "sha256": "20d01189f68f3160984369030363a59d296395b7e99197da16d58a2f74b4db06",
+      "bytes": 2154
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/late-post-after-refresh-form.json",
+      "sha256": "830e39b692bb60b700b6de1d48bff635fc4a9406d6aa5cbd0c1830062b1b5692",
+      "bytes": 10646
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/late-post-after-refresh-json.json",
+      "sha256": "69c95113fb1211a5f7fc1723aab1c9b31a2c850bedeb238ffa6dfbcf3c24cf5c",
+      "bytes": 10642
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/late-post-after-refresh-multipart.json",
+      "sha256": "0143af5c571ab54b37ca3f5730712fba1daa34a9303adf1cdde212f15fc52b8a",
+      "bytes": 10651
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/memory.json",
+      "sha256": "315866f2626b82be405fe1e485f4914bf7d245a456f55705501b3685ef677388",
+      "bytes": 652
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/mime-auth-interactsh-form-fixed-loopback.json",
+      "sha256": "6c7fb9846e08ef743da24439e15587ffcb333875ee581d1deac462eeecb56dcc",
+      "bytes": 9392
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/mime-auth-interactsh-form-positive-loopback.json",
+      "sha256": "e1f5f6c30dc980f51b206de157ac2c46b9f7808fe35ab04aeb7ab975077e8f0a",
+      "bytes": 2914
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/mime-auth-interactsh-json-fixed-loopback.json",
+      "sha256": "c2357cf9933428dd287d8befad531dfcea7436f129522ce4859dfc4b0217bd11",
+      "bytes": 9389
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/mime-auth-interactsh-json-positive-loopback.json",
+      "sha256": "10be462875ea011bda2f1d34c16b04c8b0653f76153c129217f0fc4a0c6f3e6a",
+      "bytes": 2915
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/mime-auth-interactsh-multipart-fixed-loopback.json",
+      "sha256": "b7a129b00693151d1c566e3473dd29e0a1d304e0e61ea277dd7b86693af6e400",
+      "bytes": 9395
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/mime-auth-interactsh-multipart-positive-loopback.json",
+      "sha256": "889f0201514a532334089ed570b8c0841924e91f98929f512ceb12970ea74181",
+      "bytes": 2915
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/mime-auth-schemathesis-form-fixed-loopback.json",
+      "sha256": "e0346ad92716122770189ea21c2e57babb9f9a211174d6a14f1b81be505675df",
+      "bytes": 3945
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/mime-auth-schemathesis-form-positive-loopback.json",
+      "sha256": "d1210115942a3cd7a72faf85029346388532244b6f16afc7533cc2654d5b1b7f",
+      "bytes": 4472
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/mime-auth-schemathesis-json-fixed-loopback.json",
+      "sha256": "23e5f8dfc9c43cffc49c9c6aada73289b7415bc0443383d3e5169880f59cde96",
+      "bytes": 3936
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/mime-auth-schemathesis-json-positive-loopback.json",
+      "sha256": "eb37ab6cafabaca04236321ad413477292abf25c593f88950b51707cef0f68c4",
+      "bytes": 4465
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/mime-auth-schemathesis-multipart-fixed-loopback.json",
+      "sha256": "753fbdb8b50291d404bd4de08900a434c0006324dedb257f1b251268a75a3cd8",
+      "bytes": 3974
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/mime-auth-schemathesis-multipart-positive-loopback.json",
+      "sha256": "ec703457f7a47f76a9fb0644cad0eeaea32ca0ab8e38ad94a73dbe3fb778440e",
+      "bytes": 4497
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/mime-auth-tinja-form-fixed-loopback.json",
+      "sha256": "e1a243daeccb3f774a4cb39a86bf2a38ad38ac1b9e0c9317e2fa50e665c7e1d0",
+      "bytes": 3843
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/mime-auth-tinja-form-positive-loopback.json",
+      "sha256": "2fd4c1e30aeb79efce8cf2796b1c86d4bba854df17ebffcf7bbcbdc1d2992882",
+      "bytes": 4350
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/mime-auth-tinja-json-fixed-loopback.json",
+      "sha256": "2e0e759eb5e5a58ae6cc8e35dd64407ac75066616dc48228098a5e3e9295ab2d",
+      "bytes": 3835
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/mime-auth-tinja-json-positive-loopback.json",
+      "sha256": "6850a412ef26da0784b8c048a22b5d283b7e20c2a706e66cfb9fe254a1bf5505",
+      "bytes": 4336
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/mime-auth-tinja-multipart-fixed-loopback.json",
+      "sha256": "0df08c84c7f8a39eadf23f70e1614e9058b09239bb377db5e6ef79a31d103c8d",
+      "bytes": 3868
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/mime-auth-tinja-multipart-positive-loopback.json",
+      "sha256": "46164329066b4b33fc2ca21c8fb5114e351ecf3053b28298b59388c0933de59f",
+      "bytes": 4374
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/mime-refresh-interactsh-form.json",
+      "sha256": "c75f008ce0fd01635438c306e4db5258dc64757754fc45958a562c37ef8808cc",
+      "bytes": 14006
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/mime-refresh-interactsh-json.json",
+      "sha256": "ac8708f51f9c5220a267ca5cce907e88bd243117ad1c7b2f571e517e2b7571ed",
+      "bytes": 14121
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/mime-refresh-interactsh-multipart.json",
+      "sha256": "bfd6fa44e411c83abee16c0d484a30f940f4331aa5a26b1f4870644e810bd94c",
+      "bytes": 14483
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/mime-refresh-schemathesis-form.json",
+      "sha256": "615f3a02bfabb595c7079a75bbdd9bda1313dbdf65ce5c14e8970a04e8dc1146",
+      "bytes": 15538
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/mime-refresh-schemathesis-json.json",
+      "sha256": "2571c6b7a5ed400d752e9b5d7f8e13b3d675219b4adeb51d5731808bbe4ef662",
+      "bytes": 17444
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/mime-refresh-schemathesis-multipart.json",
+      "sha256": "f1449259e2dfec4281813aedac8e723b614ff8670cd358d42b750fc0d9b09915",
+      "bytes": 17648
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/mime-refresh-tinja-form.json",
+      "sha256": "c1b7ae5dcac1724671b80bb2574eb7ecda21c1735328b2291f9422b2e8be3950",
+      "bytes": 15381
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/mime-refresh-tinja-json.json",
+      "sha256": "f21ba26c47214fa0d4d8e0886cb366bca6a55f625c0c77ba350a6a625978c8ca",
+      "bytes": 17284
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/mime-refresh-tinja-multipart.json",
+      "sha256": "a8b960c8b48a52ba4c5f77cd54e86b8abb09ac6825797521d1a6b562d1073e6c",
+      "bytes": 17403
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/mypy.txt",
+      "sha256": "e71733897737b5a6fec4640d8b7cab3d0e5252340a6f556eadfe106c7ad72b72",
+      "bytes": 107
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/nuclei.json",
+      "sha256": "c84be08f7fa08da58e61172f01bb241305f2713ce450c6525c8c5d44deaa5b0d",
+      "bytes": 853
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/os-memory/cross-campaign-automatic-resume.json",
+      "sha256": "0b26d4879fdab4bbdf2d4fb1558222c6741f9117e194b32d12833f20b5a3fd8d",
+      "bytes": 703
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/os-memory/cross-campaign-browser-scheduler.json",
+      "sha256": "55370104b264ca0f8755ca0ea8d39e8f58da271260b1932a8d1a2a2c68ccbdfd",
+      "bytes": 611
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/post.json",
+      "sha256": "8181ffc9ac138f6a3bd3c0485ad6306fe01f511724cb4dadf931ee3d0dc6e2b2",
+      "bytes": 2800
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/processes-after.json",
+      "sha256": "8ed674042a036849612ae9b7f43c5e85b3bcb06151e6b520731e648696d236ca",
+      "bytes": 75
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/projectdiscovery-loopback.json",
+      "sha256": "32f05c9d514c948aa5ea181f728e729e7850f4088d34229777f99c188e9a5d37",
+      "bytes": 16603
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/refresh-interactsh-form.json",
+      "sha256": "2f8c4384062123efd6b12af3e156096079ee3a66d584fa1f2a2cf7a0eac42d89",
+      "bytes": 14003
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/refresh-interactsh-json.json",
+      "sha256": "168018ff404f447d388412aade70c6fe43152b514c39d70d2e35aaa670a04f34",
+      "bytes": 14120
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/refresh-interactsh-multipart.json",
+      "sha256": "45996a6647c8fd5ae24f622fd8950216f62aee77c0542a7dd02c99c6d91fc167",
+      "bytes": 14478
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/refresh-schemathesis-form.json",
+      "sha256": "31c3ab12c90367236b7547599c9ab90298131e5f402634ec0fdd9a5c1c70975c",
+      "bytes": 15524
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/refresh-schemathesis-json.json",
+      "sha256": "f5b398025f9b478f9abbfbb2ce77629d9d3f00e085b5162ee2c7dc06fcf1d0bc",
+      "bytes": 17407
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/refresh-schemathesis-multipart.json",
+      "sha256": "429b3d1030c4ae5a5382ecb83c832f0a8afe95390642a1ee53cd07b0f1d98875",
+      "bytes": 17645
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/refresh-tinja-form.json",
+      "sha256": "964c9cf7a53d3a246e642e6b78fc09335f936b6c7e6301f19a63e8bbcea51760",
+      "bytes": 15366
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/refresh-tinja-json.json",
+      "sha256": "18e2e50a4226323acf7394a62d2f60e7c103f1fc08cedbe8f8d95ac76e980b29",
+      "bytes": 17245
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/refresh-tinja-multipart.json",
+      "sha256": "3b13255bf1bb96d553212bd0815906c83c09906fd39d8a343d248891b56d65f7",
+      "bytes": 17390
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/resources-after.json",
+      "sha256": "de72238f5f0cfaaf25a4881c2b711c9e0ae40a6f3e8c55aef2cae3f6e16b5237",
+      "bytes": 500
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/ruff.txt",
+      "sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+      "bytes": 19
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/schemathesis-loopback-fixed.json",
+      "sha256": "b8bb82df13ae4f6cca691da445cb2715510972f26fef6db4d0960f42a14e3da4",
+      "bytes": 3218
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/schemathesis-loopback-positive.json",
+      "sha256": "9594eb27c91d17748b12a9afa761adcfd9e35ef0d9aed297e38a234ebd0880b4",
+      "bytes": 3718
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/specialists-loopback-fixed.json",
+      "sha256": "033e10d55f809847aff87d2bc01f26437b4aa3c4d3cee4a4a31928a1e4cd37ee",
+      "bytes": 5872
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/specialists-loopback-positive.json",
+      "sha256": "acf89bf3c263d23478572640ccc7a65bdd675d2ebd2b03302377dbecf6a6bd35",
+      "bytes": 8974
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/tests.junit.xml",
+      "sha256": "543d1b32d0de096224aae22ee73c7612f5b972bc0ee5581f3e25f87c990204b2",
+      "bytes": 216232
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/tests.txt",
+      "sha256": "d6224619b762c1c53ae2271165facb1fd721347f1716d93b12792ae23d7242f8",
+      "bytes": 7295
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/tinja-loopback-fixed.json",
+      "sha256": "535d1209742d7e3c4570b9f4b2c8dc5e63d6445d1bf3c4fe42188dd6ccd10e0e",
+      "bytes": 3119
+    },
+    {
+      "path": "docs/measurements/host-binding/macos/tinja-loopback-positive.json",
+      "sha256": "47e548e1cb9e6f6d0d39a1d9c739f7fb335d013a2e33768b7ca16e0cdc136a51",
+      "bytes": 3601
+    },
+    {
+      "path": "docs/measurements/host-binding/preservation-after.json",
+      "sha256": "f19b3638055bc81c347d781538b57793c0e2d9bcbf19c18dd5a85cbc3304d595",
+      "bytes": 294
+    },
+    {
+      "path": "docs/measurements/host-binding/preservation-before.json",
+      "sha256": "8decfd46ac7e5427f05235033a6ab18a8751f29ae6b5aecfdd7d3d01bf92b922",
+      "bytes": 288
+    },
+    {
+      "path": "docs/measurements/host-binding/regressions/approval-faults-after.junit.xml",
+      "sha256": "a9c0a54dcab89469d0c3c4182fc6eadec77c255b9e7d340fc89e994cbf855e7e",
+      "bytes": 3090
+    },
+    {
+      "path": "docs/measurements/host-binding/regressions/approval-faults-before.junit.xml",
+      "sha256": "3e32c06658c1dd79137bf245350d4713b6a97a6d021887dff2902155024a64cb",
+      "bytes": 9660
+    },
+    {
+      "path": "docs/measurements/host-binding/regressions/closed-service-after.junit.xml",
+      "sha256": "0feb1b759be48bfb007edd6b118d6ac2813108ab14fddd14565c2209860724d6",
+      "bytes": 399
+    },
+    {
+      "path": "docs/measurements/host-binding/regressions/closed-service-before.junit.xml",
+      "sha256": "ec1538df398bd7fdb85d7785d9858e4fa5fd244a9b20029a151fe7b6c893803a",
+      "bytes": 2134
+    },
+    {
+      "path": "docs/measurements/host-binding/regressions/component-close-before.junit.xml",
+      "sha256": "9e89a2375c72651c2c7d93e346b987a62d3e4ce5b22723fda0e622fe6114f337",
+      "bytes": 1501
+    },
+    {
+      "path": "docs/measurements/host-binding/regressions/deadline-reason-before.junit.xml",
+      "sha256": "8b9623ecfa89ab8a7c06e889f0e9661fbe414440b193304d51c5911871dc816a",
+      "bytes": 3963
+    },
+    {
+      "path": "docs/measurements/host-binding/regressions/final-preflight-macos.junit.xml",
+      "sha256": "f01b20369ad9673bb054b28594d52a1b797196139d65b24961e5410498693498",
+      "bytes": 3008
+    },
+    {
+      "path": "docs/measurements/host-binding/regressions/host-binding-final-targeted.junit.xml",
+      "sha256": "766aad62e7b9806a566ad64cc5473a464737100d9daf06889113f9a7edccf466",
+      "bytes": 15557
+    },
+    {
+      "path": "docs/measurements/host-binding/regressions/host-start-close-fixed.junit.xml",
+      "sha256": "9d02b6e9b455a64141f813e2e11bcf722346e143bf6736c120d87d5d3f0036ba",
+      "bytes": 2587
+    },
+    {
+      "path": "docs/measurements/host-binding/regressions/host-start-fault-before.junit.xml",
+      "sha256": "c8b173b46357c320c58bf57901cc70873ddf3072b78250589f6a1af285042fda",
+      "bytes": 4105
+    },
+    {
+      "path": "docs/measurements/host-binding/regressions/metadata-import-before.junit.xml",
+      "sha256": "287b61b8ae67242aa6fc5f0a84ff3b2874c1173be14ef4ba582648bc22688272",
+      "bytes": 3479
+    },
+    {
+      "path": "docs/measurements/host-binding/regressions/native-deadline-before.junit.xml",
+      "sha256": "3b67162a27bde5918534be0ef2aeda8485047680bf6db250879f54a04bf8babb",
+      "bytes": 2070
+    },
+    {
+      "path": "docs/measurements/host-binding/regressions/policy-report-before.junit.xml",
+      "sha256": "93968915a79797c5c3aa1413911662ba352d2667686d37ef9d218d490c4a0346",
+      "bytes": 4216
+    },
+    {
+      "path": "docs/measurements/host-binding/regressions/resume-preservation-before.junit.xml",
+      "sha256": "3b47221ddb8d0b2817ff1a8ecd7e650a85bab47d2f917d8b258fadacd2ba9285",
+      "bytes": 7207
+    },
+    {
+      "path": "docs/measurements/host-binding/regressions/resume-preservation-fixed.junit.xml",
+      "sha256": "2706d213e4b8998fb0c3f2e7f6a91bd6ac771d3e95e59faa37f2f11186e5d083",
+      "bytes": 2414
+    },
+    {
+      "path": "docs/measurements/host-binding/regressions/runner-children-macos.junit.xml",
+      "sha256": "fcbb955aaf823e79e79134c205bb667000f65ff1ca32b9728dbfa45fa64c0aaf",
+      "bytes": 1234
+    },
+    {
+      "path": "docs/measurements/host-binding/regressions/targeted-linux-final.junit.xml",
+      "sha256": "2b00efde4dbdf55fcdb65cc56a8132153578e7f46fd477100b987dac81cd0853",
+      "bytes": 15560
+    },
+    {
+      "path": "docs/measurements/host-binding/regressions/targeted-linux.junit.xml",
+      "sha256": "5d965b3e1445ab72db73ed27061a3103c642e7fc8b4e28d724417070d39b78ac",
+      "bytes": 14344
+    },
+    {
+      "path": "docs/measurements/host-binding/regressions/targeted-macos.junit.xml",
+      "sha256": "e64549003037b0f69599846a19bdd81b69412f82a1a92aaefe848650b43fff68",
+      "bytes": 14204
+    },
+    {
+      "path": "docs/measurements/host-binding/source-hashes-before-resume-fix.json",
+      "sha256": "72824b9a1d28dddc255101d8d67f0bfa19a9cdad7dd373a7ae8971a0cd1ae75b",
+      "bytes": 49930
+    },
+    {
+      "path": "docs/measurements/host-binding/source-hashes.json",
+      "sha256": "bb5ed5f58756dedc64f67a71ae8a668cb84d3a7c9e0764aa34a26d847879b8e6",
+      "bytes": 49930
+    },
+    {
+      "path": "docs/measurements/host-binding/targeted-live-macos.json",
+      "sha256": "da9c8f28140ec1e76fbf5a4de1be70849db071b9098398d0cf1a4708f76b1042",
+      "bytes": 4161
+    },
+    {
+      "path": "docs/measurements/host-binding/verification-summary.json",
+      "sha256": "93d378326b21b528c60ee8a6402b881f4fbf779d3eed9e6110f7b2a9ed7a5683",
+      "bytes": 3747
+    },
+    {
+      "path": "docs/redjohn-completion-status.md",
+      "sha256": "e42896a037ccadc7c4c107fae2c52dba14ff907469122c468a6ff3e9b28ed25d",
+      "bytes": 12414
+    },
+    {
+      "path": "docs/redjohn-host-binding-changed-files.md",
+      "sha256": "e348732c65f67846473add09309b197b4b340dfc359ee99123776c9a74d7153e",
+      "bytes": 3696
+    },
+    {
+      "path": "docs/redjohn-host-binding-verification.md",
+      "sha256": "2c43697b29abe533bd813d0257e1cacd76ef810d3dffbb1e56aa83e5599b0c6c",
+      "bytes": 13144
+    }
+  ]
+}

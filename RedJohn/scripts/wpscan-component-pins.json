@@ -1,0 +1,765 @@
+{
+  "status": "preparation_only_no_engine_execution",
+  "target_ruby": "3.3.12",
+  "packages": [
+    {
+      "name": "activesupport",
+      "version": "8.1.4",
+      "platform": "ruby",
+      "sha256": "891dd3fe43c4fc8391934b237b1189bb1f661c932a84a840043db9d46a4e80df",
+      "licenses": [
+        "MIT"
+      ],
+      "gem_uri": "https://rubygems.org/gems/activesupport-8.1.4.gem",
+      "dependencies": [
+        {
+          "name": "base64",
+          "requirements": ">= 0"
+        },
+        {
+          "name": "bigdecimal",
+          "requirements": ">= 0"
+        },
+        {
+          "name": "concurrent-ruby",
+          "requirements": "~> 1.0, >= 1.3.1"
+        },
+        {
+          "name": "connection_pool",
+          "requirements": ">= 2.2.5"
+        },
+        {
+          "name": "drb",
+          "requirements": ">= 0"
+        },
+        {
+          "name": "i18n",
+          "requirements": ">= 1.6, < 2"
+        },
+        {
+          "name": "json",
+          "requirements": ">= 0"
+        },
+        {
+          "name": "logger",
+          "requirements": ">= 1.4.2"
+        },
+        {
+          "name": "minitest",
+          "requirements": ">= 5.1"
+        },
+        {
+          "name": "securerandom",
+          "requirements": ">= 0.3"
+        },
+        {
+          "name": "tzinfo",
+          "requirements": "~> 2.0, >= 2.0.5"
+        },
+        {
+          "name": "uri",
+          "requirements": ">= 0.13.1"
+        }
+      ],
+      "ruby_version": ">= 3.2.0",
+      "metadata_url": "https://rubygems.org/api/v2/rubygems/activesupport/versions/8.1.4.json?platform=ruby"
+    },
+    {
+      "name": "addressable",
+      "version": "2.9.0",
+      "platform": "ruby",
+      "sha256": "7fdf6ac3660f7f4e867a0838be3f6cf722ace541dd97767fa42bc6cfa980c7af",
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "gem_uri": "https://rubygems.org/gems/addressable-2.9.0.gem",
+      "dependencies": [
+        {
+          "name": "public_suffix",
+          "requirements": ">= 2.0.2, < 8.0"
+        }
+      ],
+      "ruby_version": ">= 2.2",
+      "metadata_url": "https://rubygems.org/api/v2/rubygems/addressable/versions/2.9.0.json?platform=ruby"
+    },
+    {
+      "name": "base64",
+      "version": "0.3.0",
+      "platform": "ruby",
+      "sha256": "27337aeabad6ffae05c265c450490628ef3ebd4b67be58257393227588f5a97b",
+      "licenses": [
+        "Ruby",
+        "BSD-2-Clause"
+      ],
+      "gem_uri": "https://rubygems.org/gems/base64-0.3.0.gem",
+      "dependencies": [],
+      "ruby_version": ">= 2.4",
+      "metadata_url": "https://rubygems.org/api/v2/rubygems/base64/versions/0.3.0.json?platform=ruby"
+    },
+    {
+      "name": "bigdecimal",
+      "version": "4.1.3",
+      "platform": "ruby",
+      "sha256": "61ebe1e5e559bdc3cc6f2c0ee7f427321fc838f59611c294356eb04d6e21cf66",
+      "licenses": [
+        "Ruby",
+        "BSD-2-Clause"
+      ],
+      "gem_uri": "https://rubygems.org/gems/bigdecimal-4.1.3.gem",
+      "dependencies": [],
+      "ruby_version": ">= 2.6.0",
+      "metadata_url": "https://rubygems.org/api/v2/rubygems/bigdecimal/versions/4.1.3.json?platform=ruby"
+    },
+    {
+      "name": "concurrent-ruby",
+      "version": "1.3.8",
+      "platform": "ruby",
+      "sha256": "b2f1be836e968ccc78ccfce277ea79c72a88633f22306782c16ff23fb415d1e1",
+      "licenses": [
+        "MIT"
+      ],
+      "gem_uri": "https://rubygems.org/gems/concurrent-ruby-1.3.8.gem",
+      "dependencies": [],
+      "ruby_version": ">= 2.3",
+      "metadata_url": "https://rubygems.org/api/v2/rubygems/concurrent-ruby/versions/1.3.8.json?platform=ruby"
+    },
+    {
+      "name": "connection_pool",
+      "version": "3.0.2",
+      "platform": "ruby",
+      "sha256": "33fff5ba71a12d2aa26cb72b1db8bba2a1a01823559fb01d29eb74c286e62e0a",
+      "licenses": [
+        "MIT"
+      ],
+      "gem_uri": "https://rubygems.org/gems/connection_pool-3.0.2.gem",
+      "dependencies": [],
+      "ruby_version": ">= 3.2.0",
+      "metadata_url": "https://rubygems.org/api/v2/rubygems/connection_pool/versions/3.0.2.json?platform=ruby"
+    },
+    {
+      "name": "drb",
+      "version": "2.2.3",
+      "platform": "ruby",
+      "sha256": "0b00d6fdb50995fe4a45dea13663493c841112e4068656854646f418fda13373",
+      "licenses": [
+        "Ruby",
+        "BSD-2-Clause"
+      ],
+      "gem_uri": "https://rubygems.org/gems/drb-2.2.3.gem",
+      "dependencies": [],
+      "ruby_version": ">= 2.7.0",
+      "metadata_url": "https://rubygems.org/api/v2/rubygems/drb/versions/2.2.3.json?platform=ruby"
+    },
+    {
+      "name": "ethon",
+      "version": "0.18.0",
+      "platform": "ruby",
+      "sha256": "b598afc9f30448cb068b850714b7d6948e941476095d04f90a4ac65b8d6efcb2",
+      "licenses": [
+        "MIT"
+      ],
+      "gem_uri": "https://rubygems.org/gems/ethon-0.18.0.gem",
+      "dependencies": [
+        {
+          "name": "ffi",
+          "requirements": ">= 1.15.0"
+        },
+        {
+          "name": "logger",
+          "requirements": ">= 0"
+        }
+      ],
+      "ruby_version": ">= 2.6",
+      "metadata_url": "https://rubygems.org/api/v2/rubygems/ethon/versions/0.18.0.json?platform=ruby"
+    },
+    {
+      "name": "ferrum",
+      "version": "0.19.1",
+      "platform": "ruby",
+      "sha256": "2e9ab588d24e08b6765a5a349bc5d367e5c09d3bead26270f1f2279ad7a4bc25",
+      "licenses": [
+        "MIT"
+      ],
+      "gem_uri": "https://rubygems.org/gems/ferrum-0.19.1.gem",
+      "dependencies": [
+        {
+          "name": "addressable",
+          "requirements": "~> 2.5"
+        },
+        {
+          "name": "base64",
+          "requirements": "~> 0.2"
+        },
+        {
+          "name": "concurrent-ruby",
+          "requirements": "~> 1.1"
+        },
+        {
+          "name": "websocket-driver",
+          "requirements": "~> 0.7"
+        }
+      ],
+      "ruby_version": ">= 3.1",
+      "metadata_url": "https://rubygems.org/api/v2/rubygems/ferrum/versions/0.19.1.json?platform=ruby"
+    },
+    {
+      "name": "ffi",
+      "version": "1.17.4",
+      "platform": "ruby",
+      "sha256": "bcd1642e06f0d16fc9e09ac6d49c3a7298b9789bcb58127302f934e437d60acf",
+      "licenses": [
+        "BSD-3-Clause"
+      ],
+      "gem_uri": "https://rubygems.org/gems/ffi-1.17.4.gem",
+      "dependencies": [],
+      "ruby_version": ">= 2.5",
+      "metadata_url": "https://rubygems.org/api/v2/rubygems/ffi/versions/1.17.4.json?platform=ruby"
+    },
+    {
+      "name": "fiddle",
+      "version": "1.1.8",
+      "platform": "ruby",
+      "sha256": "7fa8ee3627271497f3add5503acdbc3f40b32f610fc1cf49634f083ef3f32eee",
+      "licenses": [
+        "Ruby",
+        "BSD-2-Clause"
+      ],
+      "gem_uri": "https://rubygems.org/gems/fiddle-1.1.8.gem",
+      "dependencies": [],
+      "ruby_version": ">= 2.5.0",
+      "metadata_url": "https://rubygems.org/api/v2/rubygems/fiddle/versions/1.1.8.json?platform=ruby"
+    },
+    {
+      "name": "get_process_mem",
+      "version": "1.0.0",
+      "platform": "ruby",
+      "sha256": "d54024f3bcbf776a4d6e0155ec2b21bc3ba44e2fd158c4c00c80aa8a36e0b4aa",
+      "licenses": [
+        "MIT"
+      ],
+      "gem_uri": "https://rubygems.org/gems/get_process_mem-1.0.0.gem",
+      "dependencies": [
+        {
+          "name": "bigdecimal",
+          "requirements": ">= 2.0"
+        },
+        {
+          "name": "ffi",
+          "requirements": "~> 1.0"
+        }
+      ],
+      "ruby_version": ">= 2.6",
+      "metadata_url": "https://rubygems.org/api/v2/rubygems/get_process_mem/versions/1.0.0.json?platform=ruby"
+    },
+    {
+      "name": "i18n",
+      "version": "1.15.2",
+      "platform": "ruby",
+      "sha256": "00f9eb62412fe593b2a65a97daa75300d37abb8f7202ec748e94b6d46a9dd1b5",
+      "licenses": [
+        "MIT"
+      ],
+      "gem_uri": "https://rubygems.org/gems/i18n-1.15.2.gem",
+      "dependencies": [
+        {
+          "name": "concurrent-ruby",
+          "requirements": "~> 1.0"
+        }
+      ],
+      "ruby_version": ">= 3.1",
+      "metadata_url": "https://rubygems.org/api/v2/rubygems/i18n/versions/1.15.2.json?platform=ruby"
+    },
+    {
+      "name": "json",
+      "version": "3.1.0",
+      "platform": "ruby",
+      "sha256": "3ce7ccf8fde58960177a3a756c31f292a4c1e1dedee884547096a5b0604e3bd8",
+      "licenses": [
+        "Ruby"
+      ],
+      "gem_uri": "https://rubygems.org/gems/json-3.1.0.gem",
+      "dependencies": [],
+      "ruby_version": ">= 2.7",
+      "metadata_url": "https://rubygems.org/api/v2/rubygems/json/versions/3.1.0.json?platform=ruby"
+    },
+    {
+      "name": "logger",
+      "version": "1.7.0",
+      "platform": "ruby",
+      "sha256": "196edec7cc44b66cfb40f9755ce11b392f21f7967696af15d274dde7edff0203",
+      "licenses": [
+        "Ruby",
+        "BSD-2-Clause"
+      ],
+      "gem_uri": "https://rubygems.org/gems/logger-1.7.0.gem",
+      "dependencies": [],
+      "ruby_version": ">= 2.5.0",
+      "metadata_url": "https://rubygems.org/api/v2/rubygems/logger/versions/1.7.0.json?platform=ruby"
+    },
+    {
+      "name": "mini_portile2",
+      "version": "2.8.9",
+      "platform": "ruby",
+      "sha256": "0cd7c7f824e010c072e33f68bc02d85a00aeb6fce05bb4819c03dfd3c140c289",
+      "licenses": [
+        "MIT"
+      ],
+      "gem_uri": "https://rubygems.org/gems/mini_portile2-2.8.9.gem",
+      "dependencies": [],
+      "ruby_version": ">= 2.3.0",
+      "metadata_url": "https://rubygems.org/api/v2/rubygems/mini_portile2/versions/2.8.9.json?platform=ruby"
+    },
+    {
+      "name": "minitest",
+      "version": "6.0.6",
+      "platform": "ruby",
+      "sha256": "153ea36d1d987a62942382b61075745042a2b3123b1cd48f4c3675af9cc7d6f1",
+      "licenses": [
+        "MIT"
+      ],
+      "gem_uri": "https://rubygems.org/gems/minitest-6.0.6.gem",
+      "dependencies": [
+        {
+          "name": "drb",
+          "requirements": "~> 2.0"
+        },
+        {
+          "name": "prism",
+          "requirements": "~> 1.5"
+        }
+      ],
+      "ruby_version": ">= 3.2",
+      "metadata_url": "https://rubygems.org/api/v2/rubygems/minitest/versions/6.0.6.json?platform=ruby"
+    },
+    {
+      "name": "nokogiri",
+      "version": "1.19.4",
+      "platform": "ruby",
+      "sha256": "50c951611c92bca05c51411aef45f1cbc50f2821c4802758c5c6d34696533ab5",
+      "licenses": [
+        "MIT"
+      ],
+      "gem_uri": "https://rubygems.org/gems/nokogiri-1.19.4.gem",
+      "dependencies": [
+        {
+          "name": "mini_portile2",
+          "requirements": "~> 2.8.2"
+        },
+        {
+          "name": "racc",
+          "requirements": "~> 1.4"
+        }
+      ],
+      "ruby_version": ">= 3.2",
+      "metadata_url": "https://rubygems.org/api/v2/rubygems/nokogiri/versions/1.19.4.json?platform=ruby"
+    },
+    {
+      "name": "ostruct",
+      "version": "0.6.3",
+      "platform": "ruby",
+      "sha256": "95a2ed4a4bd1d190784e666b47b2d3f078e4a9efda2fccf18f84ddc6538ed912",
+      "licenses": [
+        "Ruby",
+        "BSD-2-Clause"
+      ],
+      "gem_uri": "https://rubygems.org/gems/ostruct-0.6.3.gem",
+      "dependencies": [],
+      "ruby_version": ">= 2.5.0",
+      "metadata_url": "https://rubygems.org/api/v2/rubygems/ostruct/versions/0.6.3.json?platform=ruby"
+    },
+    {
+      "name": "prism",
+      "version": "1.9.0",
+      "platform": "ruby",
+      "sha256": "7b530c6a9f92c24300014919c9dcbc055bf4cdf51ec30aed099b06cd6674ef85",
+      "licenses": [
+        "MIT"
+      ],
+      "gem_uri": "https://rubygems.org/gems/prism-1.9.0.gem",
+      "dependencies": [],
+      "ruby_version": ">= 2.7.0",
+      "metadata_url": "https://rubygems.org/api/v2/rubygems/prism/versions/1.9.0.json?platform=ruby"
+    },
+    {
+      "name": "public_suffix",
+      "version": "7.0.5",
+      "platform": "ruby",
+      "sha256": "1a8bb08f1bbea19228d3bed6e5ed908d1cb4f7c2726d18bd9cadf60bc676f623",
+      "licenses": [
+        "MIT"
+      ],
+      "gem_uri": "https://rubygems.org/gems/public_suffix-7.0.5.gem",
+      "dependencies": [],
+      "ruby_version": ">= 3.2",
+      "metadata_url": "https://rubygems.org/api/v2/rubygems/public_suffix/versions/7.0.5.json?platform=ruby"
+    },
+    {
+      "name": "racc",
+      "version": "1.8.1",
+      "platform": "ruby",
+      "sha256": "4a7f6929691dbec8b5209a0b373bc2614882b55fc5d2e447a21aaa691303d62f",
+      "licenses": [
+        "Ruby",
+        "BSD-2-Clause"
+      ],
+      "gem_uri": "https://rubygems.org/gems/racc-1.8.1.gem",
+      "dependencies": [],
+      "ruby_version": ">= 2.5",
+      "metadata_url": "https://rubygems.org/api/v2/rubygems/racc/versions/1.8.1.json?platform=ruby"
+    },
+    {
+      "name": "rexml",
+      "version": "3.4.4",
+      "platform": "ruby",
+      "sha256": "19e0a2c3425dfbf2d4fc1189747bdb2f849b6c5e74180401b15734bc97b5d142",
+      "licenses": [
+        "BSD-2-Clause"
+      ],
+      "gem_uri": "https://rubygems.org/gems/rexml-3.4.4.gem",
+      "dependencies": [],
+      "ruby_version": ">= 2.5.0",
+      "metadata_url": "https://rubygems.org/api/v2/rubygems/rexml/versions/3.4.4.json?platform=ruby"
+    },
+    {
+      "name": "ruby-progressbar",
+      "version": "1.13.0",
+      "platform": "ruby",
+      "sha256": "80fc9c47a9b640d6834e0dc7b3c94c9df37f08cb072b7761e4a71e22cff29b33",
+      "licenses": [
+        "MIT"
+      ],
+      "gem_uri": "https://rubygems.org/gems/ruby-progressbar-1.13.0.gem",
+      "dependencies": [],
+      "ruby_version": ">= 0",
+      "metadata_url": "https://rubygems.org/api/v2/rubygems/ruby-progressbar/versions/1.13.0.json?platform=ruby"
+    },
+    {
+      "name": "securerandom",
+      "version": "0.4.1",
+      "platform": "ruby",
+      "sha256": "cc5193d414a4341b6e225f0cb4446aceca8e50d5e1888743fac16987638ea0b1",
+      "licenses": [
+        "Ruby",
+        "BSD-2-Clause"
+      ],
+      "gem_uri": "https://rubygems.org/gems/securerandom-0.4.1.gem",
+      "dependencies": [],
+      "ruby_version": ">= 3.1.0",
+      "metadata_url": "https://rubygems.org/api/v2/rubygems/securerandom/versions/0.4.1.json?platform=ruby"
+    },
+    {
+      "name": "sys-proctable",
+      "version": "1.3.0",
+      "platform": "ruby",
+      "sha256": "31f61ad79aa0d4412155132beadf2b7ca706a6badce4ad2dfeda5d1ca4916e54",
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "gem_uri": "https://rubygems.org/gems/sys-proctable-1.3.0.gem",
+      "dependencies": [
+        {
+          "name": "ffi",
+          "requirements": "~> 1.1"
+        }
+      ],
+      "ruby_version": ">= 0",
+      "metadata_url": "https://rubygems.org/api/v2/rubygems/sys-proctable/versions/1.3.0.json?platform=ruby"
+    },
+    {
+      "name": "typhoeus",
+      "version": "1.6.0",
+      "platform": "ruby",
+      "sha256": "bacc41c23e379547e29801dc235cd1699b70b955a1ba3d32b2b877aa844c331d",
+      "licenses": [
+        "MIT"
+      ],
+      "gem_uri": "https://rubygems.org/gems/typhoeus-1.6.0.gem",
+      "dependencies": [
+        {
+          "name": "ethon",
+          "requirements": ">= 0.18.0"
+        }
+      ],
+      "ruby_version": ">= 2.6",
+      "metadata_url": "https://rubygems.org/api/v2/rubygems/typhoeus/versions/1.6.0.json?platform=ruby"
+    },
+    {
+      "name": "tzinfo",
+      "version": "2.0.6",
+      "platform": "ruby",
+      "sha256": "8daf828cc77bcf7d63b0e3bdb6caa47e2272dcfaf4fbfe46f8c3a9df087a829b",
+      "licenses": [
+        "MIT"
+      ],
+      "gem_uri": "https://rubygems.org/gems/tzinfo-2.0.6.gem",
+      "dependencies": [
+        {
+          "name": "concurrent-ruby",
+          "requirements": "~> 1.0"
+        }
+      ],
+      "ruby_version": ">= 1.9.3",
+      "metadata_url": "https://rubygems.org/api/v2/rubygems/tzinfo/versions/2.0.6.json?platform=ruby"
+    },
+    {
+      "name": "uri",
+      "version": "1.1.2",
+      "platform": "ruby",
+      "sha256": "89292e98eabbef6248b0a0ed5e7e398e152f83f17560023a6d94a7f492b169fb",
+      "licenses": [
+        "Ruby",
+        "BSD-2-Clause"
+      ],
+      "gem_uri": "https://rubygems.org/gems/uri-1.1.2.gem",
+      "dependencies": [],
+      "ruby_version": ">= 2.5",
+      "metadata_url": "https://rubygems.org/api/v2/rubygems/uri/versions/1.1.2.json?platform=ruby"
+    },
+    {
+      "name": "webrick",
+      "version": "1.9.2",
+      "platform": "ruby",
+      "sha256": "beb4a15fc474defed24a3bda4ffd88a490d517c9e4e6118c3edce59e45864131",
+      "licenses": [
+        "Ruby",
+        "BSD-2-Clause"
+      ],
+      "gem_uri": "https://rubygems.org/gems/webrick-1.9.2.gem",
+      "dependencies": [],
+      "ruby_version": ">= 2.4.0",
+      "metadata_url": "https://rubygems.org/api/v2/rubygems/webrick/versions/1.9.2.json?platform=ruby"
+    },
+    {
+      "name": "websocket-driver",
+      "version": "0.8.2",
+      "platform": "ruby",
+      "sha256": "97c556b019bf3410b4961002ac501621e9322d3f8a7bc02161a09301cc4c4146",
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "gem_uri": "https://rubygems.org/gems/websocket-driver-0.8.2.gem",
+      "dependencies": [
+        {
+          "name": "base64",
+          "requirements": ">= 0"
+        },
+        {
+          "name": "websocket-extensions",
+          "requirements": ">= 0.1.0"
+        }
+      ],
+      "ruby_version": ">= 0",
+      "metadata_url": "https://rubygems.org/api/v2/rubygems/websocket-driver/versions/0.8.2.json?platform=ruby"
+    },
+    {
+      "name": "websocket-extensions",
+      "version": "0.1.5",
+      "platform": "ruby",
+      "sha256": "1c6ba63092cda343eb53fc657110c71c754c56484aad42578495227d717a8241",
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "gem_uri": "https://rubygems.org/gems/websocket-extensions-0.1.5.gem",
+      "dependencies": [],
+      "ruby_version": ">= 0",
+      "metadata_url": "https://rubygems.org/api/v2/rubygems/websocket-extensions/versions/0.1.5.json?platform=ruby"
+    },
+    {
+      "name": "wpscan",
+      "version": "4.1.0",
+      "platform": "ruby",
+      "sha256": "fe467ff867116fe85ab3913297d6acbbbdac815b8e8d4590535564a91eada95e",
+      "licenses": [
+        "Dual"
+      ],
+      "gem_uri": "https://rubygems.org/gems/wpscan-4.1.0.gem",
+      "dependencies": [
+        {
+          "name": "activesupport",
+          "requirements": ">= 7.1, < 8.2"
+        },
+        {
+          "name": "addressable",
+          "requirements": "~> 2.9"
+        },
+        {
+          "name": "ethon",
+          "requirements": ">= 0.14, < 0.19"
+        },
+        {
+          "name": "ferrum",
+          "requirements": "~> 0.8"
+        },
+        {
+          "name": "fiddle",
+          "requirements": "~> 1.1"
+        },
+        {
+          "name": "get_process_mem",
+          "requirements": ">= 0.2.5, < 1.1.0"
+        },
+        {
+          "name": "nokogiri",
+          "requirements": "~> 1.16"
+        },
+        {
+          "name": "ostruct",
+          "requirements": "~> 0.6"
+        },
+        {
+          "name": "public_suffix",
+          "requirements": ">= 4.0.3, < 7.1"
+        },
+        {
+          "name": "ruby-progressbar",
+          "requirements": ">= 1.10, < 1.14"
+        },
+        {
+          "name": "sys-proctable",
+          "requirements": ">= 1.2.2, < 1.4.0"
+        },
+        {
+          "name": "typhoeus",
+          "requirements": ">= 1.3, < 1.7"
+        },
+        {
+          "name": "xmlrpc",
+          "requirements": "~> 0.3"
+        },
+        {
+          "name": "yajl-ruby",
+          "requirements": "~> 1.4.1"
+        }
+      ],
+      "ruby_version": ">= 3.3",
+      "metadata_url": "https://rubygems.org/api/v2/rubygems/wpscan/versions/4.1.0.json?platform=ruby",
+      "reviewed_files": {
+        "lib/wpscan.rb": "bb70a60720739d02427c8c0e9b0b1042377d3ef1d73bdb14598167829d266830",
+        "lib/wpscan/target.rb": "80c0cfeb75997518371677ea2c0c14295ea2ce3a892de99c7d153002f2f999d0",
+        "lib/wpscan/target/platform/wordpress.rb": "9f612c9148ff3fa3213361e5e08306f6cd7a449c8946eb88cb15adf94c7e5f88",
+        "lib/wpscan/web_site.rb": "863791fb6382a1ee39030ce1944305e01d1039a5fd2ed14bb69f7bf626299210",
+        "lib/wpscan/browser.rb": "e6f9ccf322fcc063940f96b4702083c03b5c310d5671b7b6f9499a083ebf0996",
+        "lib/wpscan/browser/actions.rb": "98c829d7a06737754f29e30513744be20eba71325babd21e361d71c70ecaa7c3",
+        "app/controllers/core.rb": "85775359fc0b429cc26ede445a5372866cde93a478a3603c484f1f2b210b0c8a",
+        "app/controllers/core/cli_options.rb": "4ceae834d4b8439bc9e47f2152709316fffd5915d6dc7323bbbb756af0d4cd73",
+        "app/controllers/vuln_api.rb": "c1a3843a16b91b3c99b591c849113917c6c09826dacabe6acf79f897d83971a6",
+        "app/app.rb": "fb17b60318a665c68e9adcd97b4291717bd58f948d47a9c686b8ecd99c7300a2",
+        "bin/wpscan": "34df0cf0c95b9655f78e12cada4e90868184c70391e1297dfa9226fffd060143",
+        "LICENSE": "72eaecf9c3497bb34fb5722eba38a4b3b0ae39235c17378547101b8329b51008"
+      }
+    },
+    {
+      "name": "xmlrpc",
+      "version": "0.3.4",
+      "platform": "ruby",
+      "sha256": "53a2e08dcff82e58f652c88e1d1ad49467ae341b8a2020339c00315112de5442",
+      "licenses": [
+        "Ruby",
+        "BSD-2-Clause"
+      ],
+      "gem_uri": "https://rubygems.org/gems/xmlrpc-0.3.4.gem",
+      "dependencies": [
+        {
+          "name": "rexml",
+          "requirements": ">= 0"
+        },
+        {
+          "name": "webrick",
+          "requirements": ">= 0"
+        }
+      ],
+      "ruby_version": ">= 2.3",
+      "metadata_url": "https://rubygems.org/api/v2/rubygems/xmlrpc/versions/0.3.4.json?platform=ruby"
+    },
+    {
+      "name": "yajl-ruby",
+      "version": "1.4.3",
+      "platform": "ruby",
+      "sha256": "8c974d9c11ae07b0a3b6d26efea8407269b02e4138118fbe3ef0d2ec9724d1d2",
+      "licenses": [
+        "MIT"
+      ],
+      "gem_uri": "https://rubygems.org/gems/yajl-ruby-1.4.3.gem",
+      "dependencies": [],
+      "ruby_version": ">= 2.6.0",
+      "metadata_url": "https://rubygems.org/api/v2/rubygems/yajl-ruby/versions/1.4.3.json?platform=ruby"
+    }
+  ],
+  "platform": "ruby",
+  "schema_version": 1,
+  "component": "wpscan_passive_wordpress_detection",
+  "upstream": {
+    "url": "https://github.com/wpscanteam/wpscan",
+    "version": "4.1.0",
+    "commit": "f6169f00652c07feb45f57ff2a10e38949c28d56",
+    "license": "WPScan Public Source License (dual commercial terms)",
+    "license_sha256": "72eaecf9c3497bb34fb5722eba38a4b3b0ae39235c17378547101b8329b51008",
+    "license_url": "https://raw.githubusercontent.com/wpscanteam/wpscan/f6169f00652c07feb45f57ff2a10e38949c28d56/LICENSE"
+  },
+  "known_preparation_blockers": [
+    {
+      "package": "get_process_mem",
+      "reason": "missing_full_license_notice",
+      "source_commit": "244e0d3ba5cd48d6929591fb4b189abf9685fec6",
+      "source_url": "https://github.com/zombocom/get_process_mem/tree/244e0d3ba5cd48d6929591fb4b189abf9685fec6"
+    }
+  ],
+  "reviewed_upstream_files": [
+    {
+      "path": "lib/wpscan.rb",
+      "sha256": "bb70a60720739d02427c8c0e9b0b1042377d3ef1d73bdb14598167829d266830",
+      "source_url": "https://raw.githubusercontent.com/wpscanteam/wpscan/f6169f00652c07feb45f57ff2a10e38949c28d56/lib/wpscan.rb"
+    },
+    {
+      "path": "lib/wpscan/target.rb",
+      "sha256": "80c0cfeb75997518371677ea2c0c14295ea2ce3a892de99c7d153002f2f999d0",
+      "source_url": "https://raw.githubusercontent.com/wpscanteam/wpscan/f6169f00652c07feb45f57ff2a10e38949c28d56/lib/wpscan/target.rb"
+    },
+    {
+      "path": "lib/wpscan/target/platform/wordpress.rb",
+      "sha256": "9f612c9148ff3fa3213361e5e08306f6cd7a449c8946eb88cb15adf94c7e5f88",
+      "source_url": "https://raw.githubusercontent.com/wpscanteam/wpscan/f6169f00652c07feb45f57ff2a10e38949c28d56/lib/wpscan/target/platform/wordpress.rb"
+    },
+    {
+      "path": "lib/wpscan/web_site.rb",
+      "sha256": "863791fb6382a1ee39030ce1944305e01d1039a5fd2ed14bb69f7bf626299210",
+      "source_url": "https://raw.githubusercontent.com/wpscanteam/wpscan/f6169f00652c07feb45f57ff2a10e38949c28d56/lib/wpscan/web_site.rb"
+    },
+    {
+      "path": "lib/wpscan/browser.rb",
+      "sha256": "e6f9ccf322fcc063940f96b4702083c03b5c310d5671b7b6f9499a083ebf0996",
+      "source_url": "https://raw.githubusercontent.com/wpscanteam/wpscan/f6169f00652c07feb45f57ff2a10e38949c28d56/lib/wpscan/browser.rb"
+    },
+    {
+      "path": "lib/wpscan/browser/actions.rb",
+      "sha256": "98c829d7a06737754f29e30513744be20eba71325babd21e361d71c70ecaa7c3",
+      "source_url": "https://raw.githubusercontent.com/wpscanteam/wpscan/f6169f00652c07feb45f57ff2a10e38949c28d56/lib/wpscan/browser/actions.rb"
+    },
+    {
+      "path": "app/controllers/core.rb",
+      "sha256": "85775359fc0b429cc26ede445a5372866cde93a478a3603c484f1f2b210b0c8a",
+      "source_url": "https://raw.githubusercontent.com/wpscanteam/wpscan/f6169f00652c07feb45f57ff2a10e38949c28d56/app/controllers/core.rb"
+    },
+    {
+      "path": "app/controllers/core/cli_options.rb",
+      "sha256": "4ceae834d4b8439bc9e47f2152709316fffd5915d6dc7323bbbb756af0d4cd73",
+      "source_url": "https://raw.githubusercontent.com/wpscanteam/wpscan/f6169f00652c07feb45f57ff2a10e38949c28d56/app/controllers/core/cli_options.rb"
+    },
+    {
+      "path": "app/controllers/vuln_api.rb",
+      "sha256": "c1a3843a16b91b3c99b591c849113917c6c09826dacabe6acf79f897d83971a6",
+      "source_url": "https://raw.githubusercontent.com/wpscanteam/wpscan/f6169f00652c07feb45f57ff2a10e38949c28d56/app/controllers/vuln_api.rb"
+    },
+    {
+      "path": "app/app.rb",
+      "sha256": "fb17b60318a665c68e9adcd97b4291717bd58f948d47a9c686b8ecd99c7300a2",
+      "source_url": "https://raw.githubusercontent.com/wpscanteam/wpscan/f6169f00652c07feb45f57ff2a10e38949c28d56/app/app.rb"
+    },
+    {
+      "path": "bin/wpscan",
+      "sha256": "34df0cf0c95b9655f78e12cada4e90868184c70391e1297dfa9226fffd060143",
+      "source_url": "https://raw.githubusercontent.com/wpscanteam/wpscan/f6169f00652c07feb45f57ff2a10e38949c28d56/bin/wpscan"
+    }
+  ],
+  "upstream_commit_binding": "reviewed_files_match_exact_commit_not_whole_gem_reproducible_build_claim"
+}

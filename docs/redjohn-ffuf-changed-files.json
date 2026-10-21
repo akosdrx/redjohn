@@ -1,0 +1,497 @@
+{
+  "recorded_at": "2026-10-17T16:30:52.862217+00:00",
+  "basis": "Changes in this ffuf/assessment-viewer stage; inherited Git restructuring is not task deletion. Generated before-images retained in recoverable Trash.",
+  "files": [
+    {
+      "path": ".github/workflows/redjohn-remote-egress.yml",
+      "status": "modified",
+      "sha256": "9e24db6aa3702c832a391a46399acb4056e64d52e95c6b011252964ba0764bf1",
+      "before_sha256": "058a6c6e0a028a41c816f9da62c2e6ee74c37e4d64c477b846d2f455245b42e9"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "status": "modified",
+      "sha256": "88f08c4b00c2e707eb234e8363b96ccd1e530ae72e10419c929cdd6c10114e07"
+    },
+    {
+      "path": "README.md",
+      "status": "modified",
+      "sha256": "10579e579341757c69f35a6c4913fc8c742758301205154fdc788bbbcfbff99c"
+    },
+    {
+      "path": "RedJohn/README.md",
+      "status": "modified",
+      "sha256": "cd216ac3b648e7b43081503356aae2d7bc6fcee9011268e72887c58ac1df1103"
+    },
+    {
+      "path": "RedJohn/docs/ffuf-discovery.md",
+      "status": "added",
+      "sha256": "9b4bfd939f5e4f12c9a78efebe8e6ada053e8d682c593d2aac955d979fc7fa2b"
+    },
+    {
+      "path": "RedJohn/docs/redjohn-skill-coverage.md",
+      "status": "modified",
+      "sha256": "3e33f3705bef314899e010df2ae612ee51fce5bb2d60bd14491b63ab128a9d61"
+    },
+    {
+      "path": "RedJohn/examples/assessment-ffuf.json",
+      "status": "added",
+      "sha256": "db4df608858dafffa13c234ff150fc17ab7189a30bc2702922df2ba7ed2bb01e"
+    },
+    {
+      "path": "RedJohn/redjohn/assessment/browser_proxy.py",
+      "status": "modified",
+      "sha256": "e36cbae15c48848adceb6e1b5ca237e1a5e70fa218bf936035986c06921d2e99",
+      "before_sha256": "7c1dc3faada8d7ad04dd40d6272f9857a85d0a94dc864460f8b3f9190d424ddb"
+    },
+    {
+      "path": "RedJohn/redjohn/assessment/cli.py",
+      "status": "modified",
+      "sha256": "b475faf1ea79ff0a1e561510a49346cbaffbea51ebff02f053be83e0f8a23f91",
+      "before_sha256": "02b9d34c3986b4b1493377cd4e5473467a235bd506e2f3f5c00a2350f0400ab0"
+    },
+    {
+      "path": "RedJohn/redjohn/assessment/ffuf.py",
+      "status": "added",
+      "sha256": "af2646daf93f3179eabf105d9b211a0c3b0c53c5c8e929b802898d44aabd87a5"
+    },
+    {
+      "path": "RedJohn/redjohn/assessment/registry.py",
+      "status": "modified",
+      "sha256": "61a4c099c542c90017c9831c82551c1fa0dc33e73132c63682cfa3c60945fdb2",
+      "before_sha256": "9b1e87ca5cac32de3bffc10719a165e3bcfbd4eb002d2ece7e4e71fb3256a76c"
+    },
+    {
+      "path": "RedJohn/redjohn/assessment/report.py",
+      "status": "modified",
+      "sha256": "2c09fed86c96a642a8e4a38af2b845f2498585703be0d9ad50f949516d4c0043",
+      "before_sha256": "d6eb0d521ab707d79771c1bc9375f6d9fb86b1a01428ff7c3ae3442013c0d72b"
+    },
+    {
+      "path": "RedJohn/redjohn/assessment/runtime.py",
+      "status": "modified",
+      "sha256": "bc1597fa68c445011fea57c569fec340624ef47127dc37d0d6eebe08b927d347",
+      "before_sha256": "9208bb59b8d283350e198895ba2956649c655fe31d57f99e435d5b16d85d1ff4"
+    },
+    {
+      "path": "RedJohn/redjohn/assessment/scheduler.py",
+      "status": "modified",
+      "sha256": "2391e413a69e3c78d95f8f2a3c8f5bb55385fef99c9dd34914692f542ff26920",
+      "before_sha256": "3ae4f8859eed9ec2edfb308004f662488ed765f16e9b857001d1f09a7a72640f"
+    },
+    {
+      "path": "RedJohn/redjohn/assessment/store.py",
+      "status": "modified",
+      "sha256": "5398a050a4d43788fa866c862ab08f4f37d6a081f5ffacc1017262992ba769d8",
+      "before_sha256": "f19e1c1b265697036cbdd22f7b61b1612d321e52c2a13fe8ce85bcc98bbfac2a"
+    },
+    {
+      "path": "RedJohn/redjohn/interface/tui/backend/controller.py",
+      "status": "modified",
+      "sha256": "0bc8d959d999176e7add2479edb7b6c433d6f0953cbcfdfae0d170d2d40b9851",
+      "before_sha256": "4d81d74391e19cb94645a3874e05369dd54d165c440eb31bdd1bb61572c75b64"
+    },
+    {
+      "path": "RedJohn/redjohn/interface/tui/backend/projection.py",
+      "status": "modified",
+      "sha256": "03fff26fddd06b5a78482852cae986c877e40483d71aee0e9c845432c73fb2f7",
+      "before_sha256": "20506953de5ce553d5d33be0333985aaffdc0b96ab169c1de92110350859e97f"
+    },
+    {
+      "path": "RedJohn/redjohn/interface/tui/internal/app/setup.go",
+      "status": "modified",
+      "sha256": "68d05a06f379da77a2c9c3455bdd758c0dc965c394e135083955487a9f365a0f",
+      "before_sha256": "49c5f26bdef124a4adab3bcf6811e8e295d8a91f5666ca441cbd08fd408c38a0"
+    },
+    {
+      "path": "RedJohn/redjohn/interface/tui/internal/app/view.go",
+      "status": "modified",
+      "sha256": "c8ac79fadd1a596f9fe9d74fa9d2d5e2b89036119554acc9fe4a7ae4563b49b8",
+      "before_sha256": "a35a6887b22dbd4314ef964f6fd96a7e1dfd346daa648fd7b3e248161feb2391"
+    },
+    {
+      "path": "RedJohn/redjohn/interface/tui/internal/protocol/protocol.go",
+      "status": "modified",
+      "sha256": "731863789616d287dd050c552cb99351ce44cf93dc23cea9c23702dd32261fba",
+      "before_sha256": "37a55b24edd455c0144f78caeadb1e0ea91713a06190ce73d2e1959f6b4f7f3b"
+    },
+    {
+      "path": "RedJohn/redjohn/interface/viewer/assessment.py",
+      "status": "added",
+      "sha256": "acc9c70a668b1c347e0960726076dd332d0370cc95f4c92760203144a328fa20"
+    },
+    {
+      "path": "RedJohn/redjohn/interface/viewer/cli.py",
+      "status": "modified",
+      "sha256": "c1b7be46e60284f69199fa2515b1432c2c840c6ae6782e2d8ed7b5192bd33970",
+      "before_sha256": "582f7354e42831155159f4fca51504801dea94365e36cf41212d073eac4c43d3"
+    },
+    {
+      "path": "RedJohn/redjohn/interface/viewer/frontend/src/App.tsx",
+      "status": "modified",
+      "sha256": "5907aad1069de9fde84bdd83c777852ae41e8d1f7a7f71973a37d219085b7b37",
+      "before_sha256": "bf79566944eb8a2ce93893adb859030ac3021736e6bf387207d07a7783291505"
+    },
+    {
+      "path": "RedJohn/redjohn/interface/viewer/frontend/src/components/AssessmentOverview.tsx",
+      "status": "added",
+      "sha256": "890b30752193572acb11e582bb57aaf71c609092518b6db59e75eadc87033eaa"
+    },
+    {
+      "path": "RedJohn/redjohn/interface/viewer/server.py",
+      "status": "modified",
+      "sha256": "2e4dea85c5f560d439b81e7e9265b6516512444a871dba887a1ca81cf27a6d54",
+      "before_sha256": "28ac6b16626cd0f4a36a2011c4f106e586a5673140e50b911e893cb648106feb"
+    },
+    {
+      "path": "RedJohn/redjohn/interface/viewer/static/assets/index-C9_dRRm-.js",
+      "status": "modified",
+      "sha256": "d8e8bdfac722e06202b405a53d52777009917d5cba8e4e740b4b2065814d1322"
+    },
+    {
+      "path": "RedJohn/redjohn/interface/viewer/static/assets/index-DfK19Aj0.css",
+      "status": "modified",
+      "sha256": "8c2ef621ffba983f8e7e30dcdbfd4cd4fb51f946417e8bc70b50df9746a16974"
+    },
+    {
+      "path": "RedJohn/redjohn/interface/viewer/static/index.html",
+      "status": "modified",
+      "sha256": "efdeefdbdfe193ec5d6f3eff571e37e9878f5d1ff2e9cf6488927ab1f1e37758"
+    },
+    {
+      "path": "RedJohn/redjohn/interface/viewer/transcript.py",
+      "status": "modified",
+      "sha256": "0c9d65beacd301ead5cd18d17b78ed65a179d916c8a56305e619d679e6a4cc57",
+      "before_sha256": "493e7bddfc3d6da510a2a9ec65ce74c5cdd84c1ff3b363c58a1ec9bd6b82ea77"
+    },
+    {
+      "path": "RedJohn/redjohn/skills/assessment/manifest.json",
+      "status": "modified",
+      "sha256": "4a09bd9bfb75fb122d60e9193fa22bd47a3c8bfb29936a34cd735635c16bb806",
+      "before_sha256": "832b568276a713354a66a4ef0aa1f0dc8ce17ba882cc9f4a5d32e5536e7bbeff"
+    },
+    {
+      "path": "RedJohn/redjohn/skills/assessment/web-surface-inventory/SKILL.md",
+      "status": "modified",
+      "sha256": "69ca6cf1140422bc17abc0c8395dcf89acab3580bb438cc30635d99716ed08e5",
+      "before_sha256": "015cc4fa7dd3949c021471da23a493d059cf95fa2f6ae87b307d1a0161345d88"
+    },
+    {
+      "path": "RedJohn/scripts/install-ffuf-pinned.py",
+      "status": "added",
+      "sha256": "fcdc80ba68313b7accbd5875653673b9e0467b6996ecbb68d56a3a41d5a2764c"
+    },
+    {
+      "path": "RedJohn/tests/test_ffuf_cli_live.py",
+      "status": "added",
+      "sha256": "943c41b6aa35fe14aea2acebf5197f645c37cfa2b630d7c0fe54cb905112865b"
+    },
+    {
+      "path": "RedJohn/tests/test_ffuf_contract.py",
+      "status": "added",
+      "sha256": "2a4951d28e972e50d76f73d18a67f2079a4ec312410d120c94401df4336ac995"
+    },
+    {
+      "path": "RedJohn/tests/test_ffuf_live.py",
+      "status": "added",
+      "sha256": "a1209b44bd9bbb234f13d9b7a12bc983a7ce1db4ceecb180306242fc5a7b17a6"
+    },
+    {
+      "path": "RedJohn/tests/test_viewer_assessment.py",
+      "status": "added",
+      "sha256": "e7b09d21b92ea444d9ca68d43a8fcf6ddd2b00905f076e132301a17ca3918320"
+    },
+    {
+      "path": "docs/measurements/ffuf-discovery/cleanup.json",
+      "status": "added",
+      "sha256": "b63516906b20a222e5d3856751425ade77b44f04595efda9e97fa394926f871c"
+    },
+    {
+      "path": "docs/measurements/ffuf-discovery/cli-capture.json",
+      "status": "added",
+      "sha256": "7974a7b8e39b0bd7a664f64f2abae6fd5d2f18575208306b54043afa6d23cf65"
+    },
+    {
+      "path": "docs/measurements/ffuf-discovery/cli-screen.txt",
+      "status": "added",
+      "sha256": "3d4af7d1fcdb3540a5fb856679475a6d040ed041bce7676b33fda2e4cb6c028a"
+    },
+    {
+      "path": "docs/measurements/ffuf-discovery/ffuf-e2e-macos.json",
+      "status": "added",
+      "sha256": "a401a55ebcc9aaba980a101f389b128f25260b2517ef3dfaf2ab7e69a056f4cd"
+    },
+    {
+      "path": "docs/measurements/ffuf-discovery/ffuf-install-macos.json",
+      "status": "added",
+      "sha256": "19e7ad24fd5a7c70368b6a4ab7b158deae7234b5ecf08167ff08e401548cb733"
+    },
+    {
+      "path": "docs/measurements/ffuf-discovery/go-test.txt",
+      "status": "added",
+      "sha256": "42952d0b99d8ab8a13ec873bcca334c73ca7177fb07f0e74cd2084f46bd93ebe"
+    },
+    {
+      "path": "docs/measurements/ffuf-discovery/go-vet.txt",
+      "status": "added",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/measurements/ffuf-discovery/linux/auth-e2e.json",
+      "status": "added",
+      "sha256": "7f672a5756a6d110c43833acc87304149c96e2cfa83043ece1a3e439365c978c"
+    },
+    {
+      "path": "docs/measurements/ffuf-discovery/linux/automatic-session-e2e.json",
+      "status": "added",
+      "sha256": "287d752d387b52549097be3ca63a8f93396a04fc77040613077a74d019ee2343"
+    },
+    {
+      "path": "docs/measurements/ffuf-discovery/linux/browser-token-e2e.json",
+      "status": "added",
+      "sha256": "ebfedd916c2db81ab38e3306f27de65ac276c43eabecb98dad0bfc50ab34c009"
+    },
+    {
+      "path": "docs/measurements/ffuf-discovery/linux/continuous-refresh-e2e.json",
+      "status": "added",
+      "sha256": "e25e525359c5c14efce2d6aae1e869dce220b28cae7207e251f2ca711faf003b"
+    },
+    {
+      "path": "docs/measurements/ffuf-discovery/linux/ffuf-e2e-loopback.json",
+      "status": "added",
+      "sha256": "490d7c4ae7be28ed8861b95621025cdf2d1d174e0db601a49067d72166a70df4"
+    },
+    {
+      "path": "docs/measurements/ffuf-discovery/linux/ffuf-e2e-remote.json",
+      "status": "added",
+      "sha256": "99c46d2995dbb87274d7b6ca91c7fa1dd2f9679429dd88c828e72776fbe7f36f"
+    },
+    {
+      "path": "docs/measurements/ffuf-discovery/linux/ffuf-install.json",
+      "status": "added",
+      "sha256": "35b645d16d5d5dc9aa810b57add45870438aeeba318c94078a958d5a269e318b"
+    },
+    {
+      "path": "docs/measurements/ffuf-discovery/linux/https-e2e.json",
+      "status": "added",
+      "sha256": "fc8345cfd95c2f951caf611cf14700545fdac223388ea242abcc4f8d9208504c"
+    },
+    {
+      "path": "docs/measurements/ffuf-discovery/linux/linux-tests.junit.xml",
+      "status": "added",
+      "sha256": "3949cf7228cba1f1bb2bb217907ec1791f2643a2169e0e172f6f164a5cd285c4"
+    },
+    {
+      "path": "docs/measurements/ffuf-discovery/linux/linux-tests.txt",
+      "status": "added",
+      "sha256": "6d149849ca3f1d2f349cd9fbb7319692ab5f32062adffb49ab5e486551195318"
+    },
+    {
+      "path": "docs/measurements/ffuf-discovery/linux/mypy-linux.txt",
+      "status": "added",
+      "sha256": "0b5d5a807d3679e8b4f2b9a6ccee376a628832ef95f0bc00f40cbeef51193c04"
+    },
+    {
+      "path": "docs/measurements/ffuf-discovery/linux/nuclei-install.json",
+      "status": "added",
+      "sha256": "9f8a3db28904d55fbfcb4a3c63ceaa6a510ea8773de87eebed27e52ebf4daf7a"
+    },
+    {
+      "path": "docs/measurements/ffuf-discovery/linux/nuclei-live.json",
+      "status": "added",
+      "sha256": "5fb405289c4b08d342a0204220cf7287eaa8d81c0b19d3fdafb1c217684240fb"
+    },
+    {
+      "path": "docs/measurements/ffuf-discovery/linux/post-nuclei-live.json",
+      "status": "added",
+      "sha256": "ff4a88eb9113d49a778b6bb2c571e47d9f3626a1fe937678e4a910a678b041bc"
+    },
+    {
+      "path": "docs/measurements/ffuf-discovery/linux/post-refresh-e2e.json",
+      "status": "added",
+      "sha256": "6b70cb4efd2538fa624000fc4be6ab1bb85a9afb08a85e0d69d0f7fe0f06c9e1"
+    },
+    {
+      "path": "docs/measurements/ffuf-discovery/linux/process-cleanup.json",
+      "status": "added",
+      "sha256": "45e3dc7b665a88409778043cc71c601da82429faff6a85f3439f30895f1f445e"
+    },
+    {
+      "path": "docs/measurements/ffuf-discovery/linux/remote-auth-e2e.json",
+      "status": "added",
+      "sha256": "776126e10668df282efb622e2a34a83fbb50d91d5b8167337b140229126930e1"
+    },
+    {
+      "path": "docs/measurements/ffuf-discovery/linux/runtime.json",
+      "status": "added",
+      "sha256": "45a44700799345573d7671d9bdf2247f4dd92ac8824e07a72558d5000296c6af"
+    },
+    {
+      "path": "docs/measurements/ffuf-discovery/linux/source-verification-after.json",
+      "status": "added",
+      "sha256": "385732148059b5fa9d41b04b088d556b47eb608f95d56d6727962b55eb2a5230"
+    },
+    {
+      "path": "docs/measurements/ffuf-discovery/linux/source-verification.json",
+      "status": "added",
+      "sha256": "e4971b8d24081376ff50ee037f4d601ec35e7d7f7cb17f0371e88f9949c2370c"
+    },
+    {
+      "path": "docs/measurements/ffuf-discovery/mac-tests.junit.xml",
+      "status": "added",
+      "sha256": "cc9739d287db17b6a6b74f07f7037d59ffb0d779056153150df4239cb9c2f515"
+    },
+    {
+      "path": "docs/measurements/ffuf-discovery/mac-tests.txt",
+      "status": "added",
+      "sha256": "20756ee6c73e33849a648531aea0ecde78d890b3bbde987c0866f1dad8717405"
+    },
+    {
+      "path": "docs/measurements/ffuf-discovery/macos-skip-resolution.json",
+      "status": "added",
+      "sha256": "8bd1e3ea59448d9b9852d65981c29ae742c67192baf83e08787eb618a2789458"
+    },
+    {
+      "path": "docs/measurements/ffuf-discovery/mypy-macos.txt",
+      "status": "added",
+      "sha256": "0b5d5a807d3679e8b4f2b9a6ccee376a628832ef95f0bc00f40cbeef51193c04"
+    },
+    {
+      "path": "docs/measurements/ffuf-discovery/preservation.json",
+      "status": "added",
+      "sha256": "e9d32afb06602eb8e4bf1f2ad366cae68622ed867944526a28d49d0eeb50e8a5"
+    },
+    {
+      "path": "docs/measurements/ffuf-discovery/preview-assessment/assessment-report.json",
+      "status": "added",
+      "sha256": "2e52098aa0812a653ea027ec6d72fd9be59c0f9b393fec6e169a9fa962b76ba8"
+    },
+    {
+      "path": "docs/measurements/ffuf-discovery/ruff.txt",
+      "status": "added",
+      "sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+    },
+    {
+      "path": "docs/measurements/ffuf-discovery/tui-capture.json",
+      "status": "added",
+      "sha256": "d997221931791b185984da9a33f6a3ecb74ebd08746cb773379e1b8991636d74"
+    },
+    {
+      "path": "docs/measurements/ffuf-discovery/tui-screen.txt",
+      "status": "added",
+      "sha256": "b2670b1a5dc75150e03d5c30f978ad88ea36fec84405bf87cedba416d21c53f6"
+    },
+    {
+      "path": "docs/measurements/ffuf-discovery/typescript.txt",
+      "status": "added",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/measurements/ffuf-discovery/verification-summary.json",
+      "status": "added",
+      "sha256": "e4e88df3c2ec011c5969b0773d296ed99f1e383cad907dffb9fbee12abef2b38"
+    },
+    {
+      "path": "docs/measurements/ffuf-discovery/verified-source-hashes.json",
+      "status": "added",
+      "sha256": "ad8d2ae942e70a9bd3c8d865dbcf2a3ca7e243b4b243cbe99e9540d05f796e70"
+    },
+    {
+      "path": "docs/measurements/ffuf-discovery/viewer-build.txt",
+      "status": "added",
+      "sha256": "11595bccdc97890ea546760ea16acd7152a953b773567f088362975dd5f34db2"
+    },
+    {
+      "path": "docs/measurements/ffuf-discovery/vm-isolation-and-deletion.json",
+      "status": "added",
+      "sha256": "e547b989da94aa178f2e1689f0868f78ecba4455596e9cc5b3b3c6315381c28e"
+    },
+    {
+      "path": "docs/measurements/ffuf-discovery/web-capture.json",
+      "status": "added",
+      "sha256": "a9fc21abc5505d9cbf2d6c37fb12f2fc956ad292bb4e365a655501f3b0ef2a54"
+    },
+    {
+      "path": "docs/redjohn-architecture.md",
+      "status": "modified",
+      "sha256": "036c8e69c2d856d4c9c8074116d255b53669445fe2c58fbaafc10e813aeb4cc2"
+    },
+    {
+      "path": "docs/redjohn-capabilities.json",
+      "status": "modified",
+      "sha256": "1646826a82cd54d14a1386e69f6bfed7ee63ab5db9371f84e819e8cf0763bc09"
+    },
+    {
+      "path": "docs/redjohn-capabilities.md",
+      "status": "modified",
+      "sha256": "6b0361261fcbce9b19da30ee30ce31a57a9aff733fe1c05111b54011f5aa36b6"
+    },
+    {
+      "path": "docs/redjohn-changed-files.md",
+      "status": "modified",
+      "sha256": "d552a92a103019918efef7d12e1ca1855cf3f717845dac87951b06358162b440"
+    },
+    {
+      "path": "docs/redjohn-ffuf-verification.md",
+      "status": "added",
+      "sha256": "3efafa71a87143fc217cacd551101190db3979d63bbb423dd63f45f170859290"
+    },
+    {
+      "path": "docs/redjohn-implementation-audit.md",
+      "status": "modified",
+      "sha256": "6858b608d27bdbbce8e3e37dc486308063cec80961ea73da05a8957e297691ce"
+    },
+    {
+      "path": "docs/redjohn-requirements.md",
+      "status": "modified",
+      "sha256": "510c866e913c2822e5298cdb4092f295e69901ac6764777d682a117dfe478517"
+    },
+    {
+      "path": "docs/redjohn-runbook.md",
+      "status": "modified",
+      "sha256": "58718f10b13bf10337c3dbd5d89f8f8df643b37447efd7c1cc276737385f3f86"
+    },
+    {
+      "path": "docs/screenshots/redjohn-cli.png",
+      "status": "added",
+      "sha256": "3b54abec8ac4f51e83ec784da1a39fc4b4cc6b6a37ac0861edfeffea3edc8818"
+    },
+    {
+      "path": "docs/screenshots/redjohn-tui.png",
+      "status": "added",
+      "sha256": "df82aa60b627e69193cc263546d7009751f6fde529cc1699002d07ee0580de78"
+    },
+    {
+      "path": "docs/screenshots/redjohn-web-view-mobile.png",
+      "status": "added",
+      "sha256": "5bda51f692c9cd19f0d6a59bd8419047805226c2245dbf760e3fd247478a00bd"
+    },
+    {
+      "path": "docs/screenshots/redjohn-web-view.png",
+      "status": "added",
+      "sha256": "2bc16715504cc11969de1b8e444528be6d9b0df90d4a89209b339a3c48527083"
+    },
+    {
+      "path": "docs/third-party-references.json",
+      "status": "modified",
+      "sha256": "c508cef1de0687173026218ec52b6595b3c0e1a62d1f8bdad3ab524b3b240df9"
+    },
+    {
+      "path": "RedJohn/redjohn/interface/viewer/static/assets/index-CCrdRleN.js",
+      "status": "replaced_generated_asset",
+      "before_sha256": "5f893919c1e046ce8835bf918a22dd9d06048e156a5a9b8ad7a8d0435433e4a1",
+      "recoverable_before_image": "/Users/akosdrx/.Trash/redjohn-ffuf-generated-20261017T162937Z/0-redjohn-ffuf-baseline/static-before"
+    },
+    {
+      "path": "RedJohn/redjohn/interface/viewer/static/assets/index-CrLE9rrV.css",
+      "status": "replaced_generated_asset",
+      "before_sha256": "0f2380ae7f348a4f5be45980f9c29e4ca46316960dc3372587626bca2256cbd3",
+      "recoverable_before_image": "/Users/akosdrx/.Trash/redjohn-ffuf-generated-20261017T162937Z/0-redjohn-ffuf-baseline/static-before"
+    },
+    {
+      "path": "docs/measurements/ffuf-discovery/final-verification.json",
+      "status": "added",
+      "sha256": "b765c368198ea58956531bb1fdcf4010c229d60baf9d421d94eec84910d76317"
+    }
+  ]
+}

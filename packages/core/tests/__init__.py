@@ -1,1 +1,0 @@
-"""RedJohn Core test suite."""

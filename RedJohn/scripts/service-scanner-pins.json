@@ -1,0 +1,12 @@
+{
+  "nmap": {
+    "version": "7.992",
+    "source_commit": "0ee561663c1d7d2d4e708cd414dccfd3d9df30d9",
+    "source_url": "https://codeload.github.com/nmap/nmap/tar.gz/0ee561663c1d7d2d4e708cd414dccfd3d9df30d9",
+    "source_sha256": "4d43d8cad701d13da94610bc956d3df5c146c43820f74fac103ca8b847067172",
+    "source_archive_bytes": 16805013,
+    "license": "Nmap Public Source License 0.95",
+    "license_sha256": "9d9a9a763c0e6145172cfe7d8483e23b38ce60b6c79a82e4894242917bdae6d3",
+    "source_directory": "nmap-0ee561663c1d7d2d4e708cd414dccfd3d9df30d9"
+  }
+}

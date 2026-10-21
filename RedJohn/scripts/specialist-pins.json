@@ -1,0 +1,106 @@
+{
+  "arjun": {
+    "version": "2.2.7",
+    "commit": "1b11c3574e1e173b47990e7d914f0c183986ec32",
+    "source_url": "https://codeload.github.com/s0md3v/Arjun/tar.gz/1b11c3574e1e173b47990e7d914f0c183986ec32",
+    "source_sha256": "751e3717779a3258f49d84b7ed19081ac2cb4e34fe35cfccc04995ba5afa49be",
+    "license": "AGPL-3.0 (LICENSE); setup.py contains conflicting GPLv3 metadata",
+    "dependencies": [
+      {
+        "name": "requests",
+        "version": "2.34.2",
+        "url": "https://files.pythonhosted.org/packages/a0/f4/c67b0b3f1b9245e8d266f0f112c500d50e5b4e83cb6f3b71b6528104182a/requests-2.34.2-py3-none-any.whl",
+        "sha256": "2a0d60c172f83ac6ab31e4554906c0f3b3588d37b5cb939b1c061f4907e278e0",
+        "filename": "requests-2.34.2-py3-none-any.whl",
+        "license_metadata": "Apache-2.0",
+        "metadata_url": "https://pypi.org/pypi/requests/2.34.2/json"
+      },
+      {
+        "name": "urllib3",
+        "version": "2.6.3",
+        "url": "https://files.pythonhosted.org/packages/39/08/aaaad47bc4e9dc8c725e68f9d04865dbcb2052843ff09c97b08904852d84/urllib3-2.6.3-py3-none-any.whl",
+        "sha256": "bf272323e553dfb2e87d9bfd225ca7b0f467b919d7bbd355436d3fd37cb0acd4",
+        "filename": "urllib3-2.6.3-py3-none-any.whl",
+        "license_metadata": "MIT",
+        "metadata_url": "https://pypi.org/pypi/urllib3/2.6.3/json"
+      },
+      {
+        "name": "certifi",
+        "version": "2026.2.25",
+        "url": "https://files.pythonhosted.org/packages/9a/3c/c17fb3ca2d9c3acff52e30b309f538586f9f5b9c9cf454f3845fc9af4881/certifi-2026.2.25-py3-none-any.whl",
+        "sha256": "027692e4402ad994f1c42e52a4997a9763c646b73e4096e4d5d6db8af1d6f0fa",
+        "filename": "certifi-2026.2.25-py3-none-any.whl",
+        "license_metadata": "MPL-2.0",
+        "metadata_url": "https://pypi.org/pypi/certifi/2026.2.25/json"
+      },
+      {
+        "name": "charset-normalizer",
+        "version": "3.4.4",
+        "url": "https://files.pythonhosted.org/packages/0a/4c/925909008ed5a988ccbb72dcc897407e5d6d3bd72410d69e051fc0c14647/charset_normalizer-3.4.4-py3-none-any.whl",
+        "sha256": "7a32c560861a02ff789ad905a2fe94e3f840803362c84fecf1851cb4cf3dc37f",
+        "filename": "charset_normalizer-3.4.4-py3-none-any.whl",
+        "license_metadata": "MIT",
+        "metadata_url": "https://pypi.org/pypi/charset-normalizer/3.4.4/json"
+      },
+      {
+        "name": "idna",
+        "version": "3.11",
+        "url": "https://files.pythonhosted.org/packages/0e/61/66938bbb5fc52dbdf84594873d5b51fb1f7c7794e9c0f5bd885f30bc507b/idna-3.11-py3-none-any.whl",
+        "sha256": "771a87f49d9defaf64091e6e6fe9c18d4833f140bd19464795bc32d966ca37ea",
+        "filename": "idna-3.11-py3-none-any.whl",
+        "license_metadata": "BSD-3-Clause",
+        "metadata_url": "https://pypi.org/pypi/idna/3.11/json"
+      },
+      {
+        "name": "dicttoxml",
+        "version": "1.7.16",
+        "url": "https://files.pythonhosted.org/packages/09/40/9d521973cae7f7ef8b1f0d0e28a3db0f851c1f1dca45d4c2ed5360bb7246/dicttoxml-1.7.16-py3-none-any.whl",
+        "sha256": "8677671496d0d38e66c7179f82a7e9059f94887777955dc71b0ac602ee637c26",
+        "filename": "dicttoxml-1.7.16-py3-none-any.whl",
+        "license_metadata": "GPL-2.0; full license text retained in the pinned dependency wheel",
+        "metadata_url": "https://pypi.org/pypi/dicttoxml/1.7.16/json"
+      },
+      {
+        "name": "ratelimit",
+        "version": "2.2.1",
+        "url": "https://files.pythonhosted.org/packages/ab/38/ff60c8fc9e002d50d48822cc5095deb8ebbc5f91a6b8fdd9731c87a147c9/ratelimit-2.2.1.tar.gz",
+        "sha256": "af8a9b64b821529aca09ebaf6d8d279100d766f19e90b5059ac6a718ca6dee42",
+        "filename": "ratelimit-2.2.1.tar.gz",
+        "license_metadata": "MIT",
+        "metadata_url": "https://pypi.org/pypi/ratelimit/2.2.1/json"
+      }
+    ]
+  },
+  "sqlmap": {
+    "version": "1.10.10",
+    "commit": "65b6e7b4acb13a736614a1ab73b0908476f3c24a",
+    "source_url": "https://codeload.github.com/sqlmapproject/sqlmap/tar.gz/65b6e7b4acb13a736614a1ab73b0908476f3c24a",
+    "source_sha256": "743f1a9ea52f933486a3cb4c4f8c97d4957ad894337e299e387065bd87c5f584",
+    "license": "GPL-2.0-or-later with upstream clarifications and exceptions (LICENSE)"
+  },
+  "dalfox": {
+    "version": "3.2.4",
+    "commit": "da19527f9c82d8525e911ca3669fc456daeb50f2",
+    "license": "MIT",
+    "assets": {
+      "dalfox-v3.2.4-linux-aarch64-musl.tar.gz": {
+        "url": "https://github.com/hahwul/dalfox/releases/download/v3.2.4/dalfox-v3.2.4-linux-aarch64-musl.tar.gz",
+        "sha256": "fd56b0b7da2d06868cd73b504f41d21314629feffcd5bdc97718db1c9dd2fa70"
+      },
+      "dalfox-v3.2.4-linux-x86_64-musl.tar.gz": {
+        "url": "https://github.com/hahwul/dalfox/releases/download/v3.2.4/dalfox-v3.2.4-linux-x86_64-musl.tar.gz",
+        "sha256": "c11cfd2f8261973f0a2a2a1eba5a147ce77712a29acfa6343f9847fb8bb7eca2"
+      },
+      "dalfox-v3.2.4-macos-aarch64.tar.gz": {
+        "url": "https://github.com/hahwul/dalfox/releases/download/v3.2.4/dalfox-v3.2.4-macos-aarch64.tar.gz",
+        "sha256": "e03a0b7ba7617c4b17b4467eba760289a3ed689d0363119bde466152ffbecab0"
+      },
+      "dalfox-v3.2.4-macos-x86_64.tar.gz": {
+        "url": "https://github.com/hahwul/dalfox/releases/download/v3.2.4/dalfox-v3.2.4-macos-x86_64.tar.gz",
+        "sha256": "e10916b975ab6e3c8845ec689351372979085098db5cdc5c85bec537d5711731"
+      }
+    },
+    "source_url": "https://codeload.github.com/hahwul/dalfox/tar.gz/da19527f9c82d8525e911ca3669fc456daeb50f2",
+    "source_sha256": "c2f7f7c46f1d15f406a54fcf80a748cd3d4f7b2cc09d3610bd419775c32c1d57"
+  }
+}

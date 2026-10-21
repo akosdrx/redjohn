@@ -6,10 +6,13 @@ node_modules/
 .env
 .DS_Store
 .venv/
+RedJohn/.venv/
 __pycache__/
 *.pyc
 .pytest_cache/
+.mypy_cache/
 .ruff_cache/
+.mimosa/
 *.egg-info/
 /build/
 /coverage/
@@ -23,7 +26,9 @@ resources/tools/
 resources/.tool-downloads/
 resources/.electron-cache/
 resources/.tools-build-*/
-rj-linux-desktop/.build/
-rj-linux-desktop/.bootstrap/
-rj-linux-desktop/release/
-strix_runs/
+.build-linux/
+.bootstrap/
+redjohn_runs/
+RedJohn/.tools/
+/artifacts/
+/.ci-state/

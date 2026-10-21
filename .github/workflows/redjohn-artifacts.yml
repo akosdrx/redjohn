@@ -1,0 +1,164 @@
+name: RedJohn offline artifact E2E
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: redjohn-artifacts-${{ github.repository }}-${{ github.sha }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  artifacts:
+    name: Offline artifact E2E Ubuntu 24.04 ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        include:
+          - arch: x64
+            runner: ubuntu-24.04
+            runner_arch: X64
+            python: '3.13.16'
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+            runner_arch: ARM64
+            python: '3.12.3'
+    env:
+      PYTHONPATH: ${{ github.workspace }}/RedJohn:${{ github.workspace }}/.github/scripts
+      REDJOHN_TELEMETRY: '0'
+      OPENAI_AGENTS_DISABLE_TRACING: '1'
+      REDJOHN_REQUIRE_ARTIFACT_E2E: '1'
+      REDJOHN_REQUIRE_WORDPRESS_OBSERVE_E2E: '1'
+      REDJOHN_REQUIRE_SOURCE_SCANNER_E2E: '1'
+      REDJOHN_REQUIRE_OS_MEMORY: '1'
+      REDJOHN_TEST_CGROUP_ROOT: /sys/fs/cgroup/redjohn-ci-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.runner_arch }}
+      REDJOHN_CI_APPARMOR_PROFILE: redjohn-ci-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.runner_arch }}
+      REDJOHN_CI_CAPABILITIES: ${{ github.workspace }}/artifacts/capabilities.json
+      REDJOHN_RESOURCE_POOL_PATH: ${{ github.workspace }}/.ci-state/artifact-resources.sqlite3
+      REDJOHN_OS_MEMORY_MEASUREMENTS: ${{ github.workspace }}/artifacts/os-memory
+      REDJOHN_DNS_FIXTURE_NAME: redjohn-owned-fixture.test
+      GOMAXPROCS: '2'
+      GOTOOLCHAIN: local
+    steps:
+      - name: Check out the exact artifact E2E commit
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - name: Set up pinned Python and pip cache
+        id: python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: |
+            .github/requirements-ci.lock
+            RedJohn/requirements-assessment.lock
+            RedJohn/pyproject.toml
+      - name: Set up pinned Go and dependency cache for the official DB builder
+        id: go
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version: '1.25.1'
+          cache-dependency-path: |
+            RedJohn/redjohn/interface/tui/go.sum
+            RedJohn/redjohn/assessment/notices/trivy-sbom-provenance.json
+      - name: Bind source and install locked Python dependencies
+        id: dependencies
+        run: |
+          python .github/scripts/ci.py preflight
+          python .github/scripts/ci.py snapshot
+          python .github/scripts/ci.py run --name python-install -- timeout 15m python -m pip install -r .github/requirements-ci.lock
+          python .github/scripts/ci.py run --name pip-check -- python -m pip check
+          python .github/scripts/ci.py run --name artifact-ci-contracts -- python -m unittest discover -s .github/tests -v
+      - name: Install reviewed parser build and isolation dependencies
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
+        id: system
+        run: python .github/scripts/ci.py run --name artifact-linux-dependencies -- timeout 10m bash -c 'sudo apt-get update && sudo apt-get install -y bubblewrap iproute2 apparmor-utils build-essential pkg-config libxml2-dev libxslt1-dev zlib1g-dev'
+      - name: Install actual pinned Trivy then build the two-record GHSA database
+        if: ${{ !cancelled() && steps.system.outcome == 'success' && steps.go.outcome == 'success' }}
+        run: |
+          mkdir -p artifacts/tool-receipts
+          python .github/scripts/ci.py run --name artifact-trivy-install -- timeout 10m python RedJohn/scripts/install-source-scanners.py trivy
+          cp RedJohn/.tools/trivy/0.76.0/receipt.json artifacts/tool-receipts/trivy.json
+          python .github/scripts/ci.py run --name artifact-database-install -- timeout 10m python .github/scripts/install-sbom-database.py
+      - name: Delegate only this job-owned cgroup and install its enforcing profile
+        if: ${{ !cancelled() && steps.system.outcome == 'success' }}
+        id: sandbox
+        run: |
+          python .github/scripts/ci.py run --name linux-setup -- bash .github/scripts/prepare-linux.sh
+          python .github/scripts/ci.py run --name sandbox-setup -- python .github/scripts/sandbox.py prepare
+      - name: Cache only SHA-verified external archives
+        uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        with:
+          path: ${{ runner.temp }}/wordpress-cache
+          key: wordpress-observe-ubuntu-24.04-${{ runner.arch }}-${{ hashFiles('RedJohn/scripts/wpscan-observe-runtime-pins.json', 'RedJohn/scripts/install-wpscan-observe.py') }}
+      - name: Build the external observation runtime inside the enforcing profile
+        if: ${{ !cancelled() && steps.sandbox.outcome == 'success' }}
+        id: runtime
+        run: |
+          task_python="$(command -v python)"
+          task_home="$HOME"
+          sudo -E env HOME="$task_home" bash .github/scripts/linux-tests.sh "$task_python" artifact-install
+      - name: Retain native build diagnostics before E2E even on failure
+        if: ${{ always() && steps.runtime.outcome != 'skipped' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: redjohn-artifact-build-${{ matrix.arch }}-${{ github.sha }}-${{ github.run_attempt }}
+          path: |
+            artifacts/source.json
+            artifacts/wordpress-build/**
+            artifacts/sbom-build/**
+            artifacts/artifact-runtime-install.*
+          if-no-files-found: error
+          retention-days: 14
+      - name: Attest Linux namespace and memory controls
+        if: ${{ !cancelled() && steps.sandbox.outcome == 'success' }}
+        run: |
+          task_python="$(command -v python)"
+          task_home="$HOME"
+          sudo -E env HOME="$task_home" bash .github/scripts/linux-tests.sh "$task_python" native-capability
+      - name: Execute only the actual public WordPress and SBOM E2Es
+        if: ${{ !cancelled() && steps.sandbox.outcome == 'success' }}
+        run: |
+          task_python="$(command -v python)"
+          task_home="$HOME"
+          sudo -E env HOME="$task_home" bash .github/scripts/linux-tests.sh "$task_python" artifact-test
+      - name: Repeat actual orphan recovery three times with the original strict assertions
+        if: ${{ !cancelled() && steps.sandbox.outcome == 'success' }}
+        run: |
+          task_python="$(command -v python)"
+          task_home="$HOME"
+          sudo -E env HOME="$task_home" bash .github/scripts/linux-tests.sh "$task_python" recovery-test
+      - name: Clean only this job-owned process delegation
+        if: always()
+        run: |
+          bash .github/scripts/cleanup-linux.sh
+      - name: Remove only this job-owned enforcing profile
+        if: ${{ always() && steps.sandbox.outcome != 'skipped' }}
+        run: python .github/scripts/ci.py run --name sandbox-cleanup -- python .github/scripts/sandbox.py cleanup
+      - name: Require complete artifact E2E and cleanup evidence
+        if: always()
+        run: python .github/scripts/artifact-evidence.py --final-artifact
+      - name: Preserve commit-bound results and failure evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: redjohn-artifacts-${{ matrix.arch }}-${{ github.sha }}-${{ github.run_attempt }}
+          path: |
+            artifacts/**/*.json
+            artifacts/**/*.log
+            artifacts/**/*.txt
+            artifacts/**/*.xml
+          if-no-files-found: error
+          retention-days: 14

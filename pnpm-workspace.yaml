@@ -1,7 +1,0 @@
-packages:
-  - "app"
-  - "packages/*"
-
-allowBuilds:
-  electron-winstaller: true
-  esbuild: true

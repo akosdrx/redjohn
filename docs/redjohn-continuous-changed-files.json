@@ -1,0 +1,268 @@
+{
+  "recorded_at": "2026-10-17T14:15:40.686586+00:00",
+  "basis": "Continuous same-runtime refresh/capture/reviewed replay, durable outbox, single-worker handoff; baseline source/tests preserved byte-for-byte except seven explicitly modified implementation modules.",
+  "baseline_snapshot": "docs/measurements/continuous-refresh-start.json",
+  "excluded": "Managed dependencies/tools, runtime state, private files and generated caches are excluded. All changed-files.json manifests are excluded to avoid circular hashes.",
+  "files": [
+    {
+      "path": ".github/workflows/redjohn-remote-egress.yml",
+      "status": "modified",
+      "sha256": "43f748a71c8568ce774e352cadd5c1e98d6e8771fea039087aed3948ac2ba7d0"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "status": "modified",
+      "sha256": "934fe56d2b8d510cc0fcd4dd638eb58370dc2893364f797e5172022bf83aec50"
+    },
+    {
+      "path": "README.md",
+      "status": "modified",
+      "sha256": "e4b7c705b9aa6deca95bd7458a4b013d7fd432904bf7a63c68afffcfc34f4179"
+    },
+    {
+      "path": "RedJohn/README.md",
+      "status": "modified",
+      "sha256": "5bb3b8be7978c66de12a6720f15713197929fcecda3fa4a69c649b35e1a8f17b"
+    },
+    {
+      "path": "RedJohn/docs/browser-post-body-tokens.md",
+      "status": "modified",
+      "sha256": "5a3380497dea1511f02e72445935d0f2e3e655b35ab3c59f015d07b0527e0b5a"
+    },
+    {
+      "path": "RedJohn/docs/continuous-refresh-replay.md",
+      "status": "added",
+      "sha256": "80788f3a1d7105cc56be3a70d4bcba263ff500ed00f321eccb8c9d9465fcd3b1"
+    },
+    {
+      "path": "RedJohn/docs/post-refresh-replay.md",
+      "status": "modified",
+      "sha256": "c5159953b8aca34597d369b33a6b1fbb7d9276befbe89d6b9f6f84b9ca7d72cc"
+    },
+    {
+      "path": "RedJohn/redjohn/assessment/browser_capture.py",
+      "status": "modified",
+      "sha256": "fe55674c8ddb09036ebb6a8a14781bef80a6e1f2578c6c5b04e1c047c863bcbe"
+    },
+    {
+      "path": "RedJohn/redjohn/assessment/browser_workflow.py",
+      "status": "modified",
+      "sha256": "187547f8769a3f7ca3545cc6e207de22164b3a8b044f6b32fe7470456de52c72"
+    },
+    {
+      "path": "RedJohn/redjohn/assessment/cli.py",
+      "status": "modified",
+      "sha256": "1fa1934f40d974108f2f98548ed842c0d270c642de9d407e5d7fde7a453a9fad"
+    },
+    {
+      "path": "RedJohn/redjohn/assessment/report.py",
+      "status": "modified",
+      "sha256": "05663b2b635455457e96a3ea043acd798d3fa9ee5cc11a447eef776bf7f01a03"
+    },
+    {
+      "path": "RedJohn/redjohn/assessment/runtime.py",
+      "status": "modified",
+      "sha256": "cf1ef8aa2f92d6a406085268edb10e8bdf82a1d1bdfe1278578cb658fb95084e"
+    },
+    {
+      "path": "RedJohn/redjohn/assessment/scheduler.py",
+      "status": "modified",
+      "sha256": "3ae4f8859eed9ec2edfb308004f662488ed765f16e9b857001d1f09a7a72640f"
+    },
+    {
+      "path": "RedJohn/redjohn/assessment/store.py",
+      "status": "modified",
+      "sha256": "a7a2f414f180e10c63c75023c411a245024701dd39e7cbbaf786d0727deb6477"
+    },
+    {
+      "path": "RedJohn/redjohn/skills/assessment/authentication-session/SKILL.md",
+      "status": "modified",
+      "sha256": "c667be7d04d734d5d3a33bf63dff555eadb1d1f2b04ac286e6ca4000b08e46ac"
+    },
+    {
+      "path": "RedJohn/redjohn/skills/assessment/execution-scheduling/SKILL.md",
+      "status": "modified",
+      "sha256": "1239be8457dfc89fb1a5ada4aa0b6978db338bc624fe180adf4e17f9add354d6"
+    },
+    {
+      "path": "RedJohn/redjohn/skills/assessment/manifest.json",
+      "status": "modified",
+      "sha256": "20b381010c94bb843f7dddc45a03455256dfa14535a4e8ed3aece06fb4b6ee0d"
+    },
+    {
+      "path": "RedJohn/tests/test_continuous_browser_workflow.py",
+      "status": "added",
+      "sha256": "0590602a9a40e53634d367491dfda4350cc323e2190814c211609980db03a618"
+    },
+    {
+      "path": "RedJohn/tests/test_continuous_cli_status.py",
+      "status": "added",
+      "sha256": "3c39c44a0065f3f887005d25de53b49d412bba023cad73a14c4567cb02777b7a"
+    },
+    {
+      "path": "RedJohn/tests/test_continuous_refresh_pipeline.py",
+      "status": "added",
+      "sha256": "5f5aed9ea6b038bbab6fe6a8f0b50e2366b0e95b027fb5d08bcf44346eea9b5d"
+    },
+    {
+      "path": "RedJohn/tests/test_continuous_scheduler_outbox.py",
+      "status": "added",
+      "sha256": "a226ddab6aa5c46287a8b6001a5ddaf45a0a8986db8bfd15ea856d10c1434257"
+    },
+    {
+      "path": "docs/measurements/continuous-refresh-cleanup.json",
+      "status": "added",
+      "sha256": "9081193bb0a27e318dc3e25ce03ed1a7f9defdfde4b2363b829dfb77b59b99f1"
+    },
+    {
+      "path": "docs/measurements/continuous-refresh-go-tests.txt",
+      "status": "added",
+      "sha256": "42952d0b99d8ab8a13ec873bcca334c73ca7177fb07f0e74cd2084f46bd93ebe"
+    },
+    {
+      "path": "docs/measurements/continuous-refresh-linux-source-files.json",
+      "status": "added",
+      "sha256": "7b4607be3dc55e11331651ddcce7b215b34278a48f92131ba64d569e394a92e2"
+    },
+    {
+      "path": "docs/measurements/continuous-refresh-linux-source-verification.json",
+      "status": "added",
+      "sha256": "13e17a4dbbfd68b62b2fad17132f95df78269a219b6b86300778547bd83da714"
+    },
+    {
+      "path": "docs/measurements/continuous-refresh-linux/browser-token-e2e.json",
+      "status": "added",
+      "sha256": "3215a12dd139d04a1dbf4477909ed68efcd285816849e7db41b4b8ddf138cf3a"
+    },
+    {
+      "path": "docs/measurements/continuous-refresh-linux/continuous-focused-e2e.json",
+      "status": "added",
+      "sha256": "a64d1579b361ce28c1ec76ead6d6d6a04f82b26f25690ac1bc29f718b8a37d62"
+    },
+    {
+      "path": "docs/measurements/continuous-refresh-linux/continuous-focused.junit.xml",
+      "status": "added",
+      "sha256": "dbb117a391b79f6b71e3e5e3db707339105b2e3e3357be36cac5be253515cee5"
+    },
+    {
+      "path": "docs/measurements/continuous-refresh-linux/continuous-focused.txt",
+      "status": "added",
+      "sha256": "3f956e2058eb576dd5f7af00d36b997cbce85f94a58d221284f0d378e9797264"
+    },
+    {
+      "path": "docs/measurements/continuous-refresh-linux/continuous-refresh-e2e.json",
+      "status": "added",
+      "sha256": "48f1da11bf27f77e402ba289050e2f3ac6220f2200b19de811737a2258c0f0bd"
+    },
+    {
+      "path": "docs/measurements/continuous-refresh-linux/continuous-refresh-full.junit.xml",
+      "status": "added",
+      "sha256": "205d1c8e3016a9e9734f7c39b3c00914e26bde4c18f502e08e046dd6dc27ecf2"
+    },
+    {
+      "path": "docs/measurements/continuous-refresh-linux/continuous-refresh-full.txt",
+      "status": "added",
+      "sha256": "d883903329be78a16d52dc40b6e1ba46126afd67487683ad38ff414eddce1c79"
+    },
+    {
+      "path": "docs/measurements/continuous-refresh-linux/nuclei-install.json",
+      "status": "added",
+      "sha256": "32230dd74e41cf7b5bb68c2a9b3ca17cc7a8f9d3e06f3f15a5d207105235ee5b"
+    },
+    {
+      "path": "docs/measurements/continuous-refresh-linux/nuclei-live.json",
+      "status": "added",
+      "sha256": "6719fc4750615a3e64a79ad59a33418234b4a3572f3e96b5e0e0f823cf02799b"
+    },
+    {
+      "path": "docs/measurements/continuous-refresh-linux/pip-freeze.txt",
+      "status": "added",
+      "sha256": "d3ee438245ca697fa8dc82fb855177128ce6b6015d79add783ee24f46f8738b0"
+    },
+    {
+      "path": "docs/measurements/continuous-refresh-linux/post-refresh-e2e.json",
+      "status": "added",
+      "sha256": "6822ecd4404d0835500d5a3b847c03675e2dbaf8271dd85507adde26c5574451"
+    },
+    {
+      "path": "docs/measurements/continuous-refresh-linux/runtime.json",
+      "status": "added",
+      "sha256": "b52b74cfd7899fef7082eba607381dd6bdb76c76bc0f7178b7131ba645cea271"
+    },
+    {
+      "path": "docs/measurements/continuous-refresh-macos-tests.txt",
+      "status": "added",
+      "sha256": "44c1df73f9ac8bf22cdb636dcb07134a0d00748af102c8b43e110445da6982cd"
+    },
+    {
+      "path": "docs/measurements/continuous-refresh-macos.junit.xml",
+      "status": "added",
+      "sha256": "8d0c25dbe9d098f83023671af31b8705bb10ff6c89ff43184590685b7bfa175f"
+    },
+    {
+      "path": "docs/measurements/continuous-refresh-mypy.txt",
+      "status": "added",
+      "sha256": "098165d38c4cf661b1daf8e610d41fbe6b066a3dc4c9de1a64f0a1f61be50225"
+    },
+    {
+      "path": "docs/measurements/continuous-refresh-preservation.json",
+      "status": "added",
+      "sha256": "b9f0eda55576ef6675c1da51e5aad834115937dfb88f137e9e0270c5ad8a6c06"
+    },
+    {
+      "path": "docs/measurements/continuous-refresh-ruff.txt",
+      "status": "added",
+      "sha256": "1904c82373e4f9454e26d015e5811ed985587dbc870507bb8f00ef25b4e0e382"
+    },
+    {
+      "path": "docs/measurements/continuous-refresh-source-skills.json",
+      "status": "added",
+      "sha256": "bf81ac2ca012efb1c18968d841ad322f7d91d00fb8f0de672a227b26d62c0ee8"
+    },
+    {
+      "path": "docs/measurements/continuous-refresh-start.json",
+      "status": "added",
+      "sha256": "543f3ede4f6574cdec803f48a9678b081faa6938387ee3d38e19c3aac18ea0fd"
+    },
+    {
+      "path": "docs/measurements/continuous-refresh-verification-summary.json",
+      "status": "added",
+      "sha256": "0de62e03ccdbe61b9c3dcd66807bcd0a240b85b5917de4a5ac2a5b3a2fab7355"
+    },
+    {
+      "path": "docs/measurements/continuous-refresh-viewer-build.txt",
+      "status": "added",
+      "sha256": "ff54a4d855b364846f7411425295f8cbefe2c47f20cea322e7541364ad6f0be5"
+    },
+    {
+      "path": "docs/redjohn-architecture.md",
+      "status": "modified",
+      "sha256": "8462ca4d7ed51a3f463f66c1373d42350b3ba9c2ed6a840b84de555d18dd01b4"
+    },
+    {
+      "path": "docs/redjohn-browser-token-verification.md",
+      "status": "modified",
+      "sha256": "e14f15b05477255d5e9547840667702fa0e4c3560ef1010224411d277089440d"
+    },
+    {
+      "path": "docs/redjohn-changed-files.md",
+      "status": "modified",
+      "sha256": "2997db103babef9c92ffbef312496377fa592d85755ff296a2cc4ec26288bd8d"
+    },
+    {
+      "path": "docs/redjohn-continuous-refresh-verification.md",
+      "status": "added",
+      "sha256": "a9bc09dc8802c429cf74a682cd243dbe91a05333fe543b55b9f696a7e1c99bdf"
+    },
+    {
+      "path": "docs/redjohn-requirements.md",
+      "status": "modified",
+      "sha256": "8043e863cd476bd61d0e2905a342ab4a93a3ed309d30cb0a1ca5553317355c7b"
+    },
+    {
+      "path": "docs/redjohn-runbook.md",
+      "status": "modified",
+      "sha256": "02661da66b5ca193ee351bb0183cf20e5ef18b2bc1bfe7a986d8ae3a290b9e35"
+    }
+  ]
+}

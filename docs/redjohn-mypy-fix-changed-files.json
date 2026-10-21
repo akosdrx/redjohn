@@ -1,0 +1,324 @@
+{
+  "recorded_at": "2026-10-17T15:38:44.238233+00:00",
+  "basis": "This mypy-fix task only, relative to its preserved starting snapshot; inherited Git restructuring is excluded. Private before-images and task-owned generated cache/build/test data are excluded.",
+  "source_modules_modified": 15,
+  "ci_workflows_modified": 1,
+  "new_active_test_files": 1,
+  "new_regression_cases": 2,
+  "original_active_files_preserved": 53,
+  "mypy_errors_before": 69,
+  "mypy_errors_after": 0,
+  "mypy_source_modules_checked": 186,
+  "files": [
+    {
+      "path": ".github/workflows/redjohn-remote-egress.yml",
+      "status": "modified",
+      "sha256": "058a6c6e0a028a41c816f9da62c2e6ee74c37e4d64c477b846d2f455245b42e9"
+    },
+    {
+      "path": "RedJohn/redjohn/assessment/cache_benchmark.py",
+      "status": "modified",
+      "sha256": "717f242c1d9e777a722d4dcb2bab38fb8095c2a98daeced91b4bfbc5173602e3"
+    },
+    {
+      "path": "RedJohn/redjohn/assessment/cli.py",
+      "status": "modified",
+      "sha256": "02b9d34c3986b4b1493377cd4e5473467a235bd506e2f3f5c00a2350f0400ab0"
+    },
+    {
+      "path": "RedJohn/redjohn/assessment/control.py",
+      "status": "modified",
+      "sha256": "69da2840b79e32905f86044d7e1dd7c165cca1820c074d619e0e3a63147f1783"
+    },
+    {
+      "path": "RedJohn/redjohn/assessment/fixture.py",
+      "status": "modified",
+      "sha256": "47998d9533bc9ab9c2d8762c57dfa5c634cecb635379a46084097af891362b8e"
+    },
+    {
+      "path": "RedJohn/redjohn/assessment/https_verification.py",
+      "status": "modified",
+      "sha256": "c3724b4234406693c99866e05c52ee462cacd8e2e6a4b6830af35171709e3913"
+    },
+    {
+      "path": "RedJohn/redjohn/assessment/intelligence.py",
+      "status": "modified",
+      "sha256": "93587e657c8b5a852a95d67688e1e9a40a1008ff87f57c966122296cd4e56804"
+    },
+    {
+      "path": "RedJohn/redjohn/assessment/recovery.py",
+      "status": "modified",
+      "sha256": "c2bca405c7a65a3329e122478830c57359c1a6a68d6bc09a1b8ca1b83edba61b"
+    },
+    {
+      "path": "RedJohn/redjohn/assessment/report.py",
+      "status": "modified",
+      "sha256": "d6eb0d521ab707d79771c1bc9375f6d9fb86b1a01428ff7c3ae3442013c0d72b"
+    },
+    {
+      "path": "RedJohn/redjohn/assessment/tls_fixture.py",
+      "status": "modified",
+      "sha256": "6b9a3ca85249830a6686ae28e21bb425aea555664eef6356d4dcf3bb5d7cf0bd"
+    },
+    {
+      "path": "RedJohn/redjohn/core/hooks.py",
+      "status": "modified",
+      "sha256": "57007436e9bfba751c9c557d61f88dcb342cc9cb6cd544dbcb8d0bb9e8ee675f"
+    },
+    {
+      "path": "RedJohn/redjohn/interface/viewer/server.py",
+      "status": "modified",
+      "sha256": "28ac6b16626cd0f4a36a2011c4f106e586a5673140e50b911e893cb648106feb"
+    },
+    {
+      "path": "RedJohn/redjohn/runtime/local_backend.py",
+      "status": "modified",
+      "sha256": "c58eec6ec0a99addfa73c0f250b2d467342b8ea69e87f1a3c560e3f5c442e7bb"
+    },
+    {
+      "path": "RedJohn/redjohn/skills/assessment_registry.py",
+      "status": "modified",
+      "sha256": "85f39f2744f8f5f0d38dd0fd936c00976bb10ffa93ca7711faeaaee848a64307"
+    },
+    {
+      "path": "RedJohn/redjohn/telemetry/posthog.py",
+      "status": "modified",
+      "sha256": "9708028d4aa2d6dae638129aea7d9b7799365a6767d67027212ee32a3235e32b"
+    },
+    {
+      "path": "RedJohn/redjohn/tools/web_search/tool.py",
+      "status": "modified",
+      "sha256": "29fac499308c8891a088d1800de6b68754d8cb37171264e28ed8322d7ab3dfc1"
+    },
+    {
+      "path": "RedJohn/tests/test_viewer_metadata_endpoints.py",
+      "status": "added",
+      "sha256": "0ee856b08a3a265cd75704d110e655cd00280d34a9f4a68feeaab6771d2c4481"
+    },
+    {
+      "path": "docs/measurements/mypy-fix-baseline.txt",
+      "status": "added",
+      "sha256": "7ef9184a65afb2adf823b00bed34cd729d88ab82f38f7ead8ad9749aa75cc641"
+    },
+    {
+      "path": "docs/measurements/mypy-fix-before.json",
+      "status": "added",
+      "sha256": "8721ae8e5511eb3b5e3538defe247af30fed87a7b2b73bc0f5015be983b339b0"
+    },
+    {
+      "path": "docs/measurements/mypy-fix-ci-verification.json",
+      "status": "added",
+      "sha256": "8394cb2b1939efc8e851025eee006f1bd88a46f935561e3240f846db90cf97d2"
+    },
+    {
+      "path": "docs/measurements/mypy-fix-cleanup.json",
+      "status": "added",
+      "sha256": "81277ffc4713d207fac9115db3135169205bc7fc400787d0a07f62f80ef8283b"
+    },
+    {
+      "path": "docs/measurements/mypy-fix-focused.txt",
+      "status": "added",
+      "sha256": "3e9e247e6f830ab612df633f4f3a77104c334ca4fb07a71dbd247f26d79f5da5"
+    },
+    {
+      "path": "docs/measurements/mypy-fix-format.txt",
+      "status": "added",
+      "sha256": "7ff2df5e4a19c344d6ea2dfc25c25d2370159894cbac570f392753b22180e09c"
+    },
+    {
+      "path": "docs/measurements/mypy-fix-go-tests.txt",
+      "status": "added",
+      "sha256": "42952d0b99d8ab8a13ec873bcca334c73ca7177fb07f0e74cd2084f46bd93ebe"
+    },
+    {
+      "path": "docs/measurements/mypy-fix-go-vet.txt",
+      "status": "added",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/measurements/mypy-fix-linux-source-files.json",
+      "status": "added",
+      "sha256": "fcb2385bc4e156ba2b4bc35128e024ee45e3873874ff223c018f1966142fe0e0"
+    },
+    {
+      "path": "docs/measurements/mypy-fix-linux/auth-e2e.json",
+      "status": "added",
+      "sha256": "64b0d5d852a2b835c58a633c33c75174ea8f736c23c77fc6a4c4034083e857f0"
+    },
+    {
+      "path": "docs/measurements/mypy-fix-linux/automatic-session-e2e.json",
+      "status": "added",
+      "sha256": "d9baa292e8a00f359cbae8173690558a459dca9507a08a22885a0bed82d5e4ea"
+    },
+    {
+      "path": "docs/measurements/mypy-fix-linux/browser-token-e2e.json",
+      "status": "added",
+      "sha256": "d10d112b9ffcccca8d72ac7e6f07b62ce9f3b9bac4d54990eedcb63eb4129f5e"
+    },
+    {
+      "path": "docs/measurements/mypy-fix-linux/continuous-refresh-e2e.json",
+      "status": "added",
+      "sha256": "7b697f6bdfb3f212edcc48bcc93ffc13bb10b721095979932be36dca493acb79"
+    },
+    {
+      "path": "docs/measurements/mypy-fix-linux/https-e2e.json",
+      "status": "added",
+      "sha256": "393675e2e399c43ea29e2a5dce303def9b0caaa1e0eb266488e6036ebf1fa568"
+    },
+    {
+      "path": "docs/measurements/mypy-fix-linux/initial-environment-failure.json",
+      "status": "added",
+      "sha256": "1df1e201974a4d28e691b8fa0f1e665647ca265f8178ab58d0f982e7cf33f594"
+    },
+    {
+      "path": "docs/measurements/mypy-fix-linux/linux-tests.junit.xml",
+      "status": "added",
+      "sha256": "2425e90252ee4ccd09acd076c996ee5ccd6f16bd2e55b3e6250286d07e5c4622"
+    },
+    {
+      "path": "docs/measurements/mypy-fix-linux/linux-tests.txt",
+      "status": "added",
+      "sha256": "1ccc18d9af01ef0ac1692282b18279c77dacff47c7852616fbbfb94fd3957a86"
+    },
+    {
+      "path": "docs/measurements/mypy-fix-linux/mypy-linux-cold.json",
+      "status": "added",
+      "sha256": "47499f717295fe1e18d13dfcbe7f31c1b22542af3b19590c754c528e75252b23"
+    },
+    {
+      "path": "docs/measurements/mypy-fix-linux/mypy-linux-cold.txt",
+      "status": "added",
+      "sha256": "b343a08f9e99cf479638abd65790efe53a824b2fa45e9d1686dd81d1798d1c3a"
+    },
+    {
+      "path": "docs/measurements/mypy-fix-linux/mypy-linux.txt",
+      "status": "added",
+      "sha256": "b343a08f9e99cf479638abd65790efe53a824b2fa45e9d1686dd81d1798d1c3a"
+    },
+    {
+      "path": "docs/measurements/mypy-fix-linux/nuclei-install.json",
+      "status": "added",
+      "sha256": "90936b251b31b386bf8a0e12e6fa71c8ef8fedd2e6bcf79584ef1e97296ff247"
+    },
+    {
+      "path": "docs/measurements/mypy-fix-linux/nuclei-live.json",
+      "status": "added",
+      "sha256": "a99b884ff0d396d6af9d33abb1d2fd27a95010f467b5fcffac01272e572b3679"
+    },
+    {
+      "path": "docs/measurements/mypy-fix-linux/nuclei-lock-path.txt",
+      "status": "added",
+      "sha256": "f5a094d4264a971da16dda8aeb5e00c39ebb5a7a7af1ad960b1ae828a4c4c8b3"
+    },
+    {
+      "path": "docs/measurements/mypy-fix-linux/nuclei-version.txt",
+      "status": "added",
+      "sha256": "7bccff7cf9fb3901e324b56fa028744bedad7c0c295bb5dbde3b40933b2c6124"
+    },
+    {
+      "path": "docs/measurements/mypy-fix-linux/pip-freeze.txt",
+      "status": "added",
+      "sha256": "15eea8c7e11d85b9caa06201d3663116e81f0989b6f57f6862eec7548e8502b4"
+    },
+    {
+      "path": "docs/measurements/mypy-fix-linux/post-nuclei-live.json",
+      "status": "added",
+      "sha256": "93bc966fc952378344792c69aa9ac5e9f3697b5532cdaee5ba0403d82d9e56db"
+    },
+    {
+      "path": "docs/measurements/mypy-fix-linux/post-refresh-e2e.json",
+      "status": "added",
+      "sha256": "f01890716a98aead39f44df56e6bc36e1826410b7d987d1bcc923079d5a368ca"
+    },
+    {
+      "path": "docs/measurements/mypy-fix-linux/remote-auth-e2e.json",
+      "status": "added",
+      "sha256": "7f491288e0c34d52289ac39fa37cdc968e62bcce6f4832ca9ce54de2b57c5e5e"
+    },
+    {
+      "path": "docs/measurements/mypy-fix-linux/runtime.json",
+      "status": "added",
+      "sha256": "a510057b97d3e73ec1ca9a29ce7c574c839196b381a1b7b22ac933d210c5ddfa"
+    },
+    {
+      "path": "docs/measurements/mypy-fix-linux/source-verification-after.json",
+      "status": "added",
+      "sha256": "ed64639e99cd9f1cc669cf14fad252bb30755db67e7eccdd0d1d33da4d9b389a"
+    },
+    {
+      "path": "docs/measurements/mypy-fix-linux/source-verification.json",
+      "status": "added",
+      "sha256": "c7a5f93807001437edb117bd8ec4121e957ff90e59fafc459cab28add2acfcea"
+    },
+    {
+      "path": "docs/measurements/mypy-fix-macos-mypy.txt",
+      "status": "added",
+      "sha256": "b343a08f9e99cf479638abd65790efe53a824b2fa45e9d1686dd81d1798d1c3a"
+    },
+    {
+      "path": "docs/measurements/mypy-fix-macos-tests.txt",
+      "status": "added",
+      "sha256": "15dcdd694ff897f567c8d23d292379d71c24cda4904d0bc0dffb9eb63a0c35db"
+    },
+    {
+      "path": "docs/measurements/mypy-fix-macos.junit.xml",
+      "status": "added",
+      "sha256": "e494e5e43b6258ce2a1fa3b8e6e8c451f64df6faadf61c15d692849eb294ff26"
+    },
+    {
+      "path": "docs/measurements/mypy-fix-preservation.json",
+      "status": "added",
+      "sha256": "c105309410ad31280a17f57193b3f737ca3a346c264faf66cb4a27a8feedcf51"
+    },
+    {
+      "path": "docs/measurements/mypy-fix-ruff.txt",
+      "status": "added",
+      "sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+    },
+    {
+      "path": "docs/measurements/mypy-fix-typescript.txt",
+      "status": "added",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/measurements/mypy-fix-verification-summary.json",
+      "status": "added",
+      "sha256": "496f42eb8c93d29eca4ad9617803c68e31bfc32f3b85cda1ee33d16d328845d7"
+    },
+    {
+      "path": "docs/measurements/mypy-fix-viewer-before.txt",
+      "status": "added",
+      "sha256": "af2b9e903d3d5943fd31925574145b54d21e234d6a1a4a35dce81f208df5942d"
+    },
+    {
+      "path": "docs/measurements/mypy-fix-viewer-build.txt",
+      "status": "added",
+      "sha256": "f34d3aad0695793896f3ca26516291a31cee3aa163d453e35033b2df9b4303e6"
+    },
+    {
+      "path": "docs/measurements/mypy-fix-vm-delete.txt",
+      "status": "added",
+      "sha256": "c14325a617cab3856e9bf85ff2927b0aaaadb32b128cc778f62388818aff41e6"
+    },
+    {
+      "path": "docs/measurements/mypy-fix-vm-isolation.json",
+      "status": "added",
+      "sha256": "4bcac724441ac37a45ba5294e253e3a02e79f8512fb7880ee1682143124df293"
+    },
+    {
+      "path": "docs/measurements/mypy-fix.patch",
+      "status": "added",
+      "sha256": "35734da84a412a85e3774eadda5e15575e555d20a5129978c5896c3f0c8e1ab1"
+    },
+    {
+      "path": "docs/redjohn-changed-files.md",
+      "status": "modified",
+      "sha256": "093d4c19dadfa92fd1b298b999e9bdb42ede340328196f71a1f18d619bc37634"
+    },
+    {
+      "path": "docs/redjohn-mypy-fix-verification.md",
+      "status": "added",
+      "sha256": "39d0ee0ac73df18b96cd5dabd3f31b6995b472df11c4834fd3688c25677f1440"
+    }
+  ]
+}

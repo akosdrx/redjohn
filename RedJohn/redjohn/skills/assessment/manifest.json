@@ -1,0 +1,2427 @@
+{
+  "schema_version": 1,
+  "contract_version": "2.0.0",
+  "source_package_audit": {
+    "kind": "user_supplied",
+    "source_directory_name": "headless_strix_skillpack",
+    "license_file_supplied": false,
+    "upstream_code_copied": false,
+    "excluded": [
+      "browser-worker/*",
+      "examples/strix-mcp-servers.example.json",
+      "schemas/job-result.schema.json"
+    ],
+    "reason": "Legacy worker/config and mixed status schema replaced by RedJohn native contracts.",
+    "documents": [
+      {
+        "path": "README.md",
+        "sha256": "33cd97461e6edd74e44533e960e0929b3b1056d7db768a195773180ac31b4ec3"
+      },
+      {
+        "path": "README.hu.md",
+        "sha256": "54f28842810a23e210edf8a0cd3d92aa41a8f5a15b12f8e71796a7bbdbf88bba"
+      },
+      {
+        "path": "skill-registry.json",
+        "sha256": "349fb5b042978fdeeecf876a938ecf3ab30b7f84c41b4e3121765ef02a64f978"
+      },
+      {
+        "path": "tool-registry.json",
+        "sha256": "5db7443df8edf68fb922d429beb83435a556048063530355dff0f0bb8639cca1"
+      },
+      {
+        "path": "capability-contracts.md",
+        "sha256": "8e06f1f89e9223adf132bc03dd0544b93a390638e75f2d4530699a0d0951b0c9"
+      },
+      {
+        "path": "coverage-matrix.md",
+        "sha256": "edf6eb9e2826a9bf4cfd372996f3b71c77c11764f0a1fe812db79341d03af9ed"
+      },
+      {
+        "path": "schemas/job-result.schema.json",
+        "sha256": "58e6c5ca98b23575ad46e8c09b80b7bf94bc666e254b8c4159b00018cdd0d81c"
+      },
+      {
+        "path": "rce-miss-triage.md",
+        "sha256": "77526b174608337e0ca0a3f8cca35ae614a02d6d96666e3b153f9242e6a2800b"
+      }
+    ]
+  },
+  "skills": [
+    {
+      "id": "engagement-scope",
+      "description": "Establishes the permitted engagement, target and action budgets before any web or API test. Use at the start of every autonomous assessment.",
+      "path": "engagement-scope/SKILL.md",
+      "capabilities": [],
+      "optional_capabilities": [],
+      "internal_modules": [
+        "redjohn.assessment.policy"
+      ],
+      "unimplemented_requirements": [],
+      "domains": [
+        "web"
+      ],
+      "profiles": [
+        "safe-production",
+        "active-staging",
+        "isolated-lab"
+      ],
+      "supported_content_types": [
+        ""
+      ],
+      "unsupported_content_types": [],
+      "input_mode": "metadata",
+      "requires_actor": false,
+      "requires_fixture": false,
+      "status": "implemented_fixture_tested",
+      "control_test_refs": [
+        "tests/test_assessment_skills.py::test_manifest_contract_and_missing_adapters"
+      ],
+      "provenance": {
+        "kind": "user_supplied_adapted_contract",
+        "source_pack": "headless_strix_skillpack",
+        "source_path": "skills/engagement-scope/SKILL.md",
+        "source_sha256": "4a7da336dbccfb931ed0bae35b081e1dd975a94d4219b9789a82962b94d12d89",
+        "source_version": "1.0.0",
+        "license": "user_supplied_no_license_file",
+        "legacy_logical_tools": [
+          "scope.get",
+          "policy.check",
+          "runs.audit"
+        ],
+        "upstream_code_copied": false,
+        "translation_input_sha256": "2847002a8ca32cc44d162bad93b264f852db1dbd0f62667e60f7d9316c98db56",
+        "content_language": "en",
+        "content_sha256": "f3de9436131f7071a7a8b40f7e80f07d8bf18822fd0fa2b5fad1a6e41f7d84d6",
+        "translation_revision": "1"
+      }
+    },
+    {
+      "id": "headless-browser-discovery",
+      "description": "Maps a JavaScript-heavy application with headless Playwright and authenticated BrowserContexts. Use for SPAs, UI workflows and DOM-driven endpoints.",
+      "path": "headless-browser-discovery/SKILL.md",
+      "capabilities": [
+        "browser_discover"
+      ],
+      "optional_capabilities": [],
+      "internal_modules": [],
+      "unimplemented_requirements": [],
+      "domains": [
+        "web"
+      ],
+      "profiles": [
+        "safe-production",
+        "active-staging",
+        "isolated-lab"
+      ],
+      "supported_content_types": [
+        ""
+      ],
+      "unsupported_content_types": [],
+      "input_mode": "metadata",
+      "requires_actor": false,
+      "requires_fixture": false,
+      "status": "implemented_fixture_tested",
+      "control_test_refs": [
+        "tests/test_assessment_skills.py::test_manifest_contract_and_missing_adapters"
+      ],
+      "provenance": {
+        "kind": "user_supplied_adapted_contract",
+        "source_pack": "headless_strix_skillpack",
+        "source_path": "skills/headless-browser-discovery/SKILL.md",
+        "source_sha256": "0f85dc186437a6a3e58f87d7e4ecd013690efe6afebad675c6d6a36e54d50e7d",
+        "source_version": "1.0.0",
+        "license": "user_supplied_no_license_file",
+        "legacy_logical_tools": [
+          "browser.navigate",
+          "browser.capture_traffic",
+          "surface.upsert",
+          "scope.get"
+        ],
+        "upstream_code_copied": false,
+        "translation_input_sha256": "5bc58da1f0157ad0d43cb0c23af857743bd089a4e84e4379c6ccdf0aa8dc6574",
+        "content_language": "en",
+        "content_sha256": "4506ba9b3326f407aebc43f09ce9712699e820fb3711182282ca655a314c2703",
+        "translation_revision": "1"
+      }
+    },
+    {
+      "id": "web-surface-inventory",
+      "description": "Builds a durable, queryable inventory of routes, requests and states from browser, proxy and crawler observations.",
+      "path": "web-surface-inventory/SKILL.md",
+      "capabilities": [],
+      "optional_capabilities": [
+        "ffuf_discover"
+      ],
+      "internal_modules": [
+        "redjohn.assessment.store"
+      ],
+      "unimplemented_requirements": [],
+      "domains": [
+        "web"
+      ],
+      "profiles": [
+        "safe-production",
+        "active-staging",
+        "isolated-lab"
+      ],
+      "supported_content_types": [
+        ""
+      ],
+      "unsupported_content_types": [],
+      "input_mode": "metadata",
+      "requires_actor": false,
+      "requires_fixture": false,
+      "status": "implemented_fixture_tested",
+      "control_test_refs": [
+        "tests/test_assessment_skills.py::test_manifest_contract_and_missing_adapters",
+        "tests/test_ffuf_live.py::test_actual_ffuf_browser_nuclei_durable_chain_and_retest"
+      ],
+      "provenance": {
+        "kind": "user_supplied_adapted_contract",
+        "source_pack": "headless_strix_skillpack",
+        "source_path": "skills/web-surface-inventory/SKILL.md",
+        "source_sha256": "d487388256c30055518caf8600c108e3ee91f2f30a88de395d43f393e62b3dc6",
+        "source_version": "1.0.0",
+        "license": "user_supplied_no_license_file",
+        "legacy_logical_tools": [
+          "surface.upsert",
+          "surface.search",
+          "traffic.index"
+        ],
+        "upstream_code_copied": false,
+        "translation_input_sha256": "0dad1f6b2912097805d1f9850e631db188282b156cb4095dbc83794c2789747d",
+        "content_language": "en",
+        "content_sha256": "69ca6cf1140422bc17abc0c8395dcf89acab3580bb438cc30635d99716ed08e5",
+        "translation_revision": "1",
+        "implementation_revision": "ffuf-2.1.0-bounded-path-discovery"
+      }
+    },
+    {
+      "id": "javascript-endpoint-analysis",
+      "description": "Finds candidate API routes and client-side sinks in bundled JavaScript and correlates them with live browser traffic.",
+      "path": "javascript-endpoint-analysis/SKILL.md",
+      "capabilities": [
+        "browser_discover"
+      ],
+      "optional_capabilities": [],
+      "internal_modules": [],
+      "unimplemented_requirements": [
+        "ast_endpoint_analysis"
+      ],
+      "domains": [
+        "web"
+      ],
+      "profiles": [
+        "safe-production",
+        "active-staging",
+        "isolated-lab"
+      ],
+      "supported_content_types": [
+        ""
+      ],
+      "unsupported_content_types": [],
+      "input_mode": "metadata",
+      "requires_actor": false,
+      "requires_fixture": false,
+      "status": "adapter_not_implemented",
+      "control_test_refs": [
+        "tests/test_assessment_skills.py::test_manifest_contract_and_missing_adapters"
+      ],
+      "provenance": {
+        "kind": "user_supplied_adapted_contract",
+        "source_pack": "headless_strix_skillpack",
+        "source_path": "skills/javascript-endpoint-analysis/SKILL.md",
+        "source_sha256": "59035c56a45752d2f70cc50d1efc537f1f1bbb5cf946a02b960e0d8cc30cd2dc",
+        "source_version": "1.0.0",
+        "license": "user_supplied_no_license_file",
+        "legacy_logical_tools": [
+          "browser.inspect_scripts",
+          "source.scan_js",
+          "surface.upsert"
+        ],
+        "upstream_code_copied": false,
+        "translation_input_sha256": "dc0cc618cde0bc75d06f0e1af512ec3da51e85846f0e382c4b401581704cfa68",
+        "content_language": "en",
+        "content_sha256": "1603dd3418eae5dd77d3685a04f4096920373e2baf3df6d4ba4f0f2644678aa9",
+        "translation_revision": "1"
+      }
+    },
+    {
+      "id": "input-discovery",
+      "description": "Discovers additional query parameter names on selected observed anonymous GET endpoints with bounded Arjun.",
+      "path": "input-discovery/SKILL.md",
+      "capabilities": [
+        "arjun_parameters"
+      ],
+      "optional_capabilities": [
+        "browser_discover"
+      ],
+      "internal_modules": [],
+      "unimplemented_requirements": [],
+      "domains": [
+        "web"
+      ],
+      "profiles": [
+        "active-staging",
+        "isolated-lab"
+      ],
+      "supported_content_types": [],
+      "unsupported_content_types": [
+        "application/json",
+        "application/xml",
+        "multipart/form-data",
+        "application/x-www-form-urlencoded"
+      ],
+      "input_mode": "recorded_request",
+      "requires_actor": false,
+      "requires_fixture": false,
+      "status": "implemented_fixture_tested",
+      "control_test_refs": [
+        "tests/test_specialists_contract.py",
+        "tests/test_specialists_live.py::test_actual_specialists_restart_browser_sqlite_and_xss_chain"
+      ],
+      "provenance": {
+        "kind": "user_supplied_adapted_contract",
+        "source_pack": "headless_strix_skillpack",
+        "source_path": "skills/input-discovery/SKILL.md",
+        "source_sha256": "610ab214bbc68c9bd34335ad7e5eead6b60fd720e91dbf5b3ae0889647b9c9f2",
+        "source_version": "1.0.0",
+        "license": "user_supplied_no_license_file",
+        "legacy_logical_tools": [
+          "surface.search",
+          "traffic.replay",
+          "arjun.run"
+        ],
+        "upstream_code_copied": false,
+        "translation_input_sha256": "ed2d2f653ed39b8ba26c232b44815d8c946a5081211b3a6654f8261ef308657d",
+        "content_language": "en",
+        "content_sha256": "a998fa4bbaa510aaf460fa63e87d83a3af3f1f1d06cba631659505df21ffcf2e",
+        "translation_revision": "2-specialist-get-support"
+      }
+    },
+    {
+      "id": "technology-fingerprinting",
+      "description": "Correlates headers, static assets, observed behavior and source manifests to identify technologies with evidence.",
+      "path": "technology-fingerprinting/SKILL.md",
+      "capabilities": [
+        "http_observe"
+      ],
+      "optional_capabilities": [
+        "httpx_probe"
+      ],
+      "internal_modules": [
+        "redjohn.assessment.intelligence"
+      ],
+      "unimplemented_requirements": [],
+      "domains": [
+        "web"
+      ],
+      "profiles": [
+        "safe-production",
+        "active-staging",
+        "isolated-lab"
+      ],
+      "supported_content_types": [
+        ""
+      ],
+      "unsupported_content_types": [],
+      "input_mode": "metadata",
+      "requires_actor": false,
+      "requires_fixture": false,
+      "status": "implemented_fixture_tested",
+      "control_test_refs": [
+        "tests/test_assessment_skills.py::test_manifest_contract_and_missing_adapters"
+      ],
+      "provenance": {
+        "kind": "user_supplied_adapted_contract",
+        "source_pack": "headless_strix_skillpack",
+        "source_path": "skills/technology-fingerprinting/SKILL.md",
+        "source_sha256": "859563e823e7408fac1bbbe22d2f3edb84a4594c8cb650020fcbc4d24a9ca479",
+        "source_version": "1.0.0",
+        "license": "user_supplied_no_license_file",
+        "legacy_logical_tools": [
+          "browser.observe",
+          "httpx.probe",
+          "source.manifest",
+          "surface.upsert"
+        ],
+        "upstream_code_copied": false,
+        "translation_input_sha256": "04ef912504d92a94b31b2a576edefbd7b8d9e9f15d09d5276aaec1b9deb95795",
+        "content_language": "en",
+        "content_sha256": "ec88f0be56bf57843faf877c86baa355acce7bc66c204967e2bef4425ea8866a",
+        "translation_revision": "1"
+      }
+    },
+    {
+      "id": "nuclei-cve-planning",
+      "description": "Selects reviewed Nuclei GET/HEAD or approved POST replay templates; treats CVE and VulnX metadata as context rather than proof.",
+      "path": "nuclei-cve-planning/SKILL.md",
+      "capabilities": [
+        "nuclei_scan"
+      ],
+      "optional_capabilities": [
+        "vulnx_intelligence",
+        "browser_post_capture"
+      ],
+      "internal_modules": [
+        "redjohn.assessment.intelligence"
+      ],
+      "unimplemented_requirements": [],
+      "domains": [
+        "web"
+      ],
+      "profiles": [
+        "active-staging",
+        "isolated-lab"
+      ],
+      "supported_content_types": [
+        "",
+        "application/json",
+        "application/x-www-form-urlencoded",
+        "multipart/form-data"
+      ],
+      "unsupported_content_types": [
+        "application/xml"
+      ],
+      "input_mode": "recorded_request",
+      "requires_actor": false,
+      "requires_fixture": false,
+      "status": "implemented_fixture_tested",
+      "control_test_refs": [
+        "tests/test_assessment_skills.py::test_manifest_contract_and_missing_adapters",
+        "tests/test_nuclei_post_contract.py",
+        "tests/test_nuclei_post_live.py",
+        "tests/test_post_refresh_pipeline.py",
+        "tests/test_body_token_refresh.py",
+        "tests/test_browser_token_pipeline.py"
+      ],
+      "provenance": {
+        "kind": "user_supplied_adapted_contract",
+        "source_pack": "headless_strix_skillpack",
+        "source_path": "skills/nuclei-cve-planning/SKILL.md",
+        "source_sha256": "3717f79df7a9129f3b2a03abd085859ed3e31837f6b2a76fcbb9126fa9ac1c86",
+        "source_version": "1.0.0",
+        "license": "user_supplied_no_license_file",
+        "legacy_logical_tools": [
+          "tech.lookup",
+          "vulnx.query",
+          "nuclei.template_index",
+          "nuclei.run_profile"
+        ],
+        "upstream_code_copied": false,
+        "translation_input_sha256": "97bcf591b4074a1ea4be4394a4d9c1c0d0f344b340a4306794c7c47d0e14496b",
+        "content_language": "en",
+        "content_sha256": "0ce48a27360ad2829e4d6b8bd1a74c22532fe601b9e6442dbb2df1e6940f66c5",
+        "translation_revision": "1"
+      }
+    },
+    {
+      "id": "authentication-session",
+      "description": "Plans controlled authentication/session lifecycle checks and routes exact replay/refresh without claiming full login or MFA automation.",
+      "path": "authentication-session/SKILL.md",
+      "capabilities": [
+        "browser_discover"
+      ],
+      "optional_capabilities": [
+        "nuclei_scan",
+        "session_refresh",
+        "browser_post_capture"
+      ],
+      "internal_modules": [
+        "redjohn.assessment.capture",
+        "redjohn.assessment.auth_replay",
+        "redjohn.assessment.session_refresh",
+        "redjohn.assessment.browser_capture",
+        "redjohn.assessment.body_tokens",
+        "redjohn.assessment.browser_workflow"
+      ],
+      "unimplemented_requirements": [
+        "controlled_session_replay"
+      ],
+      "domains": [
+        "web"
+      ],
+      "profiles": [
+        "active-staging",
+        "isolated-lab"
+      ],
+      "supported_content_types": [
+        "",
+        "application/json",
+        "application/x-www-form-urlencoded",
+        "multipart/form-data"
+      ],
+      "unsupported_content_types": [
+        "application/xml"
+      ],
+      "input_mode": "recorded_request",
+      "requires_actor": true,
+      "requires_fixture": false,
+      "status": "adapter_not_implemented",
+      "control_test_refs": [
+        "tests/test_assessment_skills.py::test_manifest_contract_and_missing_adapters",
+        "tests/test_assessment_session_refresh.py",
+        "tests/test_capture_reservations.py",
+        "tests/test_post_refresh_pipeline.py",
+        "tests/test_body_token_refresh.py",
+        "tests/test_browser_token_pipeline.py",
+        "tests/test_authenticated_schema_oast_contract.py",
+        "tests/test_authenticated_schema_oast_recovery_live.py"
+      ],
+      "provenance": {
+        "kind": "user_supplied_adapted_contract",
+        "source_pack": "headless_strix_skillpack",
+        "source_path": "skills/authentication-session/SKILL.md",
+        "source_sha256": "31dc68a017c33b87e052549680fc76cce1f519d008021d032b6e62ce40856897",
+        "source_version": "1.0.0",
+        "license": "user_supplied_no_license_file",
+        "legacy_logical_tools": [
+          "browser.session",
+          "traffic.replay",
+          "auth.expected_policy"
+        ],
+        "upstream_code_copied": false,
+        "translation_input_sha256": "3d81629b95b452284f2284afa14754d504e6e8e4e485a8634c043579b403be5e",
+        "content_language": "en",
+        "content_sha256": "510f3c2d1c8d8c9dcdfaafee0b4c9af133b3d4f58b185063e2e6a3865b6a1c2e",
+        "translation_revision": "1"
+      }
+    },
+    {
+      "id": "jwt-security",
+      "description": "Checks JWT validation and lifetime expectations without accepting decoded token content as a security proof.",
+      "path": "jwt-security/SKILL.md",
+      "capabilities": [],
+      "optional_capabilities": [],
+      "internal_modules": [],
+      "unimplemented_requirements": [
+        "jwt_validation_replay"
+      ],
+      "domains": [
+        "web"
+      ],
+      "profiles": [
+        "active-staging",
+        "isolated-lab"
+      ],
+      "supported_content_types": [],
+      "unsupported_content_types": [
+        "application/json",
+        "application/xml",
+        "multipart/form-data",
+        "application/x-www-form-urlencoded"
+      ],
+      "input_mode": "recorded_request",
+      "requires_actor": true,
+      "requires_fixture": false,
+      "status": "adapter_not_implemented",
+      "control_test_refs": [
+        "tests/test_assessment_skills.py::test_manifest_contract_and_missing_adapters"
+      ],
+      "provenance": {
+        "kind": "user_supplied_adapted_contract",
+        "source_pack": "headless_strix_skillpack",
+        "source_path": "skills/jwt-security/SKILL.md",
+        "source_sha256": "119411f3c16463bc5fa45f5865c22202bcc790b265743ba729acab5f9d158a3b",
+        "source_version": "1.0.0",
+        "license": "user_supplied_no_license_file",
+        "legacy_logical_tools": [
+          "auth.token_metadata",
+          "traffic.replay",
+          "auth.expected_policy"
+        ],
+        "upstream_code_copied": false,
+        "translation_input_sha256": "7825f5e51b6456df958064a08b69a9b2454e62767463846626d25ead494d27dd",
+        "content_language": "en",
+        "content_sha256": "64fa6a8417ead873107dab105c4fcf0dd3f6e8466f9442f72cc59fccba5f91de",
+        "translation_revision": "1"
+      }
+    },
+    {
+      "id": "authorization-idor-bola",
+      "description": "Tests object-level authorization across isolated accounts, object owners and tenants.",
+      "path": "authorization-idor-bola/SKILL.md",
+      "capabilities": [
+        "browser_discover"
+      ],
+      "optional_capabilities": [],
+      "internal_modules": [],
+      "unimplemented_requirements": [
+        "actor_object_comparison"
+      ],
+      "domains": [
+        "web"
+      ],
+      "profiles": [
+        "active-staging",
+        "isolated-lab"
+      ],
+      "supported_content_types": [],
+      "unsupported_content_types": [
+        "application/json",
+        "application/xml",
+        "multipart/form-data",
+        "application/x-www-form-urlencoded"
+      ],
+      "input_mode": "recorded_request",
+      "requires_actor": true,
+      "requires_fixture": false,
+      "status": "adapter_not_implemented",
+      "control_test_refs": [
+        "tests/test_assessment_skills.py::test_manifest_contract_and_missing_adapters"
+      ],
+      "provenance": {
+        "kind": "user_supplied_adapted_contract",
+        "source_pack": "headless_strix_skillpack",
+        "source_path": "skills/authorization-idor-bola/SKILL.md",
+        "source_sha256": "f2cde1e65c39e8ed80270a32d13dac862c45b1d27479584f450e2e6fecc61277",
+        "source_version": "1.0.0",
+        "license": "user_supplied_no_license_file",
+        "legacy_logical_tools": [
+          "surface.objects",
+          "browser.session",
+          "traffic.replay",
+          "auth.expected_policy"
+        ],
+        "upstream_code_copied": false,
+        "translation_input_sha256": "889fb7f6405c912533bbc1904fc35e5bb5fa63ed439915f881600313b300e921",
+        "content_language": "en",
+        "content_sha256": "9768a443d7f6b0d1381893face4fd4c8940caad4c509cdfad257ce93fcccff59",
+        "translation_revision": "1"
+      }
+    },
+    {
+      "id": "authorization-bfla-bopla",
+      "description": "Tests endpoint/function-level and field/property-level privilege boundaries for assigned application roles.",
+      "path": "authorization-bfla-bopla/SKILL.md",
+      "capabilities": [],
+      "optional_capabilities": [],
+      "internal_modules": [],
+      "unimplemented_requirements": [
+        "role_function_property_comparison"
+      ],
+      "domains": [
+        "web"
+      ],
+      "profiles": [
+        "active-staging",
+        "isolated-lab"
+      ],
+      "supported_content_types": [],
+      "unsupported_content_types": [
+        "application/json",
+        "application/xml",
+        "multipart/form-data",
+        "application/x-www-form-urlencoded"
+      ],
+      "input_mode": "recorded_request",
+      "requires_actor": true,
+      "requires_fixture": false,
+      "status": "adapter_not_implemented",
+      "control_test_refs": [
+        "tests/test_assessment_skills.py::test_manifest_contract_and_missing_adapters"
+      ],
+      "provenance": {
+        "kind": "user_supplied_adapted_contract",
+        "source_pack": "headless_strix_skillpack",
+        "source_path": "skills/authorization-bfla-bopla/SKILL.md",
+        "source_sha256": "e800c82e5798c60231fdf70d13ea3de54800a56b7a465cf562b448ba5d8a44b3",
+        "source_version": "1.0.0",
+        "license": "user_supplied_no_license_file",
+        "legacy_logical_tools": [
+          "surface.operations",
+          "traffic.replay",
+          "auth.expected_policy"
+        ],
+        "upstream_code_copied": false,
+        "translation_input_sha256": "94cf880ebac3508a4d497a2f2a88c2f4c91d7db05ef2231df1448e14972e2dd0",
+        "content_language": "en",
+        "content_sha256": "d856fea7c35f00433173920488c85ae8a29b937702efcbf32dfabe97cf7d1c7f",
+        "translation_revision": "1"
+      }
+    },
+    {
+      "id": "api-graphql-security",
+      "description": "Checks a captured GET or selected private POST input projection with pinned Schemathesis and bounded integer generation.",
+      "path": "api-graphql-security/SKILL.md",
+      "capabilities": [
+        "schemathesis_validate"
+      ],
+      "optional_capabilities": [],
+      "internal_modules": [
+        "redjohn.assessment.input_replay"
+      ],
+      "unimplemented_requirements": [],
+      "domains": [
+        "web"
+      ],
+      "profiles": [
+        "active-staging",
+        "isolated-lab"
+      ],
+      "supported_content_types": [
+        "",
+        "application/json",
+        "application/x-www-form-urlencoded",
+        "multipart/form-data"
+      ],
+      "unsupported_content_types": [
+        "application/xml"
+      ],
+      "input_mode": "recorded_request",
+      "requires_actor": false,
+      "requires_fixture": true,
+      "status": "implemented_fixture_tested",
+      "control_test_refs": [
+        "tests/test_schema_oast_contract.py",
+        "tests/test_schema_oast_live.py",
+        "tests/test_authenticated_schema_oast_contract.py",
+        "tests/test_authenticated_schema_oast_live.py",
+        "tests/test_authenticated_schema_oast_recovery_live.py"
+      ],
+      "provenance": {
+        "kind": "user_supplied_adapted_contract",
+        "source_pack": "headless_strix_skillpack",
+        "source_path": "skills/api-graphql-security/SKILL.md",
+        "source_sha256": "e40100b2a8fae65f18ede0637c858a9dc9f76449b73f0c4421f4d8e15a5cbb4b",
+        "source_version": "1.0.0",
+        "license": "user_supplied_no_license_file",
+        "legacy_logical_tools": [
+          "api.schema_import",
+          "schemathesis.run_profile",
+          "traffic.replay"
+        ],
+        "upstream_code_copied": false,
+        "translation_input_sha256": "f5337a08b479696b22ab53942c2ee3f5cdf272988e3afe828d5eac9df454d375",
+        "content_language": "en",
+        "content_sha256": "74394f24792e55a6a2194bdb590cc3111c8a7095dae345b2221b59e089de0c2c",
+        "translation_revision": "1"
+      }
+    },
+    {
+      "id": "sql-injection-validation",
+      "description": "Checks an explicit SQLi hint on a captured GET query parameter with bounded boolean-only sqlmap.",
+      "path": "sql-injection-validation/SKILL.md",
+      "capabilities": [
+        "sqlmap_validate"
+      ],
+      "optional_capabilities": [],
+      "internal_modules": [],
+      "unimplemented_requirements": [],
+      "domains": [
+        "web"
+      ],
+      "profiles": [
+        "active-staging",
+        "isolated-lab"
+      ],
+      "supported_content_types": [],
+      "unsupported_content_types": [
+        "application/json",
+        "application/xml",
+        "multipart/form-data",
+        "application/x-www-form-urlencoded"
+      ],
+      "input_mode": "recorded_request",
+      "requires_actor": false,
+      "requires_fixture": true,
+      "status": "implemented_fixture_tested",
+      "control_test_refs": [
+        "tests/test_specialists_contract.py",
+        "tests/test_specialists_live.py::test_actual_specialists_restart_browser_sqlite_and_xss_chain"
+      ],
+      "provenance": {
+        "kind": "user_supplied_adapted_contract",
+        "source_pack": "headless_strix_skillpack",
+        "source_path": "skills/sql-injection-validation/SKILL.md",
+        "source_sha256": "a78a3749c06a177a786f835feae90cc57f1ed9c78aff4f8e85fc1454a95a27cc",
+        "source_version": "1.0.0",
+        "license": "user_supplied_no_license_file",
+        "legacy_logical_tools": [
+          "surface.inputs",
+          "sqlmap.run_profile",
+          "traffic.replay"
+        ],
+        "upstream_code_copied": false,
+        "translation_input_sha256": "ae830b9a639907bc45b02fb4ba9fef356262cc6442ed6919e07ef1c16b4b70ad",
+        "content_language": "en",
+        "content_sha256": "19152061a93f2b67fa1a3866d1605eb43b583e532c8cbd5257f07c256699fce7",
+        "translation_revision": "2-specialist-get-support"
+      }
+    },
+    {
+      "id": "nosql-ldap-injection",
+      "description": "Reviews NoSQL and LDAP query boundaries with technology-aware, controlled validation and source-dataflow correlation.",
+      "path": "nosql-ldap-injection/SKILL.md",
+      "capabilities": [
+        "semgrep_source"
+      ],
+      "optional_capabilities": [],
+      "internal_modules": [],
+      "unimplemented_requirements": [
+        "nosql_ldap_controlled_replay"
+      ],
+      "domains": [
+        "web"
+      ],
+      "profiles": [
+        "active-staging",
+        "isolated-lab"
+      ],
+      "supported_content_types": [],
+      "unsupported_content_types": [
+        "application/json",
+        "application/xml",
+        "multipart/form-data",
+        "application/x-www-form-urlencoded"
+      ],
+      "input_mode": "recorded_request",
+      "requires_actor": false,
+      "requires_fixture": true,
+      "status": "adapter_not_implemented",
+      "control_test_refs": [
+        "tests/test_assessment_skills.py::test_manifest_contract_and_missing_adapters"
+      ],
+      "provenance": {
+        "kind": "user_supplied_adapted_contract",
+        "source_pack": "headless_strix_skillpack",
+        "source_path": "skills/nosql-ldap-injection/SKILL.md",
+        "source_sha256": "71a7221f491c1da3b2fbc36a199ebed9d86f60261e899ca230f6e85de66e9716",
+        "source_version": "1.0.0",
+        "license": "user_supplied_no_license_file",
+        "legacy_logical_tools": [
+          "source.taint_analysis",
+          "traffic.replay",
+          "surface.inputs"
+        ],
+        "upstream_code_copied": false,
+        "translation_input_sha256": "fe26f3191e1b4f92480000ddb6d684c8cf5e1af4d85799d4a2cdedf04eac2d91",
+        "content_language": "en",
+        "content_sha256": "dbc910a9867188875fc01c3a8d3749becebb4135bfc2cd9f007cbcde93a09132",
+        "translation_revision": "1"
+      }
+    },
+    {
+      "id": "xss-validation",
+      "description": "Checks a selected reflected GET input with Dalfox, then confirms target-delivered JavaScript in isolated Chromium.",
+      "path": "xss-validation/SKILL.md",
+      "capabilities": [
+        "dalfox_validate",
+        "browser_xss_confirmation"
+      ],
+      "optional_capabilities": [],
+      "internal_modules": [],
+      "unimplemented_requirements": [],
+      "domains": [
+        "web"
+      ],
+      "profiles": [
+        "active-staging",
+        "isolated-lab"
+      ],
+      "supported_content_types": [],
+      "unsupported_content_types": [
+        "application/json",
+        "application/xml",
+        "multipart/form-data",
+        "application/x-www-form-urlencoded"
+      ],
+      "input_mode": "recorded_request",
+      "requires_actor": false,
+      "requires_fixture": true,
+      "status": "implemented_fixture_tested",
+      "control_test_refs": [
+        "tests/test_specialists_contract.py",
+        "tests/test_specialists_live.py::test_actual_specialists_restart_browser_sqlite_and_xss_chain"
+      ],
+      "provenance": {
+        "kind": "user_supplied_adapted_contract",
+        "source_pack": "headless_strix_skillpack",
+        "source_path": "skills/xss-validation/SKILL.md",
+        "source_sha256": "a59c5a8d1e63fd43baa56950d6ae140b321a78f3d3871549d91ebe5aebfebf3f",
+        "source_version": "1.0.0",
+        "license": "user_supplied_no_license_file",
+        "legacy_logical_tools": [
+          "dalfox.run_profile",
+          "browser.observe_dom",
+          "browser.capture_traffic"
+        ],
+        "upstream_code_copied": false,
+        "translation_input_sha256": "ae5842fe9fce916024ec5e0dcbcbc77f08341a1609e3ad93b6ebed2174769ee5",
+        "content_language": "en",
+        "content_sha256": "f7f9bdd2d4854eb2ff1484de49639004534dac0a51b06891116ff1701f632286",
+        "translation_revision": "2-specialist-get-support"
+      }
+    },
+    {
+      "id": "command-injection-validation",
+      "description": "Assesses suspected server-side command execution paths using authorized non-destructive evidence and explicit impact gates.",
+      "path": "command-injection-validation/SKILL.md",
+      "capabilities": [
+        "commix"
+      ],
+      "optional_capabilities": [
+        "oast_correlate"
+      ],
+      "internal_modules": [],
+      "unimplemented_requirements": [
+        "command_injection_lab_control"
+      ],
+      "domains": [
+        "web"
+      ],
+      "profiles": [
+        "isolated-lab"
+      ],
+      "supported_content_types": [],
+      "unsupported_content_types": [
+        "application/json",
+        "application/xml",
+        "multipart/form-data",
+        "application/x-www-form-urlencoded"
+      ],
+      "input_mode": "recorded_request",
+      "requires_actor": false,
+      "requires_fixture": true,
+      "status": "deferred_not_required",
+      "control_test_refs": [
+        "tests/test_assessment_skills.py::test_manifest_contract_and_missing_adapters"
+      ],
+      "provenance": {
+        "kind": "user_supplied_adapted_contract",
+        "source_pack": "headless_strix_skillpack",
+        "source_path": "skills/command-injection-validation/SKILL.md",
+        "source_sha256": "a7499e4b580de6db94b47bb595dc225f17da722c1ebc158429678f40476b9eb6",
+        "source_version": "1.0.0",
+        "license": "user_supplied_no_license_file",
+        "legacy_logical_tools": [
+          "commix.run_profile",
+          "source.taint_analysis",
+          "oast.correlate"
+        ],
+        "upstream_code_copied": false,
+        "translation_input_sha256": "fc5c7f2bf3852ce03cd31a1675d7c4c96c91fdc7c03051c190005435938e93e0",
+        "content_language": "en",
+        "content_sha256": "2cba344e96585e7e9fa060ef0618c33390bb3d8eb22ad5e39fa2b48cb341fd1a",
+        "translation_revision": "1"
+      }
+    },
+    {
+      "id": "template-injection-validation",
+      "description": "Validates a captured GET or one approved private POST field with pinned TInjA and a finite host-enforced template profile.",
+      "path": "template-injection-validation/SKILL.md",
+      "capabilities": [
+        "tinja_validate"
+      ],
+      "optional_capabilities": [],
+      "internal_modules": [
+        "redjohn.assessment.input_replay"
+      ],
+      "unimplemented_requirements": [],
+      "domains": [
+        "web"
+      ],
+      "profiles": [
+        "active-staging",
+        "isolated-lab"
+      ],
+      "supported_content_types": [
+        "",
+        "application/json",
+        "application/x-www-form-urlencoded",
+        "multipart/form-data"
+      ],
+      "unsupported_content_types": [
+        "application/xml"
+      ],
+      "input_mode": "recorded_request",
+      "requires_actor": false,
+      "requires_fixture": true,
+      "status": "implemented_fixture_tested",
+      "control_test_refs": [
+        "tests/test_schema_oast_contract.py",
+        "tests/test_schema_oast_live.py",
+        "tests/test_authenticated_schema_oast_contract.py",
+        "tests/test_authenticated_schema_oast_live.py",
+        "tests/test_authenticated_schema_oast_recovery_live.py"
+      ],
+      "provenance": {
+        "kind": "user_supplied_adapted_contract",
+        "source_pack": "headless_strix_skillpack",
+        "source_path": "skills/template-injection-validation/SKILL.md",
+        "source_sha256": "8871a03c432bd3ed434feef06f4f1fd2568479820fd990ec4b4ef5dc7203bc9c",
+        "source_version": "1.0.0",
+        "license": "user_supplied_no_license_file",
+        "legacy_logical_tools": [
+          "tinja.run_profile",
+          "browser.observe_dom",
+          "source.taint_analysis"
+        ],
+        "upstream_code_copied": false,
+        "translation_input_sha256": "813a52deec14527adaee58f974f4d80c87182e122cf9842c014d8df5838301eb",
+        "content_language": "en",
+        "content_sha256": "7622f3ea14c4493b8b132771443a1024004e4441e1e3d097e08ac86aade3c111",
+        "translation_revision": "1"
+      }
+    },
+    {
+      "id": "ssrf-validation",
+      "description": "Evaluates whether server-side URL fetching violates intended destination restrictions, using controlled OAST targets.",
+      "path": "ssrf-validation/SKILL.md",
+      "capabilities": [
+        "oast_correlate"
+      ],
+      "optional_capabilities": [],
+      "internal_modules": [],
+      "unimplemented_requirements": [
+        "server_fetch_fixture_replay"
+      ],
+      "domains": [
+        "web"
+      ],
+      "profiles": [
+        "active-staging",
+        "isolated-lab"
+      ],
+      "supported_content_types": [],
+      "unsupported_content_types": [
+        "application/json",
+        "application/xml",
+        "multipart/form-data",
+        "application/x-www-form-urlencoded"
+      ],
+      "input_mode": "recorded_request",
+      "requires_actor": false,
+      "requires_fixture": true,
+      "status": "adapter_not_implemented",
+      "control_test_refs": [
+        "tests/test_assessment_skills.py::test_manifest_contract_and_missing_adapters"
+      ],
+      "provenance": {
+        "kind": "user_supplied_adapted_contract",
+        "source_pack": "headless_strix_skillpack",
+        "source_path": "skills/ssrf-validation/SKILL.md",
+        "source_sha256": "183679cc4e953b6049055ca9845b02f13e54c82488d3f5ca0868b169fb4e2783",
+        "source_version": "1.0.0",
+        "license": "user_supplied_no_license_file",
+        "legacy_logical_tools": [
+          "surface.inputs",
+          "oast.allocate",
+          "oast.events",
+          "traffic.replay"
+        ],
+        "upstream_code_copied": false,
+        "translation_input_sha256": "9d198a25b5e5ed734493e686dfce62c4f13d71cfcf220e02e098d925500fdb7b",
+        "content_language": "en",
+        "content_sha256": "60d016afea32c1ead654beb2ac1ba9a780be53b35256ffebd25ac8a318ea03f7",
+        "translation_revision": "1"
+      }
+    },
+    {
+      "id": "xxe-validation",
+      "description": "Reviews XML parsing and external entity handling, corroborating any observed callbacks with parser and request context.",
+      "path": "xxe-validation/SKILL.md",
+      "capabilities": [
+        "oast_correlate"
+      ],
+      "optional_capabilities": [],
+      "internal_modules": [],
+      "unimplemented_requirements": [
+        "xml_entity_fixture_replay"
+      ],
+      "domains": [
+        "web"
+      ],
+      "profiles": [
+        "active-staging",
+        "isolated-lab"
+      ],
+      "supported_content_types": [],
+      "unsupported_content_types": [
+        "application/json",
+        "application/xml",
+        "multipart/form-data",
+        "application/x-www-form-urlencoded"
+      ],
+      "input_mode": "recorded_request",
+      "requires_actor": false,
+      "requires_fixture": true,
+      "status": "adapter_not_implemented",
+      "control_test_refs": [
+        "tests/test_assessment_skills.py::test_manifest_contract_and_missing_adapters"
+      ],
+      "provenance": {
+        "kind": "user_supplied_adapted_contract",
+        "source_pack": "headless_strix_skillpack",
+        "source_path": "skills/xxe-validation/SKILL.md",
+        "source_sha256": "563cc3626d10f0632831e33366ff081930e34239c30b74073bce31e68b2399c1",
+        "source_version": "1.0.0",
+        "license": "user_supplied_no_license_file",
+        "legacy_logical_tools": [
+          "traffic.replay",
+          "source.xml_parser_config",
+          "oast.correlate"
+        ],
+        "upstream_code_copied": false,
+        "translation_input_sha256": "ad0d6f0693d16d659520fdf559344acecd4d8829e9a17b4f395c45f4ccc36f32",
+        "content_language": "en",
+        "content_sha256": "f4d4ddeb416991bbc9892f38fce61ea0a4f7bacb68644f7ba21c490d38d21ac4",
+        "translation_revision": "1"
+      }
+    },
+    {
+      "id": "path-traversal-lfi-rfi",
+      "description": "Checks file path normalization and inclusion boundaries using controlled fixture files and evidence-aware comparison.",
+      "path": "path-traversal-lfi-rfi/SKILL.md",
+      "capabilities": [],
+      "optional_capabilities": [],
+      "internal_modules": [],
+      "unimplemented_requirements": [
+        "fixture_file_boundary_replay"
+      ],
+      "domains": [
+        "web"
+      ],
+      "profiles": [
+        "active-staging",
+        "isolated-lab"
+      ],
+      "supported_content_types": [],
+      "unsupported_content_types": [
+        "application/json",
+        "application/xml",
+        "multipart/form-data",
+        "application/x-www-form-urlencoded"
+      ],
+      "input_mode": "recorded_request",
+      "requires_actor": false,
+      "requires_fixture": true,
+      "status": "adapter_not_implemented",
+      "control_test_refs": [
+        "tests/test_assessment_skills.py::test_manifest_contract_and_missing_adapters"
+      ],
+      "provenance": {
+        "kind": "user_supplied_adapted_contract",
+        "source_pack": "headless_strix_skillpack",
+        "source_path": "skills/path-traversal-lfi-rfi/SKILL.md",
+        "source_sha256": "744a811437f38898af37bd613063804013e42eb039d995721b4529a00ee857c7",
+        "source_version": "1.0.0",
+        "license": "user_supplied_no_license_file",
+        "legacy_logical_tools": [
+          "traffic.replay",
+          "source.file_access",
+          "surface.inputs"
+        ],
+        "upstream_code_copied": false,
+        "translation_input_sha256": "e7419d1366ffea49d3b06aabf94a0dcb722e649d192e7fc49cd12b1f8d4cbea6",
+        "content_language": "en",
+        "content_sha256": "67793cabc05fbc428cf9edf2924f79a4314b39b554852c84d20c1ee2d09f1dc8",
+        "translation_revision": "1"
+      }
+    },
+    {
+      "id": "file-upload-processing",
+      "description": "Maps upload, transformation and download workflows for authorization, validation and unsafe processing issues.",
+      "path": "file-upload-processing/SKILL.md",
+      "capabilities": [
+        "browser_discover"
+      ],
+      "optional_capabilities": [],
+      "internal_modules": [],
+      "unimplemented_requirements": [
+        "fixture_upload_workflow"
+      ],
+      "domains": [
+        "web"
+      ],
+      "profiles": [
+        "active-staging",
+        "isolated-lab"
+      ],
+      "supported_content_types": [],
+      "unsupported_content_types": [
+        "application/json",
+        "application/xml",
+        "multipart/form-data",
+        "application/x-www-form-urlencoded"
+      ],
+      "input_mode": "recorded_request",
+      "requires_actor": true,
+      "requires_fixture": true,
+      "status": "adapter_not_implemented",
+      "control_test_refs": [
+        "tests/test_assessment_skills.py::test_manifest_contract_and_missing_adapters"
+      ],
+      "provenance": {
+        "kind": "user_supplied_adapted_contract",
+        "source_pack": "headless_strix_skillpack",
+        "source_path": "skills/file-upload-processing/SKILL.md",
+        "source_sha256": "122c2a7838b62cbfd1deccb1cf031dfa2c03d8aa4e4a146c3a52a10b7a9447c4",
+        "source_version": "1.0.0",
+        "license": "user_supplied_no_license_file",
+        "legacy_logical_tools": [
+          "browser.upload_fixture",
+          "traffic.capture",
+          "source.file_handlers"
+        ],
+        "upstream_code_copied": false,
+        "translation_input_sha256": "b4aa607956aab393e0c99eccbe47c344d2cbeaafbc827515f37d4c5efa32a1b6",
+        "content_language": "en",
+        "content_sha256": "7a7b57af9cefb12419617e037d59e4817ea73fffd0863afe724afd775350ebeb",
+        "translation_revision": "1"
+      }
+    },
+    {
+      "id": "csrf-validation",
+      "description": "Checks browser-origin protections for actual state-changing operations with isolated test accounts.",
+      "path": "csrf-validation/SKILL.md",
+      "capabilities": [
+        "browser_discover"
+      ],
+      "optional_capabilities": [],
+      "internal_modules": [],
+      "unimplemented_requirements": [
+        "cross_origin_state_fixture"
+      ],
+      "domains": [
+        "web"
+      ],
+      "profiles": [
+        "active-staging",
+        "isolated-lab"
+      ],
+      "supported_content_types": [],
+      "unsupported_content_types": [
+        "application/json",
+        "application/xml",
+        "multipart/form-data",
+        "application/x-www-form-urlencoded"
+      ],
+      "input_mode": "recorded_request",
+      "requires_actor": true,
+      "requires_fixture": true,
+      "status": "adapter_not_implemented",
+      "control_test_refs": [
+        "tests/test_assessment_skills.py::test_manifest_contract_and_missing_adapters"
+      ],
+      "provenance": {
+        "kind": "user_supplied_adapted_contract",
+        "source_pack": "headless_strix_skillpack",
+        "source_path": "skills/csrf-validation/SKILL.md",
+        "source_sha256": "24f27ffd0d77d161aea2a8b0816d67d7f11a7a03a93785ae661e6811d9203bb0",
+        "source_version": "1.0.0",
+        "license": "user_supplied_no_license_file",
+        "legacy_logical_tools": [
+          "browser.cross_origin_fixture",
+          "traffic.capture",
+          "auth.expected_policy"
+        ],
+        "upstream_code_copied": false,
+        "translation_input_sha256": "561f6b955ebaaea7eccb2e4fb66d32e10d8c9a802d07cc8a3f18ba19291da9df",
+        "content_language": "en",
+        "content_sha256": "c314048a15ac1cae1c3b8f95483519026f3fdeb4abb5f4e3f39a887561d5e451",
+        "translation_revision": "1"
+      }
+    },
+    {
+      "id": "cors-validation",
+      "description": "Assesses cross-origin browser access against explicit origin and credential policies using headless Chromium.",
+      "path": "cors-validation/SKILL.md",
+      "capabilities": [
+        "browser_discover",
+        "headers_audit"
+      ],
+      "optional_capabilities": [],
+      "internal_modules": [],
+      "unimplemented_requirements": [
+        "cross_origin_read_fixture"
+      ],
+      "domains": [
+        "web"
+      ],
+      "profiles": [
+        "active-staging",
+        "isolated-lab"
+      ],
+      "supported_content_types": [],
+      "unsupported_content_types": [
+        "application/json",
+        "application/xml",
+        "multipart/form-data",
+        "application/x-www-form-urlencoded"
+      ],
+      "input_mode": "recorded_request",
+      "requires_actor": true,
+      "requires_fixture": true,
+      "status": "adapter_not_implemented",
+      "control_test_refs": [
+        "tests/test_assessment_skills.py::test_manifest_contract_and_missing_adapters"
+      ],
+      "provenance": {
+        "kind": "user_supplied_adapted_contract",
+        "source_pack": "headless_strix_skillpack",
+        "source_path": "skills/cors-validation/SKILL.md",
+        "source_sha256": "4dc2c8fe0f74da979d845ca045d5b0594c93017083a1457976a3ff9fb22d1ca9",
+        "source_version": "1.0.0",
+        "license": "user_supplied_no_license_file",
+        "legacy_logical_tools": [
+          "browser.cross_origin_fixture",
+          "traffic.capture",
+          "auth.expected_policy"
+        ],
+        "upstream_code_copied": false,
+        "translation_input_sha256": "4e27794e3e02bcdbfae0d9d4b5bf2a64bbb8f9cd64ee157fb4ac432bf74b52cb",
+        "content_language": "en",
+        "content_sha256": "10c27d2ca9044905de2d82692a958da2efac5f5ac787a992067b314cc108533f",
+        "translation_revision": "1"
+      }
+    },
+    {
+      "id": "http-desync-assessment",
+      "description": "Evaluates HTTP framing risks through controlled gateway/backend comparisons in an isolated environment.",
+      "path": "http-desync-assessment/SKILL.md",
+      "capabilities": [],
+      "optional_capabilities": [],
+      "internal_modules": [],
+      "unimplemented_requirements": [
+        "raw_http_framing_lab_harness"
+      ],
+      "domains": [
+        "web"
+      ],
+      "profiles": [
+        "isolated-lab"
+      ],
+      "supported_content_types": [],
+      "unsupported_content_types": [
+        "application/json",
+        "application/xml",
+        "multipart/form-data",
+        "application/x-www-form-urlencoded"
+      ],
+      "input_mode": "recorded_request",
+      "requires_actor": false,
+      "requires_fixture": true,
+      "status": "adapter_not_implemented",
+      "control_test_refs": [
+        "tests/test_assessment_skills.py::test_manifest_contract_and_missing_adapters"
+      ],
+      "provenance": {
+        "kind": "user_supplied_adapted_contract",
+        "source_pack": "headless_strix_skillpack",
+        "source_path": "skills/http-desync-assessment/SKILL.md",
+        "source_sha256": "3964d700369cd8f7039536d55845a5a55002b5069b878699fb5970d1d69798f1",
+        "source_version": "1.0.0",
+        "license": "user_supplied_no_license_file",
+        "legacy_logical_tools": [
+          "protocol.test_harness",
+          "infra.proxy_config",
+          "evidence.store"
+        ],
+        "upstream_code_copied": false,
+        "translation_input_sha256": "e4872b1ff3d1efc39af439167dce86af214dc12b3710770b0bc303eb153ad93c",
+        "content_language": "en",
+        "content_sha256": "d085d1dc8c7cfa5fd9e54891f9c2dc4dd0b4049ee0ca7f2c46dd50b6fc7a54aa",
+        "translation_revision": "1"
+      }
+    },
+    {
+      "id": "crlf-response-splitting",
+      "description": "Checks whether untrusted data improperly changes HTTP header boundaries or logging metadata.",
+      "path": "crlf-response-splitting/SKILL.md",
+      "capabilities": [],
+      "optional_capabilities": [],
+      "internal_modules": [],
+      "unimplemented_requirements": [
+        "byte_exact_response_header_replay"
+      ],
+      "domains": [
+        "web"
+      ],
+      "profiles": [
+        "active-staging",
+        "isolated-lab"
+      ],
+      "supported_content_types": [],
+      "unsupported_content_types": [
+        "application/json",
+        "application/xml",
+        "multipart/form-data",
+        "application/x-www-form-urlencoded"
+      ],
+      "input_mode": "recorded_request",
+      "requires_actor": false,
+      "requires_fixture": true,
+      "status": "adapter_not_implemented",
+      "control_test_refs": [
+        "tests/test_assessment_skills.py::test_manifest_contract_and_missing_adapters"
+      ],
+      "provenance": {
+        "kind": "user_supplied_adapted_contract",
+        "source_pack": "headless_strix_skillpack",
+        "source_path": "skills/crlf-response-splitting/SKILL.md",
+        "source_sha256": "74c07b2b9bb868a318267aa53d7b689a448353720c6398382fffc3187afbed95",
+        "source_version": "1.0.0",
+        "license": "user_supplied_no_license_file",
+        "legacy_logical_tools": [
+          "traffic.replay",
+          "browser.capture_traffic",
+          "source.header_construction"
+        ],
+        "upstream_code_copied": false,
+        "translation_input_sha256": "e83444cbed17a62aa91525ef46089394e4efbbe33e62135fd948828db9b40428",
+        "content_language": "en",
+        "content_sha256": "fc99d7d4ff7d7cae6489f673d04a3da29597d38ee869e782e63bb5477844a67f",
+        "translation_revision": "1"
+      }
+    },
+    {
+      "id": "deserialization-risk",
+      "description": "Reviews serializer formats and unsafe decoding paths, combining SAST evidence with bounded runtime validation.",
+      "path": "deserialization-risk/SKILL.md",
+      "capabilities": [
+        "semgrep_source",
+        "trivy_source"
+      ],
+      "optional_capabilities": [],
+      "internal_modules": [],
+      "unimplemented_requirements": [
+        "deserializer_fixture_validation"
+      ],
+      "domains": [
+        "web"
+      ],
+      "profiles": [
+        "active-staging",
+        "isolated-lab"
+      ],
+      "supported_content_types": [],
+      "unsupported_content_types": [
+        "application/json",
+        "application/xml",
+        "multipart/form-data",
+        "application/x-www-form-urlencoded"
+      ],
+      "input_mode": "recorded_request",
+      "requires_actor": false,
+      "requires_fixture": true,
+      "status": "adapter_not_implemented",
+      "control_test_refs": [
+        "tests/test_assessment_skills.py::test_manifest_contract_and_missing_adapters"
+      ],
+      "provenance": {
+        "kind": "user_supplied_adapted_contract",
+        "source_pack": "headless_strix_skillpack",
+        "source_path": "skills/deserialization-risk/SKILL.md",
+        "source_sha256": "ac17717e065c52b2da28fde550ea86fe3880fdf61537e2cc09b12920c3f34f98",
+        "source_version": "1.0.0",
+        "license": "user_supplied_no_license_file",
+        "legacy_logical_tools": [
+          "source.taint_analysis",
+          "source.dependency_scan",
+          "traffic.replay"
+        ],
+        "upstream_code_copied": false,
+        "translation_input_sha256": "d23e80ef632339342711620b54bbff27caa981468ea3faf40af1cf8bffe8e6e5",
+        "content_language": "en",
+        "content_sha256": "f6d38c714c4999d01c448e5863ecdfcaebaa83788f5fc908308feb52d55742e3",
+        "translation_revision": "1"
+      }
+    },
+    {
+      "id": "race-toctou",
+      "description": "Checks state invariants under controlled concurrency and compares them with sequential baseline behavior.",
+      "path": "race-toctou/SKILL.md",
+      "capabilities": [],
+      "optional_capabilities": [],
+      "internal_modules": [],
+      "unimplemented_requirements": [
+        "serialized_baseline_concurrent_fixture_harness"
+      ],
+      "domains": [
+        "web"
+      ],
+      "profiles": [
+        "isolated-lab"
+      ],
+      "supported_content_types": [],
+      "unsupported_content_types": [
+        "application/json",
+        "application/xml",
+        "multipart/form-data",
+        "application/x-www-form-urlencoded"
+      ],
+      "input_mode": "recorded_request",
+      "requires_actor": false,
+      "requires_fixture": true,
+      "status": "adapter_not_implemented",
+      "control_test_refs": [
+        "tests/test_assessment_skills.py::test_manifest_contract_and_missing_adapters"
+      ],
+      "provenance": {
+        "kind": "user_supplied_adapted_contract",
+        "source_pack": "headless_strix_skillpack",
+        "source_path": "skills/race-toctou/SKILL.md",
+        "source_sha256": "e5a59fc2b60dc9b1c34a12a577387d1dcbe1cce54547756cf10d1bd28ae9ba9c",
+        "source_version": "1.0.0",
+        "license": "user_supplied_no_license_file",
+        "legacy_logical_tools": [
+          "workflow.fixture",
+          "concurrency.run_bounded",
+          "state.snapshot"
+        ],
+        "upstream_code_copied": false,
+        "translation_input_sha256": "e25bf8d15689b5061fc4590e240ef80beac8b837e0c917e2f76371dc70f20569",
+        "content_language": "en",
+        "content_sha256": "57ad556868f48550e0c0a59214d0fbee4c17a3c803ce7b586b522c763d713202",
+        "translation_revision": "1"
+      }
+    },
+    {
+      "id": "prototype-pollution",
+      "description": "Examines JavaScript object merge and parsing paths for unsafe prototype handling with local isolated fixtures.",
+      "path": "prototype-pollution/SKILL.md",
+      "capabilities": [],
+      "optional_capabilities": [],
+      "internal_modules": [],
+      "unimplemented_requirements": [
+        "isolated_javascript_state_harness"
+      ],
+      "domains": [
+        "web"
+      ],
+      "profiles": [
+        "isolated-lab"
+      ],
+      "supported_content_types": [],
+      "unsupported_content_types": [
+        "application/json",
+        "application/xml",
+        "multipart/form-data",
+        "application/x-www-form-urlencoded"
+      ],
+      "input_mode": "recorded_request",
+      "requires_actor": false,
+      "requires_fixture": true,
+      "status": "adapter_not_implemented",
+      "control_test_refs": [
+        "tests/test_assessment_skills.py::test_manifest_contract_and_missing_adapters"
+      ],
+      "provenance": {
+        "kind": "user_supplied_adapted_contract",
+        "source_pack": "headless_strix_skillpack",
+        "source_path": "skills/prototype-pollution/SKILL.md",
+        "source_sha256": "6125d47d9a8a2582c7e21a80dfc0e24dc83dc840dca594d4563765ec12e2f425",
+        "source_version": "1.0.0",
+        "license": "user_supplied_no_license_file",
+        "legacy_logical_tools": [
+          "source.js_ast",
+          "browser.isolated_fixture",
+          "runtime.observe"
+        ],
+        "upstream_code_copied": false,
+        "translation_input_sha256": "1710c0bc47194d1e51fafec12b518766e2d7c59ea6f9b1874fbd08caa7668698",
+        "content_language": "en",
+        "content_sha256": "d9568a28237c6f29b10486c6cbc4d3bdb5d557e46e4c1ea3d60f7f7c77f1cd22",
+        "translation_revision": "1"
+      }
+    },
+    {
+      "id": "subdomain-takeover",
+      "description": "Assesses dangling DNS and provider ownership with evidence of real claimability rather than DNS heuristics.",
+      "path": "subdomain-takeover/SKILL.md",
+      "capabilities": [
+        "dns_discover"
+      ],
+      "optional_capabilities": [],
+      "internal_modules": [],
+      "unimplemented_requirements": [
+        "nonclaiming_provider_ownership_validation"
+      ],
+      "domains": [
+        "web"
+      ],
+      "profiles": [
+        "safe-production",
+        "active-staging",
+        "isolated-lab"
+      ],
+      "supported_content_types": [],
+      "unsupported_content_types": [
+        "application/json",
+        "application/xml",
+        "multipart/form-data",
+        "application/x-www-form-urlencoded"
+      ],
+      "input_mode": "recorded_request",
+      "requires_actor": false,
+      "requires_fixture": false,
+      "status": "adapter_not_implemented",
+      "control_test_refs": [
+        "tests/test_assessment_skills.py::test_manifest_contract_and_missing_adapters"
+      ],
+      "provenance": {
+        "kind": "user_supplied_adapted_contract",
+        "source_pack": "headless_strix_skillpack",
+        "source_path": "skills/subdomain-takeover/SKILL.md",
+        "source_sha256": "4c653c9fb390639a8458a91637cf5cba2caac06911a684ec7dfc5d64c7454f19",
+        "source_version": "1.0.0",
+        "license": "user_supplied_no_license_file",
+        "legacy_logical_tools": [
+          "dns.records",
+          "provider.fingerprint",
+          "asset.ownership"
+        ],
+        "upstream_code_copied": false,
+        "translation_input_sha256": "6d8997946af8800101c3ca36fed441ea63c76281e2da55aa8138b08f635c125d",
+        "content_language": "en",
+        "content_sha256": "5ebcbb3572152e6c3706b6e1d948d6ca1918fd789c558d6b3723b724271771ed",
+        "translation_revision": "1"
+      }
+    },
+    {
+      "id": "business-logic-testing",
+      "description": "Models multi-step business workflows and checks documented invariants that generic scanners cannot infer.",
+      "path": "business-logic-testing/SKILL.md",
+      "capabilities": [],
+      "optional_capabilities": [],
+      "internal_modules": [],
+      "unimplemented_requirements": [
+        "application_specific_workflow_invariants"
+      ],
+      "domains": [
+        "web"
+      ],
+      "profiles": [
+        "active-staging",
+        "isolated-lab"
+      ],
+      "supported_content_types": [],
+      "unsupported_content_types": [
+        "application/json",
+        "application/xml",
+        "multipart/form-data",
+        "application/x-www-form-urlencoded"
+      ],
+      "input_mode": "recorded_request",
+      "requires_actor": true,
+      "requires_fixture": true,
+      "status": "adapter_not_implemented",
+      "control_test_refs": [
+        "tests/test_assessment_skills.py::test_manifest_contract_and_missing_adapters"
+      ],
+      "provenance": {
+        "kind": "user_supplied_adapted_contract",
+        "source_pack": "headless_strix_skillpack",
+        "source_path": "skills/business-logic-testing/SKILL.md",
+        "source_sha256": "3ca2951e56eb5da833d9983cdd810af281702e04a11190a29f05af4c5ebfdf87",
+        "source_version": "1.0.0",
+        "license": "user_supplied_no_license_file",
+        "legacy_logical_tools": [
+          "workflow.graph",
+          "browser.execute_fixture",
+          "state.snapshot",
+          "auth.expected_policy"
+        ],
+        "upstream_code_copied": false,
+        "translation_input_sha256": "5364e6ede72a0865f41154200590968467aa375ba9c167694b7cca22bce926fc",
+        "content_language": "en",
+        "content_sha256": "a2193e7e71a8febaa1ef6e34022d3e2a7ce895b2530c2e15d171c8257c6cd038",
+        "translation_revision": "1"
+      }
+    },
+    {
+      "id": "oast-correlation",
+      "description": "Correlates HTTP callbacks from a reviewed GET or authenticated private POST with durable Interactsh polling.",
+      "path": "oast-correlation/SKILL.md",
+      "capabilities": [
+        "oast_correlate"
+      ],
+      "optional_capabilities": [],
+      "internal_modules": [
+        "redjohn.assessment.input_replay"
+      ],
+      "unimplemented_requirements": [],
+      "domains": [
+        "web"
+      ],
+      "profiles": [
+        "active-staging",
+        "isolated-lab"
+      ],
+      "supported_content_types": [
+        "",
+        "application/json",
+        "application/x-www-form-urlencoded",
+        "multipart/form-data"
+      ],
+      "unsupported_content_types": [
+        "application/xml"
+      ],
+      "input_mode": "recorded_request",
+      "requires_actor": false,
+      "requires_fixture": true,
+      "status": "implemented_fixture_tested",
+      "control_test_refs": [
+        "tests/test_schema_oast_contract.py",
+        "tests/test_schema_oast_live.py",
+        "tests/test_authenticated_schema_oast_contract.py",
+        "tests/test_authenticated_schema_oast_live.py",
+        "tests/test_authenticated_schema_oast_recovery_live.py"
+      ],
+      "provenance": {
+        "kind": "user_supplied_adapted_contract",
+        "source_pack": "headless_strix_skillpack",
+        "source_path": "skills/oast-correlation/SKILL.md",
+        "source_sha256": "7328dc9e492989c007d7854421f337436b7699989cba96de21405b86547fe879",
+        "source_version": "1.0.0",
+        "license": "user_supplied_no_license_file",
+        "legacy_logical_tools": [
+          "oast.allocate",
+          "oast.poll",
+          "evidence.store"
+        ],
+        "upstream_code_copied": false,
+        "translation_input_sha256": "2659f5ef15654be664cb055066d3a8f4fda2300c24df3b0f56a65abcd9bbe4da",
+        "content_language": "en",
+        "content_sha256": "34f06558893f3b4f8c72e3d60f454086009aee39417f338e824c1c4f166e7c2f",
+        "translation_revision": "1"
+      }
+    },
+    {
+      "id": "source-dependency-analysis",
+      "description": "Combines source taint analysis and package vulnerability data to prioritize reachable security defects.",
+      "path": "source-dependency-analysis/SKILL.md",
+      "capabilities": [
+        "semgrep_source",
+        "trivy_source"
+      ],
+      "optional_capabilities": [
+        "vulnx_intelligence"
+      ],
+      "internal_modules": [],
+      "unimplemented_requirements": [],
+      "domains": [
+        "source"
+      ],
+      "profiles": [
+        "safe-production",
+        "active-staging",
+        "isolated-lab"
+      ],
+      "supported_content_types": [],
+      "unsupported_content_types": [],
+      "input_mode": "source_artifact",
+      "requires_actor": false,
+      "requires_fixture": false,
+      "status": "adapter_not_implemented",
+      "control_test_refs": [
+        "tests/test_assessment_skills.py::test_manifest_contract_and_missing_adapters"
+      ],
+      "provenance": {
+        "kind": "user_supplied_adapted_contract",
+        "source_pack": "headless_strix_skillpack",
+        "source_path": "skills/source-dependency-analysis/SKILL.md",
+        "source_sha256": "650b354f606eefac16b8b9f583c1bfa25da8785bef6fd552c0075ff454727253",
+        "source_version": "1.0.0",
+        "license": "user_supplied_no_license_file",
+        "legacy_logical_tools": [
+          "semgrep.scan",
+          "trivy.scan",
+          "vulnx.query",
+          "source.callgraph"
+        ],
+        "upstream_code_copied": false,
+        "translation_input_sha256": "94468a539621882a3488318111dfe1181f45dea0def73a943966fab27ca37797",
+        "content_language": "en",
+        "content_sha256": "4de45e3f5651cd738b3bfdafbd35e780c21764e696dae75e7f6874736112e315",
+        "translation_revision": "1"
+      }
+    },
+    {
+      "id": "finding-triage-retest",
+      "description": "Validates, deduplicates and retests candidate findings using independent controls and persisted evidence.",
+      "path": "finding-triage-retest/SKILL.md",
+      "capabilities": [],
+      "optional_capabilities": [],
+      "internal_modules": [
+        "redjohn.assessment.store",
+        "redjohn.assessment.report"
+      ],
+      "unimplemented_requirements": [
+        "finding_control_validation"
+      ],
+      "domains": [
+        "web"
+      ],
+      "profiles": [
+        "active-staging",
+        "isolated-lab"
+      ],
+      "supported_content_types": [],
+      "unsupported_content_types": [
+        "application/json",
+        "application/xml",
+        "multipart/form-data",
+        "application/x-www-form-urlencoded"
+      ],
+      "input_mode": "recorded_request",
+      "requires_actor": false,
+      "requires_fixture": true,
+      "status": "adapter_not_implemented",
+      "control_test_refs": [
+        "tests/test_assessment_skills.py::test_manifest_contract_and_missing_adapters"
+      ],
+      "provenance": {
+        "kind": "user_supplied_adapted_contract",
+        "source_pack": "headless_strix_skillpack",
+        "source_path": "skills/finding-triage-retest/SKILL.md",
+        "source_sha256": "90bddf9b0786401c4db0049f5c9c3d051d62c25a59660701419cef60bdd47a57",
+        "source_version": "1.0.0",
+        "license": "user_supplied_no_license_file",
+        "legacy_logical_tools": [
+          "evidence.get",
+          "findings.upsert",
+          "tests.replay"
+        ],
+        "upstream_code_copied": false,
+        "translation_input_sha256": "79ad3ee81c113666d992a037663dfdbf7e1857451781c768ea4b1576631266ba",
+        "content_language": "en",
+        "content_sha256": "195c5f4e61cb407976f856d7d835cd3b9b7d512cc1537d5cbce28d9971144cdf",
+        "translation_revision": "1"
+      }
+    },
+    {
+      "id": "report-coverage",
+      "description": "Builds concise reports with source-linked findings, residual gaps, fixes and machine-readable artifacts.",
+      "path": "report-coverage/SKILL.md",
+      "capabilities": [],
+      "optional_capabilities": [],
+      "internal_modules": [
+        "redjohn.assessment.report",
+        "redjohn.assessment.store"
+      ],
+      "unimplemented_requirements": [],
+      "domains": [
+        "web"
+      ],
+      "profiles": [
+        "safe-production",
+        "active-staging",
+        "isolated-lab"
+      ],
+      "supported_content_types": [
+        ""
+      ],
+      "unsupported_content_types": [],
+      "input_mode": "metadata",
+      "requires_actor": false,
+      "requires_fixture": false,
+      "status": "implemented_fixture_tested",
+      "control_test_refs": [
+        "tests/test_assessment_skills.py::test_manifest_contract_and_missing_adapters"
+      ],
+      "provenance": {
+        "kind": "user_supplied_adapted_contract",
+        "source_pack": "headless_strix_skillpack",
+        "source_path": "skills/report-coverage/SKILL.md",
+        "source_sha256": "246de3e6ec77bdb5ba969cde7dab49bf647ad8455faa99fb76ed3866c73aeda7",
+        "source_version": "1.0.0",
+        "license": "user_supplied_no_license_file",
+        "legacy_logical_tools": [
+          "findings.query",
+          "coverage.query",
+          "report.export"
+        ],
+        "upstream_code_copied": false,
+        "translation_input_sha256": "7814a95b105a53384dc71e2a2e01b86a97a019d336a9c07a36ebc1f5bb9c30ce",
+        "content_language": "en",
+        "content_sha256": "9011829ccba31068dc4347e45bec534a4895d7ecb1e6f9868e1bbe9cc751986e",
+        "translation_revision": "1"
+      }
+    },
+    {
+      "id": "execution-scheduling",
+      "description": "Schedules bounded independent test jobs from inventory state while limiting LLM context and repeated work.",
+      "path": "execution-scheduling/SKILL.md",
+      "capabilities": [],
+      "optional_capabilities": [],
+      "internal_modules": [
+        "redjohn.assessment.scheduler",
+        "redjohn.assessment.store"
+      ],
+      "unimplemented_requirements": [],
+      "domains": [
+        "web"
+      ],
+      "profiles": [
+        "safe-production",
+        "active-staging",
+        "isolated-lab"
+      ],
+      "supported_content_types": [
+        ""
+      ],
+      "unsupported_content_types": [],
+      "input_mode": "metadata",
+      "requires_actor": false,
+      "requires_fixture": false,
+      "status": "implemented_fixture_tested",
+      "control_test_refs": [
+        "tests/test_assessment_skills.py::test_manifest_contract_and_missing_adapters",
+        "tests/test_authenticated_schema_oast_contract.py",
+        "tests/test_authenticated_schema_oast_recovery_live.py"
+      ],
+      "provenance": {
+        "kind": "user_supplied_adapted_contract",
+        "source_pack": "headless_strix_skillpack",
+        "source_path": "skills/execution-scheduling/SKILL.md",
+        "source_sha256": "3b0653e4c15839b339888fabe665a743feccbbfa9fc03f0ce312df821062a874",
+        "source_version": "1.0.0",
+        "license": "user_supplied_no_license_file",
+        "legacy_logical_tools": [
+          "jobs.enqueue",
+          "jobs.status",
+          "coverage.query",
+          "policy.check"
+        ],
+        "upstream_code_copied": false,
+        "translation_input_sha256": "a11edee07df6422cd2a935616cf22e2505a5e9b78ef632b2abf84f4449fa9ff7",
+        "content_language": "en",
+        "content_sha256": "90a35f57d4b1e7763770a5a0044b81044cfbe81cbe6e31ee345e176f1adef5d0",
+        "translation_revision": "1"
+      }
+    },
+    {
+      "id": "service-discovery",
+      "description": "Plans port and service discovery for an explicitly authorized network scope.",
+      "path": "service-discovery/SKILL.md",
+      "capabilities": [
+        "naabu_ports",
+        "nmap_services"
+      ],
+      "optional_capabilities": [],
+      "internal_modules": [],
+      "unimplemented_requirements": [],
+      "domains": [
+        "network"
+      ],
+      "profiles": [
+        "safe-production",
+        "active-staging",
+        "isolated-lab"
+      ],
+      "supported_content_types": [
+        ""
+      ],
+      "unsupported_content_types": [],
+      "input_mode": "metadata",
+      "requires_actor": false,
+      "requires_fixture": false,
+      "status": "adapter_not_implemented",
+      "control_test_refs": [
+        "tests/test_assessment_skills.py::test_manifest_contract_and_missing_adapters"
+      ],
+      "provenance": {
+        "kind": "redjohn_native_master_prompt",
+        "source_pack": null,
+        "source_path": "REDJOHN_FULL_BUILD_MASTER_PROMPT_HU.md",
+        "source_sha256": "5155214725199748c7e8f54cdd31c687417a3d6a5336b904a2e863d2c3a7677d",
+        "source_version": "2.0",
+        "license": "project",
+        "legacy_logical_tools": [],
+        "upstream_code_copied": false,
+        "translation_input_sha256": "73b8794017ea06cd52228ab7cbd91d2e49272019b198eafbbd0436ad24bf54d6",
+        "content_language": "en",
+        "content_sha256": "90bdba2e1d74a41fd8150a5847257fb601e8f35908eddf12be41e6da3737280a",
+        "translation_revision": "1"
+      }
+    },
+    {
+      "id": "dns-asset-discovery",
+      "description": "Tracks DNS/asset relationships while keeping observed and authorized states separate.",
+      "path": "dns-asset-discovery/SKILL.md",
+      "capabilities": [
+        "dns_discover"
+      ],
+      "optional_capabilities": [],
+      "internal_modules": [],
+      "unimplemented_requirements": [],
+      "domains": [
+        "network"
+      ],
+      "profiles": [
+        "safe-production",
+        "active-staging",
+        "isolated-lab"
+      ],
+      "supported_content_types": [
+        ""
+      ],
+      "unsupported_content_types": [],
+      "input_mode": "metadata",
+      "requires_actor": false,
+      "requires_fixture": false,
+      "status": "adapter_not_implemented",
+      "control_test_refs": [
+        "tests/test_assessment_skills.py::test_manifest_contract_and_missing_adapters"
+      ],
+      "provenance": {
+        "kind": "redjohn_native_master_prompt",
+        "source_pack": null,
+        "source_path": "REDJOHN_FULL_BUILD_MASTER_PROMPT_HU.md",
+        "source_sha256": "5155214725199748c7e8f54cdd31c687417a3d6a5336b904a2e863d2c3a7677d",
+        "source_version": "2.0",
+        "license": "project",
+        "legacy_logical_tools": [],
+        "upstream_code_copied": false,
+        "translation_input_sha256": "f2f466af8acd0a1f44356e75a476a77e746a99edfc72b402e8a787877f03af87",
+        "content_language": "en",
+        "content_sha256": "1949aa2e48e3468b3834a388c39ef4601acf80f2c8e9f8b3ba0207db507a2686",
+        "translation_revision": "1"
+      }
+    },
+    {
+      "id": "wordpress-assessment",
+      "description": "Performs targeted assessment of an evidenced WordPress surface while respecting licensing requirements.",
+      "path": "wordpress-assessment/SKILL.md",
+      "capabilities": [
+        "wordpress_assess"
+      ],
+      "optional_capabilities": [],
+      "internal_modules": [],
+      "unimplemented_requirements": [],
+      "domains": [
+        "cms"
+      ],
+      "profiles": [
+        "safe-production",
+        "active-staging",
+        "isolated-lab"
+      ],
+      "supported_content_types": [
+        ""
+      ],
+      "unsupported_content_types": [],
+      "input_mode": "metadata",
+      "requires_actor": false,
+      "requires_fixture": false,
+      "status": "adapter_not_implemented",
+      "control_test_refs": [
+        "tests/test_assessment_skills.py::test_manifest_contract_and_missing_adapters"
+      ],
+      "provenance": {
+        "kind": "redjohn_native_master_prompt",
+        "source_pack": null,
+        "source_path": "REDJOHN_FULL_BUILD_MASTER_PROMPT_HU.md",
+        "source_sha256": "5155214725199748c7e8f54cdd31c687417a3d6a5336b904a2e863d2c3a7677d",
+        "source_version": "2.0",
+        "license": "project",
+        "legacy_logical_tools": [],
+        "upstream_code_copied": false,
+        "translation_input_sha256": "cad3af1e1ce5dc3b9a4501be02bcfbb22543dfed66f7266c523d4d07d15beb65",
+        "content_language": "en",
+        "content_sha256": "b337e4bd9b741810d284e85a219a1781d696d44b1cb3b3028604c4081dad5245",
+        "translation_revision": "1"
+      }
+    },
+    {
+      "id": "cloud-posture-assessment",
+      "description": "Audits configuration for a designated cloud account, project and region.",
+      "path": "cloud-posture-assessment/SKILL.md",
+      "capabilities": [
+        "cloud_assess"
+      ],
+      "optional_capabilities": [],
+      "internal_modules": [],
+      "unimplemented_requirements": [],
+      "domains": [
+        "cloud"
+      ],
+      "profiles": [
+        "safe-production",
+        "active-staging",
+        "isolated-lab"
+      ],
+      "supported_content_types": [
+        ""
+      ],
+      "unsupported_content_types": [],
+      "input_mode": "metadata",
+      "requires_actor": true,
+      "requires_fixture": false,
+      "status": "adapter_not_implemented",
+      "control_test_refs": [
+        "tests/test_assessment_skills.py::test_manifest_contract_and_missing_adapters"
+      ],
+      "provenance": {
+        "kind": "redjohn_native_master_prompt",
+        "source_pack": null,
+        "source_path": "REDJOHN_FULL_BUILD_MASTER_PROMPT_HU.md",
+        "source_sha256": "5155214725199748c7e8f54cdd31c687417a3d6a5336b904a2e863d2c3a7677d",
+        "source_version": "2.0",
+        "license": "project",
+        "legacy_logical_tools": [],
+        "upstream_code_copied": false,
+        "translation_input_sha256": "1bd9b7fe2f67d01827c63453f6424ea920341f558106ec804f43aca33e4ad21f",
+        "content_language": "en",
+        "content_sha256": "f014358f2d245ed2734398cd0d60f4e245b0ccff0cee950f4541aa1e6d51e030",
+        "translation_revision": "1"
+      }
+    },
+    {
+      "id": "kubernetes-benchmark-assessment",
+      "description": "Assesses Kubernetes configuration against a version-specific benchmark.",
+      "path": "kubernetes-benchmark-assessment/SKILL.md",
+      "capabilities": [
+        "kubernetes_benchmark"
+      ],
+      "optional_capabilities": [],
+      "internal_modules": [],
+      "unimplemented_requirements": [],
+      "domains": [
+        "kubernetes"
+      ],
+      "profiles": [
+        "safe-production",
+        "active-staging",
+        "isolated-lab"
+      ],
+      "supported_content_types": [
+        ""
+      ],
+      "unsupported_content_types": [],
+      "input_mode": "metadata",
+      "requires_actor": false,
+      "requires_fixture": false,
+      "status": "adapter_not_implemented",
+      "control_test_refs": [
+        "tests/test_assessment_skills.py::test_manifest_contract_and_missing_adapters"
+      ],
+      "provenance": {
+        "kind": "redjohn_native_master_prompt",
+        "source_pack": null,
+        "source_path": "REDJOHN_FULL_BUILD_MASTER_PROMPT_HU.md",
+        "source_sha256": "5155214725199748c7e8f54cdd31c687417a3d6a5336b904a2e863d2c3a7677d",
+        "source_version": "2.0",
+        "license": "project",
+        "legacy_logical_tools": [],
+        "upstream_code_copied": false,
+        "translation_input_sha256": "4d084e9d0f5c6b24ace5678b68f071cf5ccc3abe67ce1fffa931a4fb73ef0ef6",
+        "content_language": "en",
+        "content_sha256": "bc55533e7a8bfb19132553027643e08450b0de6bf06c7880eb4d1bef4909b6d0",
+        "translation_revision": "1"
+      }
+    },
+    {
+      "id": "local-binary-triage",
+      "description": "Triages crashes and backtraces from local binary fixtures within resource limits.",
+      "path": "local-binary-triage/SKILL.md",
+      "capabilities": [
+        "binary_triage"
+      ],
+      "optional_capabilities": [],
+      "internal_modules": [],
+      "unimplemented_requirements": [],
+      "domains": [
+        "binary-lab"
+      ],
+      "profiles": [
+        "isolated-lab"
+      ],
+      "supported_content_types": [
+        ""
+      ],
+      "unsupported_content_types": [],
+      "input_mode": "local_fixture",
+      "requires_actor": false,
+      "requires_fixture": true,
+      "status": "deferred_not_required",
+      "control_test_refs": [
+        "tests/test_assessment_skills.py::test_manifest_contract_and_missing_adapters"
+      ],
+      "provenance": {
+        "kind": "redjohn_native_master_prompt",
+        "source_pack": null,
+        "source_path": "REDJOHN_FULL_BUILD_MASTER_PROMPT_HU.md",
+        "source_sha256": "5155214725199748c7e8f54cdd31c687417a3d6a5336b904a2e863d2c3a7677d",
+        "source_version": "2.0",
+        "license": "project",
+        "legacy_logical_tools": [],
+        "upstream_code_copied": false,
+        "translation_input_sha256": "73ae0de85a229858e70be67b838c6e13d5f1fd1a3203a96016d8a289e4196e88",
+        "content_language": "en",
+        "content_sha256": "f1bd81d6b009a10d15e1585ebdf439a5b7dfea80a004d6322156c862b9f968de",
+        "translation_revision": "1"
+      }
+    },
+    {
+      "id": "resilience-recovery",
+      "description": "Analyzes exceptional recovery cases while program code handles routine recovery.",
+      "path": "resilience-recovery/SKILL.md",
+      "capabilities": [],
+      "optional_capabilities": [],
+      "internal_modules": [
+        "redjohn.assessment.recovery",
+        "redjohn.assessment.scheduler"
+      ],
+      "unimplemented_requirements": [],
+      "domains": [
+        "web"
+      ],
+      "profiles": [
+        "safe-production",
+        "active-staging",
+        "isolated-lab"
+      ],
+      "supported_content_types": [
+        ""
+      ],
+      "unsupported_content_types": [],
+      "input_mode": "metadata",
+      "requires_actor": false,
+      "requires_fixture": false,
+      "status": "implemented_fixture_tested",
+      "control_test_refs": [
+        "tests/test_assessment_resource_control.py"
+      ],
+      "provenance": {
+        "kind": "redjohn_native_master_prompt",
+        "source_pack": null,
+        "source_path": "REDJOHN_FULL_BUILD_MASTER_PROMPT_HU.md",
+        "source_sha256": "5155214725199748c7e8f54cdd31c687417a3d6a5336b904a2e863d2c3a7677d",
+        "source_version": "2.0",
+        "license": "project",
+        "legacy_logical_tools": [],
+        "upstream_code_copied": false,
+        "translation_input_sha256": "24d19c8386e95e3546ea2ecf45f98cb2e6e2a0382793f2630175aa72dbb0ae4e",
+        "content_language": "en",
+        "content_sha256": "0bc7a62fdbf531144c626d45cba757b0ff9acab692ed3d33f8d1c07a1067ee29",
+        "translation_revision": "1"
+      }
+    },
+    {
+      "id": "memory-context-budgeting",
+      "description": "Analyzes shared resource deviations across workers, browsers, caches and LLM context.",
+      "path": "memory-context-budgeting/SKILL.md",
+      "capabilities": [],
+      "optional_capabilities": [],
+      "internal_modules": [
+        "redjohn.assessment.resources",
+        "redjohn.llm.context_budget"
+      ],
+      "unimplemented_requirements": [],
+      "domains": [
+        "web"
+      ],
+      "profiles": [
+        "safe-production",
+        "active-staging",
+        "isolated-lab"
+      ],
+      "supported_content_types": [
+        ""
+      ],
+      "unsupported_content_types": [],
+      "input_mode": "metadata",
+      "requires_actor": false,
+      "requires_fixture": false,
+      "status": "implemented_fixture_tested",
+      "control_test_refs": [
+        "tests/test_assessment_resource_control.py"
+      ],
+      "provenance": {
+        "kind": "redjohn_native_master_prompt",
+        "source_pack": null,
+        "source_path": "REDJOHN_FULL_BUILD_MASTER_PROMPT_HU.md",
+        "source_sha256": "5155214725199748c7e8f54cdd31c687417a3d6a5336b904a2e863d2c3a7677d",
+        "source_version": "2.0",
+        "license": "project",
+        "legacy_logical_tools": [],
+        "upstream_code_copied": false,
+        "translation_input_sha256": "b4166071e8cd8434662c0ea914f076e02b1d18d686f3eca5405ce03f170f3627",
+        "content_language": "en",
+        "content_sha256": "678aba0c6660cfb627bd9cb876eadeddf81bb1d6928d81cee57dcdde4f922c1d",
+        "translation_revision": "1"
+      }
+    },
+    {
+      "id": "cache-freshness-control",
+      "description": "Checks context-sensitive cache freshness, invalidation and single-flight behavior.",
+      "path": "cache-freshness-control/SKILL.md",
+      "capabilities": [],
+      "optional_capabilities": [],
+      "internal_modules": [
+        "redjohn.assessment.cache"
+      ],
+      "unimplemented_requirements": [],
+      "domains": [
+        "web"
+      ],
+      "profiles": [
+        "safe-production",
+        "active-staging",
+        "isolated-lab"
+      ],
+      "supported_content_types": [
+        ""
+      ],
+      "unsupported_content_types": [],
+      "input_mode": "metadata",
+      "requires_actor": false,
+      "requires_fixture": false,
+      "status": "implemented_fixture_tested",
+      "control_test_refs": [
+        "tests/test_assessment_resource_control.py"
+      ],
+      "provenance": {
+        "kind": "redjohn_native_master_prompt",
+        "source_pack": null,
+        "source_path": "REDJOHN_FULL_BUILD_MASTER_PROMPT_HU.md",
+        "source_sha256": "5155214725199748c7e8f54cdd31c687417a3d6a5336b904a2e863d2c3a7677d",
+        "source_version": "2.0",
+        "license": "project",
+        "legacy_logical_tools": [],
+        "upstream_code_copied": false,
+        "translation_input_sha256": "cf11400e177ee39b9986ae6541f6c28061ca150e2f0d8f064c6e618207398a6d",
+        "content_language": "en",
+        "content_sha256": "52fafc38c7555aa9f9e1951043272696eab6bcdb6d975a5ad9842da476154bb2",
+        "translation_revision": "1"
+      }
+    },
+    {
+      "id": "correlation-hypothesis-review",
+      "description": "Reviews evidence relationships and unproven attack-chain hypotheses.",
+      "path": "correlation-hypothesis-review/SKILL.md",
+      "capabilities": [],
+      "optional_capabilities": [],
+      "internal_modules": [
+        "redjohn.assessment.intelligence"
+      ],
+      "unimplemented_requirements": [],
+      "domains": [
+        "web"
+      ],
+      "profiles": [
+        "safe-production",
+        "active-staging",
+        "isolated-lab"
+      ],
+      "supported_content_types": [
+        ""
+      ],
+      "unsupported_content_types": [],
+      "input_mode": "metadata",
+      "requires_actor": false,
+      "requires_fixture": false,
+      "status": "implemented_fixture_tested",
+      "control_test_refs": [
+        "tests/test_assessment_intelligence.py"
+      ],
+      "provenance": {
+        "kind": "redjohn_native_master_prompt",
+        "source_pack": null,
+        "source_path": "REDJOHN_FULL_BUILD_MASTER_PROMPT_HU.md",
+        "source_sha256": "5155214725199748c7e8f54cdd31c687417a3d6a5336b904a2e863d2c3a7677d",
+        "source_version": "2.0",
+        "license": "project",
+        "legacy_logical_tools": [],
+        "upstream_code_copied": false,
+        "translation_input_sha256": "38354c832fadb0a7810010642b9bc011918751c71eac35603fcb2fbdff761ccf",
+        "content_language": "en",
+        "content_sha256": "da27ffc05959749a7703b1dab3651fa5b343eda9db1b251ccee5db061b81e49d",
+        "translation_revision": "1"
+      }
+    },
+    {
+      "id": "performance-regression",
+      "description": "Evaluates comparable local benchmarks and any loss of coverage.",
+      "path": "performance-regression/SKILL.md",
+      "capabilities": [],
+      "optional_capabilities": [],
+      "internal_modules": [
+        "redjohn.assessment.intelligence",
+        "redjohn.assessment.resources"
+      ],
+      "unimplemented_requirements": [],
+      "domains": [
+        "web"
+      ],
+      "profiles": [
+        "safe-production",
+        "active-staging",
+        "isolated-lab"
+      ],
+      "supported_content_types": [
+        ""
+      ],
+      "unsupported_content_types": [],
+      "input_mode": "metadata",
+      "requires_actor": false,
+      "requires_fixture": false,
+      "status": "implemented_fixture_tested",
+      "control_test_refs": [
+        "tests/test_assessment_intelligence.py"
+      ],
+      "provenance": {
+        "kind": "redjohn_native_master_prompt",
+        "source_pack": null,
+        "source_path": "REDJOHN_FULL_BUILD_MASTER_PROMPT_HU.md",
+        "source_sha256": "5155214725199748c7e8f54cdd31c687417a3d6a5336b904a2e863d2c3a7677d",
+        "source_version": "2.0",
+        "license": "project",
+        "legacy_logical_tools": [],
+        "upstream_code_copied": false,
+        "translation_input_sha256": "bea91616902af66a56117b2f7b2a1d02361acd61996321385566abc7432923c8",
+        "content_language": "en",
+        "content_sha256": "de308362bbf7831ff2a46d56b428efb9bb63d5f648cc6f18330d5c5408e1e0ca",
+        "translation_revision": "1"
+      }
+    },
+    {
+      "id": "safe-reproducer-validation",
+      "description": "Reviews a controlled lab reproducer and its fixed control.",
+      "path": "safe-reproducer-validation/SKILL.md",
+      "capabilities": [],
+      "optional_capabilities": [],
+      "internal_modules": [],
+      "unimplemented_requirements": [
+        "isolated_reproducer_sandbox"
+      ],
+      "domains": [
+        "web"
+      ],
+      "profiles": [
+        "isolated-lab"
+      ],
+      "supported_content_types": [
+        ""
+      ],
+      "unsupported_content_types": [],
+      "input_mode": "local_fixture",
+      "requires_actor": false,
+      "requires_fixture": true,
+      "status": "adapter_not_implemented",
+      "control_test_refs": [
+        "tests/test_assessment_skills.py::test_manifest_contract_and_missing_adapters"
+      ],
+      "provenance": {
+        "kind": "redjohn_native_master_prompt",
+        "source_pack": null,
+        "source_path": "REDJOHN_FULL_BUILD_MASTER_PROMPT_HU.md",
+        "source_sha256": "5155214725199748c7e8f54cdd31c687417a3d6a5336b904a2e863d2c3a7677d",
+        "source_version": "2.0",
+        "license": "project",
+        "legacy_logical_tools": [],
+        "upstream_code_copied": false,
+        "translation_input_sha256": "3e3c9f7bb463d2d50152943f2b2205754252908bedc1d6f855ad64f6327db8f6",
+        "content_language": "en",
+        "content_sha256": "ba7a6a572a8c42269f85945cc800124f231c044a3843e00ab7dc0e542d70e2b0",
+        "translation_revision": "1"
+      }
+    }
+  ],
+  "content_language": "en",
+  "translation_note": "English RedJohn adaptations; source_sha256 identifies the unchanged original source, translation_input_sha256 the preceding RedJohn contract, and content_sha256 the current English document."
+}
