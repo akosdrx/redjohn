@@ -36,7 +36,7 @@ jobs:
       REDJOHN_TEST_CGROUP_ROOT: /sys/fs/cgroup/redjohn-ci-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.runner_arch }}
       REDJOHN_CI_APPARMOR_PROFILE: redjohn-ci-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.runner_arch }}
       REDJOHN_DNS_FIXTURE_NAME: redjohn-owned-fixture.test
-      REDJOHN_RESOURCE_POOL_PATH: ${{ runner.temp }}/controller-profile-resources.sqlite3
+      REDJOHN_RESOURCE_POOL_PATH: ${{ github.workspace }}/.ci-state/controller-profile-resources.sqlite3
       REDJOHN_NUCLEI_LOCK: ${{ github.workspace }}/RedJohn/.tools/nuclei/3.11.1/fixture-lock.json
       GOMAXPROCS: '2'
     steps:
