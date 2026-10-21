@@ -644,11 +644,13 @@ class EvidenceContract(unittest.TestCase):
         policy = (Path(__file__).parents[1] / "policies/redjohn-ci.apparmor").read_text()
         assert "/{,**} mrwlkix" not in policy
         assert "capability sys_ptrace," not in policy
-        assert "capability sys_admin," in policy  # setuid bwrap namespace setup
+        assert "capability sys_admin," in policy  # bwrap child profile only
         assert "capability net_admin," in policy  # bwrap loopback setup
+        assert "/usr/bin/bwrap px -> @REDJOHN_CI_PROFILE@-bwrap" in policy
         assert "/proc/self/{uid_map,gid_map,setgroups} rw" in policy
         assert "  / w,\n" in policy
         assert "/{bin,etc,lib,lib32,lib64,sbin,usr,proc,dev,tmp,run,sys,home,opt,var}/ w" in policy
+        assert "profile @REDJOHN_CI_PROFILE@-bwrap" in policy
         assert "/home/*/work/** rwklix" in policy
         assert "/sys/fs/cgroup/redjohn-ci-*/** rwklix" in policy
 
