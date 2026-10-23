@@ -229,10 +229,7 @@ fn draw_setup(frame: &mut Frame, state: &AppState, area: Rect) {
                 Span::styled("Memory : ", style_dim()),
                 Span::styled(mem_model, style_bold(BRIGHT_WHITE)),
             ]),
-            Line::from(Span::styled(
-                "SELF LEARNING OFFENSIVE SWARM",
-                style_dim(),
-            )),
+            Line::from(Span::styled("SELF LEARNING OFFENSIVE SWARM", style_dim())),
         ];
         let p = Paragraph::new(compact).alignment(Alignment::Center);
         frame.render_widget(p, Rect::new(col_x, cur_y, col_w, 3));
@@ -294,7 +291,10 @@ fn draw_setup(frame: &mut Frame, state: &AppState, area: Rect) {
     // 4. Key Hints Footer
     if cur_y < area.height {
         let hint_line = setup_hints_line(state, col_w as usize);
-        frame.render_widget(Paragraph::new(vec![hint_line]), Rect::new(col_x, cur_y, col_w, 1));
+        frame.render_widget(
+            Paragraph::new(vec![hint_line]),
+            Rect::new(col_x, cur_y, col_w, 1),
+        );
     }
 
     // 5. Right-hand Launch Rail
@@ -930,14 +930,7 @@ fn build_header_lines(state: &AppState, width: usize) -> Vec<Line<'static>> {
         row5_spans.push(Span::styled(" Scrollback", style_fg(MID)));
     }
 
-    vec![
-        row1,
-        row2,
-        rule.clone(),
-        row4,
-        Line::from(row5_spans),
-        rule,
-    ]
+    vec![row1, row2, rule.clone(), row4, Line::from(row5_spans), rule]
 }
 
 fn draw_status_row(frame: &mut Frame, state: &AppState, rect: Rect) {
@@ -1380,9 +1373,18 @@ fn draw_help_modal(frame: &mut Frame, area: Rect) {
     let lines = vec![
         Line::from(Span::styled("RedJohn Help", style_bold(RED))),
         Line::from(Span::raw("")),
-        Line::from(Span::styled("0 / F2       All agents stream", style_fg(TEXT))),
-        Line::from(Span::styled("1-9          Switch agent (1-9)", style_fg(TEXT))),
-        Line::from(Span::styled("F3 / /mcp    MCP connections modal", style_fg(TEXT))),
+        Line::from(Span::styled(
+            "0 / F2       All agents stream",
+            style_fg(TEXT),
+        )),
+        Line::from(Span::styled(
+            "1-9          Switch agent (1-9)",
+            style_fg(TEXT),
+        )),
+        Line::from(Span::styled(
+            "F3 / /mcp    MCP connections modal",
+            style_fg(TEXT),
+        )),
         Line::from(Span::styled(
             "F4 / /skills Skills catalog & selector",
             style_fg(TEXT),
@@ -1400,7 +1402,10 @@ fn draw_help_modal(frame: &mut Frame, area: Rect) {
             "/openviking  OpenViking memory & model config",
             style_fg(TEXT),
         )),
-        Line::from(Span::styled("/effort      Reasoning effort", style_fg(TEXT))),
+        Line::from(Span::styled(
+            "/effort      Reasoning effort",
+            style_fg(TEXT),
+        )),
         Line::from(Span::styled(
             "/rj <target> Launch pentest swarm",
             style_fg(TEXT),
@@ -1412,20 +1417,17 @@ fn draw_help_modal(frame: &mut Frame, area: Rect) {
         Line::from(Span::styled("F1           Help", style_fg(TEXT))),
         Line::from(Span::styled("Ctrl+Q/C     Quit RedJohn", style_fg(TEXT))),
         Line::from(Span::styled("ESC          Stop Agent", style_fg(TEXT))),
-        Line::from(Span::styled("Enter        Send / expand node", style_fg(TEXT))),
+        Line::from(Span::styled(
+            "Enter        Send / expand node",
+            style_fg(TEXT),
+        )),
         Line::from(Span::styled("Tab          Switch panels", style_fg(TEXT))),
     ];
     let rect = centered_rect(area, 52.min(area.width), 22.min(area.height));
     render_dialog_box(frame, rect, RED, lines, Alignment::Left);
 }
 
-fn draw_confirm_modal(
-    frame: &mut Frame,
-    state: &AppState,
-    area: Rect,
-    title: &str,
-    width: u16,
-) {
+fn draw_confirm_modal(frame: &mut Frame, state: &AppState, area: Rect, title: &str, width: u16) {
     let yes_style = if state.modal_choice == 0 {
         Style::default()
             .fg(BRIGHT_WHITE)
@@ -1585,7 +1587,10 @@ fn draw_mcp_modal(frame: &mut Frame, state: &AppState, area: Rect) {
             lines.push(Line::from(vec![
                 Span::styled(format!("{st_txt}  "), st_style),
                 Span::styled(conn.name.clone(), style_bold(BRIGHT_WHITE)),
-                Span::styled(format!("  ({})", tools_label(conn.tool_count)), style_fg(MID)),
+                Span::styled(
+                    format!("  ({})", tools_label(conn.tool_count)),
+                    style_fg(MID),
+                ),
             ]));
         }
         lines.push(Line::from(Span::raw("")));
@@ -1847,8 +1852,7 @@ fn draw_vulnerability_modal(frame: &mut Frame, state: &AppState, area: Rect) {
     let scroll = state
         .vuln_report_scroll
         .min(wrapped.len().saturating_sub(body_h));
-    let mut visible: Vec<Line<'static>> =
-        wrapped.into_iter().skip(scroll).take(body_h).collect();
+    let mut visible: Vec<Line<'static>> = wrapped.into_iter().skip(scroll).take(body_h).collect();
     while visible.len() < body_h {
         visible.push(Line::from(Span::raw("")));
     }
@@ -1924,9 +1928,7 @@ fn draw_picker_modal(frame: &mut Frame, state: &AppState, area: Rect) {
             lines.push(Line::from(Span::styled("API key", style_dim())));
             lines.push(Line::from(Span::styled(
                 pad_right_width(&masked, inner_w),
-                Style::default()
-                    .fg(WHITE)
-                    .bg(Color::Rgb(28, 25, 23)),
+                Style::default().fg(WHITE).bg(Color::Rgb(28, 25, 23)),
             )));
             lines.push(Line::from(Span::raw("")));
             lines.push(Line::from(Span::styled("enter save", style_dim())));
@@ -1963,9 +1965,7 @@ fn draw_picker_modal(frame: &mut Frame, state: &AppState, area: Rect) {
             lines.push(Line::from(Span::styled("esc cancel", style_dim())));
         }
         PickerPhase::List | PickerPhase::Models => {
-            let p_frame = state
-                .active_picker_frame()
-                .unwrap_or(&state.picker.frame);
+            let p_frame = state.active_picker_frame().unwrap_or(&state.picker.frame);
             let q = if p_frame.query.is_empty() {
                 " ".to_string()
             } else {

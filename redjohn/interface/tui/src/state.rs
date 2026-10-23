@@ -25,14 +25,7 @@ pub const SLASH_COMMANDS: &[&str] = &[
 ];
 
 pub const SWARM_PROFILES: &[&str] = &[
-    "full",
-    "balanced",
-    "deep",
-    "recon",
-    "exploit",
-    "whitebox",
-    "fast",
-    "single",
+    "full", "balanced", "deep", "recon", "exploit", "whitebox", "fast", "single",
 ];
 
 pub const REPORT_PREV: &str = "‹ Prev";
@@ -170,10 +163,7 @@ pub struct AgentTreeEntry {
     pub prefix: String,
 }
 
-pub fn agent_tree_entries(
-    agents: &[Agent],
-    collapsed: &HashSet<String>,
-) -> Vec<AgentTreeEntry> {
+pub fn agent_tree_entries(agents: &[Agent], collapsed: &HashSet<String>) -> Vec<AgentTreeEntry> {
     let mut index_by_id = HashMap::with_capacity(agents.len());
     for (i, ag) in agents.iter().enumerate() {
         index_by_id.insert(ag.id.as_str(), i);
@@ -199,11 +189,7 @@ pub fn agent_tree_entries(
     let mut entries = Vec::with_capacity(agents.len());
     let mut visited = vec![false; agents.len()];
 
-    fn hide_descendants(
-        idx: usize,
-        children: &HashMap<usize, Vec<usize>>,
-        visited: &mut [bool],
-    ) {
+    fn hide_descendants(idx: usize, children: &HashMap<usize, Vec<usize>>, visited: &mut [bool]) {
         if let Some(ch) = children.get(&idx) {
             for &c in ch {
                 if !visited[c] {
@@ -245,10 +231,7 @@ pub fn agent_tree_entries(
                 prefix.push_str("├─ ");
             }
         }
-        entries.push(AgentTreeEntry {
-            index: idx,
-            prefix,
-        });
+        entries.push(AgentTreeEntry { index: idx, prefix });
         if collapsed.contains(&agents[idx].id) {
             hide_descendants(idx, children, visited);
             return;
@@ -676,7 +659,7 @@ impl AppState {
             && self
                 .picker
                 .last_poll
-                .map_or(true, |t| t.elapsed() >= Duration::from_secs(1))
+                .is_none_or(|t| t.elapsed() >= Duration::from_secs(1))
         {
             self.picker.poll_in_flight = true;
             self.picker.last_poll = Some(Instant::now());
@@ -695,10 +678,12 @@ impl AppState {
             .to_string();
         match client.send(command, payload) {
             Ok(request_id) => {
-                if command == "collection.resync" && !request_id.is_empty() && !col.is_empty() {
-                    if *self.resync_requested.get(&col).unwrap_or(&false) {
-                        self.resync_requests.insert(request_id, col);
-                    }
+                if command == "collection.resync"
+                    && !request_id.is_empty()
+                    && !col.is_empty()
+                    && *self.resync_requested.get(&col).unwrap_or(&false)
+                {
+                    self.resync_requests.insert(request_id, col);
                 }
             }
             Err(err) => {
@@ -949,7 +934,8 @@ impl AppState {
                 self.selected_vuln = 0;
             }
         }
-        self.collection_revisions.insert(col.clone(), chunk.revision);
+        self.collection_revisions
+            .insert(col.clone(), chunk.revision);
         self.clear_collection_resync(&col);
     }
 
@@ -1014,7 +1000,8 @@ impl AppState {
             self.collection_mismatch(&col);
             return;
         }
-        self.collection_revisions.insert(col.clone(), chunk.revision);
+        self.collection_revisions
+            .insert(col.clone(), chunk.revision);
         self.clear_collection_resync(&col);
         if col == "agents" {
             self.notify_budget_pause();
@@ -1109,10 +1096,7 @@ impl AppState {
                 if op.id.is_empty() || !seen.insert(op.id.clone()) {
                     return false;
                 }
-                let Some(pos) = values
-                    .iter()
-                    .position(|f| val_str(f.get("id")) == op.id)
-                else {
+                let Some(pos) = values.iter().position(|f| val_str(f.get("id")) == op.id) else {
                     return false;
                 };
                 values.remove(pos);
@@ -1501,8 +1485,8 @@ impl AppState {
             self.skill_selected = 0;
             return;
         }
-        let next = (self.skill_selected as isize + delta)
-            .clamp(0, entries.len() as isize - 1) as usize;
+        let next =
+            (self.skill_selected as isize + delta).clamp(0, entries.len() as isize - 1) as usize;
         self.skill_selected = next;
     }
 
@@ -1616,57 +1600,55 @@ impl AppState {
         } else {
             "OFFLINE"
         };
-        let sections = vec![
-            PickerSection {
-                title: format!("OPENVIKING MEMORY MCP · {ov_status}"),
-                entries: vec![
-                    PickerEntry {
-                        id: "openviking".to_string(),
-                        label: format!("Select Memory VLM Model        · {ov_model_label}"),
-                        auth: "swarm_scope".to_string(),
-                        children: Vec::new(),
-                    },
-                    PickerEntry {
-                        id: "openviking_inherit".to_string(),
-                        label: format!("Inherit Orchestrator Model     · {orch_label}"),
-                        auth: "openviking_action".to_string(),
-                        children: Vec::new(),
-                    },
-                    PickerEntry {
-                        id: "embed:local".to_string(),
-                        label: format!(
-                            "Embedding: Local Fast (512d)   · {}",
-                            if ov_embed_label.starts_with("local/") {
-                                "active ●"
-                            } else {
-                                "no API key needed"
-                            }
-                        ),
-                        auth: "openviking_action".to_string(),
-                        children: Vec::new(),
-                    },
-                    PickerEntry {
-                        id: "embed:openai".to_string(),
-                        label: format!(
-                            "Embedding: OpenAI 3-Small      · {}",
-                            if ov_embed_label.starts_with("openai/") {
-                                "active ●"
-                            } else {
-                                "text-embedding-3-small"
-                            }
-                        ),
-                        auth: "openviking_action".to_string(),
-                        children: Vec::new(),
-                    },
-                    PickerEntry {
-                        id: "openviking_toggle".to_string(),
-                        label: format!("Toggle OpenViking MCP          · [{ov_status}]"),
-                        auth: "openviking_action".to_string(),
-                        children: Vec::new(),
-                    },
-                ],
-            },
-        ];
+        let sections = vec![PickerSection {
+            title: format!("OPENVIKING MEMORY MCP · {ov_status}"),
+            entries: vec![
+                PickerEntry {
+                    id: "openviking".to_string(),
+                    label: format!("Select Memory VLM Model        · {ov_model_label}"),
+                    auth: "swarm_scope".to_string(),
+                    children: Vec::new(),
+                },
+                PickerEntry {
+                    id: "openviking_inherit".to_string(),
+                    label: format!("Inherit Orchestrator Model     · {orch_label}"),
+                    auth: "openviking_action".to_string(),
+                    children: Vec::new(),
+                },
+                PickerEntry {
+                    id: "embed:local".to_string(),
+                    label: format!(
+                        "Embedding: Local Fast (512d)   · {}",
+                        if ov_embed_label.starts_with("local/") {
+                            "active ●"
+                        } else {
+                            "no API key needed"
+                        }
+                    ),
+                    auth: "openviking_action".to_string(),
+                    children: Vec::new(),
+                },
+                PickerEntry {
+                    id: "embed:openai".to_string(),
+                    label: format!(
+                        "Embedding: OpenAI 3-Small      · {}",
+                        if ov_embed_label.starts_with("openai/") {
+                            "active ●"
+                        } else {
+                            "text-embedding-3-small"
+                        }
+                    ),
+                    auth: "openviking_action".to_string(),
+                    children: Vec::new(),
+                },
+                PickerEntry {
+                    id: "openviking_toggle".to_string(),
+                    label: format!("Toggle OpenViking MCP          · [{ov_status}]"),
+                    auth: "openviking_action".to_string(),
+                    children: Vec::new(),
+                },
+            ],
+        }];
         let title = "OpenViking Agent Memory & MCP Configuration".to_string();
         self.picker = PickerState {
             phase: PickerPhase::List,
@@ -1985,7 +1967,10 @@ impl AppState {
                         self.open_model_picker_with_scope("openviking");
                         return true;
                     } else if lower == "inherit" {
-                        self.send_command("llm.set_swarm", json!({ "action": "openviking_inherit" }));
+                        self.send_command(
+                            "llm.set_swarm",
+                            json!({ "action": "openviking_inherit" }),
+                        );
                         return true;
                     } else if lower == "toggle" || lower == "on" || lower == "off" {
                         let enabled = if lower == "on" {
@@ -2380,10 +2365,10 @@ impl AppState {
                 if self.focus == FocusMode::Agents {
                     if let Some(ag) = self.snapshot.agents.get(self.selected_agent) {
                         let id = ag.id.clone();
-                        if has_agent_children(&id, &self.snapshot.agents) {
-                            if !self.collapsed_agents.remove(&id) {
-                                self.collapsed_agents.insert(id);
-                            }
+                        if has_agent_children(&id, &self.snapshot.agents)
+                            && !self.collapsed_agents.remove(&id)
+                        {
+                            self.collapsed_agents.insert(id);
                         }
                     }
                     return;
@@ -2400,10 +2385,10 @@ impl AppState {
             KeyCode::Char(' ') if self.focus == FocusMode::Agents => {
                 if let Some(ag) = self.snapshot.agents.get(self.selected_agent) {
                     let id = ag.id.clone();
-                    if has_agent_children(&id, &self.snapshot.agents) {
-                        if !self.collapsed_agents.remove(&id) {
-                            self.collapsed_agents.insert(id);
-                        }
+                    if has_agent_children(&id, &self.snapshot.agents)
+                        && !self.collapsed_agents.remove(&id)
+                    {
+                        self.collapsed_agents.insert(id);
                     }
                 }
                 return;
@@ -2517,10 +2502,7 @@ impl AppState {
         if !self.snapshot.setup_mode && !self.snapshot.agents.is_empty() {
             available.push(FocusMode::Agents);
         }
-        let cur = available
-            .iter()
-            .position(|&f| f == self.focus)
-            .unwrap_or(0) as isize;
+        let cur = available.iter().position(|&f| f == self.focus).unwrap_or(0) as isize;
         let len = available.len() as isize;
         let next = ((cur + delta) % len + len) % len;
         self.focus = available[next as usize];
@@ -2562,10 +2544,8 @@ impl AppState {
                 KeyCode::PageUp => self.move_vulnerability_selection(-8),
                 KeyCode::PageDown => self.move_vulnerability_selection(8),
                 KeyCode::Char('c') => self.copy_selected_vulnerability(),
-                KeyCode::Enter => {
-                    if !self.snapshot.vulnerabilities.is_empty() {
-                        self.open_modal(ModalMode::Vulnerability);
-                    }
+                KeyCode::Enter if !self.snapshot.vulnerabilities.is_empty() => {
+                    self.open_modal(ModalMode::Vulnerability);
                 }
                 _ => {}
             },
@@ -2995,12 +2975,7 @@ impl AppState {
         }
         let rel = (col - 2) as usize;
         let total_mcp = self.snapshot.connections.len();
-        let live_mcp = self
-            .snapshot
-            .connections
-            .iter()
-            .filter(|c| !c.dead)
-            .count();
+        let live_mcp = self.snapshot.connections.iter().filter(|c| !c.dead).count();
         let f2_str = " F2  All Agents   ";
         let f3_str = format!(" F3  MCPs {live_mcp}/{total_mcp}   ");
         let f4_str = format!(" F4  Skills {}   ", self.registered_skill_count());
@@ -3108,10 +3083,7 @@ impl AppState {
         let stats_top = self.height.saturating_sub(stats_h);
 
         if !self.snapshot.targets.is_empty() {
-            let total = self
-                .snapshot
-                .target_count
-                .max(self.snapshot.targets.len());
+            let total = self.snapshot.target_count.max(self.snapshot.targets.len());
             let mut visible = self.snapshot.targets.len().min(4).min(5);
             if visible < total {
                 visible = visible.min(4);
@@ -3237,10 +3209,8 @@ impl AppState {
                         let list_first_row = agents_top.saturating_add(3);
                         if mouse.row >= list_first_row {
                             let row_idx = (mouse.row - list_first_row) as usize;
-                            let entries = agent_tree_entries(
-                                &self.snapshot.agents,
-                                &self.collapsed_agents,
-                            );
+                            let entries =
+                                agent_tree_entries(&self.snapshot.agents, &self.collapsed_agents);
                             if let Some(entry) = entries.get(row_idx) {
                                 self.all_agents_view = false;
                                 self.selected_agent = entry.index;
@@ -3316,7 +3286,7 @@ fn copy_to_system_clipboard(text: &str) -> Result<(), String> {
             if let Some(mut stdin) = child.stdin.take() {
                 let _ = stdin.write_all(text.as_bytes());
             }
-            if child.wait().map_or(false, |s| s.success()) {
+            if child.wait().is_ok_and(|s| s.success()) {
                 return Ok(());
             }
         }

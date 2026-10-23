@@ -10,10 +10,10 @@ pub const TEXT: Color = Color::Rgb(212, 212, 212);
 pub const WHITE: Color = Color::Rgb(250, 250, 249);
 pub const BRIGHT_WHITE: Color = Color::Rgb(255, 255, 255);
 
-pub const RED: Color = Color::Rgb(239, 68, 68);        // #ef4444
+pub const RED: Color = Color::Rgb(239, 68, 68); // #ef4444
 pub const BRIGHT_RED: Color = Color::Rgb(248, 113, 113); // #f87171
-pub const SOFT_RED: Color = Color::Rgb(252, 165, 165);   // #fca5a5
-pub const CRIMSON: Color = Color::Rgb(220, 38, 38);     // #dc2626
+pub const SOFT_RED: Color = Color::Rgb(252, 165, 165); // #fca5a5
+pub const CRIMSON: Color = Color::Rgb(220, 38, 38); // #dc2626
 pub const DARK_CRIMSON: Color = Color::Rgb(127, 29, 29); // #7f1d1d
 
 pub const SEV_CRIT: Color = Color::Rgb(220, 38, 38);

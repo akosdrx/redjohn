@@ -150,8 +150,7 @@ impl Client {
 
         if address.trim().is_empty() || token.is_empty() {
             return Err(
-                "REDJOHN_TUI_FD or REDJOHN_TUI_ADDR and REDJOHN_TUI_TOKEN are required"
-                    .to_string(),
+                "REDJOHN_TUI_FD or REDJOHN_TUI_ADDR and REDJOHN_TUI_TOKEN are required".to_string(),
             );
         }
 
@@ -255,8 +254,7 @@ impl Client {
     }
 
     fn send_envelope(&self, envelope: &Envelope, maximum: usize) -> Result<(), String> {
-        let raw =
-            serde_json::to_vec(envelope).map_err(|e| format!("encode IPC envelope: {e}"))?;
+        let raw = serde_json::to_vec(envelope).map_err(|e| format!("encode IPC envelope: {e}"))?;
         if raw.len() > maximum {
             return Err(format!("TUI IPC message exceeds {maximum} bytes"));
         }
@@ -438,17 +436,17 @@ mod tests {
             .send("collection.resync", json!({"collection": "events"}))
             .expect("resync events");
         let r2 = client
-            .send("collection.resync", json!({"collection": "vulnerabilities"}))
+            .send(
+                "collection.resync",
+                json!({"collection": "vulnerabilities"}),
+            )
             .expect("resync vulns");
         assert_ne!(r1, r2);
 
         let _ = read_frame(&mut server);
         assert!(!client.resolve(&id1, "app.quit"));
         assert!(!client.resolve("foreign", "agent.stop"));
-        assert_eq!(
-            client.expected_command(&id1).as_deref(),
-            Some("agent.stop")
-        );
+        assert_eq!(client.expected_command(&id1).as_deref(), Some("agent.stop"));
         assert!(client.resolve(&id1, "agent.stop"));
         assert!(client.resolve(&r1, "collection.resync"));
         assert!(client.resolve(&r2, "collection.resync"));

@@ -301,12 +301,9 @@ fn render_inline_markdown(line: &str) -> Line<'static> {
     while !rest.is_empty() {
         if let Some(bold_start) = rest.find("**") {
             let code_start = rest.find('`');
-            if code_start.map_or(true, |cs| bold_start <= cs) {
+            if code_start.is_none_or(|cs| bold_start <= cs) {
                 if bold_start > 0 {
-                    spans.push(Span::styled(
-                        rest[..bold_start].to_string(),
-                        style_fg(TEXT),
-                    ));
+                    spans.push(Span::styled(rest[..bold_start].to_string(), style_fg(TEXT)));
                 }
                 let after = &rest[bold_start + 2..];
                 if let Some(bold_end) = after.find("**") {
@@ -321,10 +318,7 @@ fn render_inline_markdown(line: &str) -> Line<'static> {
         }
         if let Some(code_start) = rest.find('`') {
             if code_start > 0 {
-                spans.push(Span::styled(
-                    rest[..code_start].to_string(),
-                    style_fg(TEXT),
-                ));
+                spans.push(Span::styled(rest[..code_start].to_string(), style_fg(TEXT)));
             }
             let after = &rest[code_start + 1..];
             if let Some(code_end) = after.find('`') {
@@ -409,7 +403,10 @@ fn render_tool_event(
                 ]),
                 Line::from(vec![
                     Span::raw("  "),
-                    Span::styled(body, Style::default().fg(DIM).add_modifier(Modifier::ITALIC)),
+                    Span::styled(
+                        body,
+                        Style::default().fg(DIM).add_modifier(Modifier::ITALIC),
+                    ),
                 ]),
             ]
         }
@@ -519,7 +516,10 @@ fn render_tool_event(
             }
             let desc = val_str(args.get("description"));
             if !desc.is_empty() {
-                lines.push(Line::from(Span::styled("Description", style_bold(BRIGHT_RED))));
+                lines.push(Line::from(Span::styled(
+                    "Description",
+                    style_bold(BRIGHT_RED),
+                )));
                 lines.extend(render_markdown_lines(&desc));
             }
             lines
@@ -537,10 +537,12 @@ fn render_tool_event(
                 ]),
             ]
         }
-        "view_agent_graph" | "create_agent" | "send_message_to_agent" | "agent_finish"
-        | "wait_for_agents" | "stop_agent" => {
-            render_agent_graph_tool(&name, args, result, live_spinner, spinner_frame)
-        }
+        "view_agent_graph"
+        | "create_agent"
+        | "send_message_to_agent"
+        | "agent_finish"
+        | "wait_for_agents"
+        | "stop_agent" => render_agent_graph_tool(&name, args, result, live_spinner, spinner_frame),
         "create_note" | "delete_note" | "update_note" | "list_notes" | "get_note" => {
             let title = val_str(args.get("title"));
             let content = val_str(args.get("content"));
@@ -549,10 +551,16 @@ fn render_tool_event(
                 Span::styled(name.replace('_', " "), style_dim()),
             ])];
             if !title.is_empty() {
-                lines.push(Line::from(Span::styled(format!("  {title}"), style_fg(TEXT))));
+                lines.push(Line::from(Span::styled(
+                    format!("  {title}"),
+                    style_fg(TEXT),
+                )));
             }
             if !content.is_empty() {
-                lines.push(Line::from(Span::styled(format!("  {content}"), style_dim())));
+                lines.push(Line::from(Span::styled(
+                    format!("  {content}"),
+                    style_dim(),
+                )));
             }
             lines
         }
@@ -684,7 +692,10 @@ fn append_shell_result(lines: &mut Vec<Line<'static>>, result: Option<&Value>, _
             } else {
                 l.to_string()
             };
-            lines.push(Line::from(Span::styled(format!("  {clipped}"), style_dim())));
+            lines.push(Line::from(Span::styled(
+                format!("  {clipped}"),
+                style_dim(),
+            )));
         }
     } else {
         let head = 25;
@@ -720,7 +731,10 @@ fn render_apply_patch(
                     style_fg(BRIGHT_RED),
                 )));
             } else if l.starts_with('-') && !l.starts_with("---") {
-                lines.push(Line::from(Span::styled(format!("  {l}"), style_fg(CRIMSON))));
+                lines.push(Line::from(Span::styled(
+                    format!("  {l}"),
+                    style_fg(CRIMSON),
+                )));
             } else {
                 lines.push(Line::from(Span::styled(format!("  {l}"), style_dim())));
             }
@@ -1101,7 +1115,10 @@ pub fn parse_fenced_code(raw: &str) -> (String, String) {
     if let Some(rest) = trimmed.strip_prefix("```") {
         if let Some((first_line, body)) = rest.split_once('\n') {
             let lang = first_line.trim().to_string();
-            let code = body.strip_suffix("```").unwrap_or(body).trim_end_matches('\n');
+            let code = body
+                .strip_suffix("```")
+                .unwrap_or(body)
+                .trim_end_matches('\n');
             return (lang, code.to_string());
         }
     }

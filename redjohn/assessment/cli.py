@@ -311,7 +311,16 @@ def resource_status(
             payload = handle.read(4097)
         if len(payload) > 4096:
             raise ValueError("host_policy_byte_limit")
-        pool.configure(HostResourceLimits(**json.loads(payload)))
+        overrides = json.loads(payload)
+        if not isinstance(overrides, dict):
+            raise ValueError("host_policy_invalid")
+        # A partial policy narrows the CURRENT policy, not the dataclass
+        # defaults; keep browsers<=workers instead of rejecting the intent.
+        from dataclasses import asdict
+
+        merged = {**asdict(pool.limits), **overrides}
+        merged["max_browsers"] = min(merged["max_browsers"], merged["max_workers"])
+        pool.configure(HostResourceLimits(**merged))
     return {"product": "RedJohn", "recovered_leases": recovered, "resources": pool.snapshot()}
 
 
