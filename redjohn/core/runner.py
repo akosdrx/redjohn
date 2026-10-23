@@ -567,10 +567,7 @@ async def run_redjohn_scan(
                     str(scan_config.get("user_instructions") or ""),
                 )
                 if recalled_memory:
-                    scope_context["openviking_memory"] = (
-                        "OPENVIKING PRIOR PENTEST MEMORY (recalled from viking://):\n"
-                        f"{recalled_memory}"
-                    )
+                    scope_context["openviking_memory"] = recalled_memory
 
         # Attach the run's MCP connections and hold their live sessions in a
         # per-run registry. The connections are source-agnostic: a caller

@@ -2,17 +2,20 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 import os
+import secrets
 import sys
-import urllib.request
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 from redjohn.config import codex, grok, load_settings
 from redjohn.config.model_catalog import short_model_label
 from redjohn.tools.mcp.config import McpConnectionConfig
+from redjohn.utils.secret_files import write_secret_text
 
 
 logger = logging.getLogger(__name__)
@@ -179,14 +182,37 @@ def _infer_embedding_from_redjohn(vlm_info: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _load_or_create_root_api_key() -> str:
+    """Stable key for the local OpenViking HTTP surface (api_key auth mode).
+
+    Stored 0600 next to ``ov.conf`` and generated once. Without it OpenViking's
+    server auto-selects open ``dev`` auth, and any local process could drive it.
+    """
+    with contextlib.suppress(OSError):
+        existing = (DEFAULT_OV_DIR / "ov.root_key").read_text(encoding="utf-8").strip()
+        if existing:
+            return existing
+    key = secrets.token_urlsafe(32)
+    try:
+        write_secret_text(DEFAULT_OV_DIR / "ov.root_key", key + "\n")
+    except OSError:
+        logger.debug("Could not persist OpenViking root api key", exc_info=True)
+    return key
+
+
 def ensure_openviking_configured() -> Path:
     """Write and synchronize ``~/.openviking/ov.conf`` from RedJohn settings."""
     settings = load_settings()
     ov = settings.openviking
     workspace_dir = Path(ov.workspace).expanduser().resolve()
-    workspace_dir.mkdir(parents=True, exist_ok=True)
+    workspace_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
+    with contextlib.suppress(OSError):
+        workspace_dir.chmod(0o700)
 
-    DEFAULT_OV_DIR.mkdir(parents=True, exist_ok=True)
+    DEFAULT_OV_DIR.mkdir(parents=True, exist_ok=True, mode=0o700)
+    with contextlib.suppress(OSError):
+        DEFAULT_OV_DIR.chmod(0o700)
+    root_api_key = _load_or_create_root_api_key()
     vlm_info = _infer_vlm_from_redjohn()
     emb_info = _infer_embedding_from_redjohn(vlm_info)
 
@@ -222,8 +248,8 @@ def ensure_openviking_configured() -> Path:
         "server": {
             "host": "127.0.0.1",
             "port": 1933,
-            "root_api_key": None,
-            "cors_origins": ["*"],
+            "root_api_key": root_api_key,
+            "cors_origins": [],
             "agent_evolution": {"enabled": False},
         },
         "storage": {
@@ -248,9 +274,9 @@ def ensure_openviking_configured() -> Path:
     }
 
     try:
-        DEFAULT_OV_CONF.write_text(
+        write_secret_text(
+            DEFAULT_OV_CONF,
             json.dumps(ov_conf_payload, indent=2, ensure_ascii=False),
-            encoding="utf-8",
         )
         os.environ["OPENVIKING_CONFIG_FILE"] = str(DEFAULT_OV_CONF)
     except OSError:
@@ -259,15 +285,12 @@ def ensure_openviking_configured() -> Path:
     return DEFAULT_OV_CONF
 
 
-def _check_external_http_server(url: str) -> bool:
-    """Return True if an external OpenViking HTTP server is responding at ``url``."""
-    health_url = f"{url.rstrip('/')}/health"
-    try:
-        req = urllib.request.Request(health_url, method="GET")  # noqa: S310
-        with urllib.request.urlopen(req, timeout=0.6) as resp:  # nosec B310
-            return int(getattr(resp, "status", 200)) < 500
-    except Exception:
+def _external_url_allowed(url: str) -> bool:
+    """Remote memory egress is opt-in and TLS-only."""
+    if os.environ.get("REDJOHN_OPENVIKING_ALLOW_REMOTE") != "1":
         return False
+    parsed = urlsplit(url)
+    return parsed.scheme == "https" and bool(parsed.hostname)
 
 
 def probe_openviking_status() -> dict[str, Any]:
@@ -296,10 +319,12 @@ def probe_openviking_status() -> dict[str, Any]:
 
         ov_installed = importlib.util.find_spec("openviking") is not None
         ext_url = (ov.url or os.environ.get("OPENVIKING_URL") or "").strip()
-        if ext_url and _check_external_http_server(ext_url):
-            mode = "http"
-            online = True
-        elif _check_external_http_server("http://127.0.0.1:1933"):
+        if ext_url and not _external_url_allowed(ext_url):
+            ext_url = ""
+        if ext_url:
+            # Configured external memory: no probe is made from this module (the
+            # MCP client establishes reachability at connect time), so no
+            # server-side request to operator-supplied URLs happens here.
             mode = "http"
             online = True
         else:
@@ -353,7 +378,16 @@ def get_openviking_mcp_config() -> McpConnectionConfig | None:
     )
 
     ext_url = (settings.openviking.url or os.environ.get("OPENVIKING_URL") or "").strip()
-    if ext_url and _check_external_http_server(ext_url):
+    if ext_url and not _external_url_allowed(ext_url):
+        logger.warning(
+            "OPENVIKING_URL is ignored: remote memory egress requires "
+            "REDJOHN_OPENVIKING_ALLOW_REMOTE=1 and an https:// URL; using the local "
+            "workspace instead."
+        )
+        ext_url = ""
+    if ext_url:
+        # Use the opted-in https URL as configured; the MCP client surfaces
+        # connectivity failures through the registry's unavailable state.
         return McpConnectionConfig(
             name="openviking",
             transport="http",

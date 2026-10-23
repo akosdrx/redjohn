@@ -17,7 +17,7 @@ The `openviking` MCP connection is automatically attached to every RedJohn pente
   - `list(uri="viking://resources/pentests")` / `tree(uri="viking://resources/pentests")` — Browse stored target directories and prior pentest artifacts.
   - `grep(uri, pattern)` / `glob(uri, pattern)` — Pattern search across stored `viking://` files.
 - **Persistence**:
-  - `remember(messages)` — Extract and store durable facts, credentials, endpoint behaviors, WAF bypasses, and lessons learned into `viking://`.
+  - `remember(messages)` — Extract and store durable facts, endpoint behaviors, and lessons learned into `viking://`. NEVER store credentials, tokens, or raw secrets in memory.
   - `write(uri, content, mode="replace")` / `edit(uri, old_str, new_str)` — Author or update structured markdown notes at `viking://resources/pentests/<target>/<topic>.md`.
   - `add_resource(path_or_url, parent="viking://resources/pentests")` — Index external recon files, OpenAPI specs, or source docs into `viking://`.
 - **Maintenance**:
@@ -27,7 +27,7 @@ The `openviking` MCP connection is automatically attached to every RedJohn pente
 ## Mandatory Pentest Memory Workflow
 
 1. **Recall at Task Start**:
-   - Before starting active reconnaissance or exploitation on a target, check the `<openviking_memory>` block in your scope prompt or call `call_mcp(connection="openviking", tool="find", arguments={"query": "<target domain or service> vulnerabilities endpoints auth", "read_content": True})`.
+   - Before starting active reconnaissance or exploitation on a target, check the UNTRUSTED PRIOR-SCAN NOTES block (wrapped in `<recalled_memory>` tags) in your scope prompt or call `call_mcp(connection="openviking", tool="find", arguments={"query": "<target domain or service> vulnerabilities endpoints auth", "read_content": True})`.
    - Reuse prior verified endpoints, tech stack fingerprints, authentication flows, and WAF quirks to avoid redundant probing.
 2. **Persist High-Signal Discoveries During Assessment**:
    - When you uncover a non-obvious architectural fact, authentication mechanism, working exploit chain, or environment constraint, persist it via `call_mcp(connection="openviking", tool="write", arguments={"uri": "viking://resources/pentests/<target>/notes.md", "content": "..."})` or `call_mcp(connection="openviking", tool="remember", arguments={"messages": [...]})`.

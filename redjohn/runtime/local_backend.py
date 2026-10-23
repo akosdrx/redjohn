@@ -225,6 +225,7 @@ class RedJohnLocalSandboxSession(UnixLocalSandboxSession):
     caido_port: int | None = None
     caido_process: asyncio.subprocess.Process | None = None
     redjohn_shell_boundary: LegacyShellBoundary | None = None
+    _env_scrub_warned: bool = False
 
     def bind_assessment_shell_boundary(self, boundary: LegacyShellBoundary | None) -> None:
         self.redjohn_shell_boundary = boundary
@@ -303,12 +304,44 @@ class RedJohnLocalSandboxSession(UnixLocalSandboxSession):
             self.redjohn_shell_boundary.assert_active()
             return dict(self.redjohn_shell_boundary.environment), str(self.state.manifest.root)
         env, workspace = await super()._resolved_exec_context()
-        # Keep the operator's real home out of agent shells. Home-relative
-        # reads would otherwise reach ~/.ssh, cloud credentials and browser profiles.
+        # Boundary-less agent shells execute directly on the host. The SDK's
+        # base context is os.environ.copy(), which hands them every ambient
+        # provider credential; scrub to an explicit allowlist (manifest-granted
+        # keys survive) and never re-add credential names. The darwin fallback
+        # profile separately denies host-file reads outside the workspace.
+        manifest_env = await self.state.manifest.environment.resolve()
+        base_allowed = {
+            "HOME", "WORKSPACE", "PATH", "LANG", "LC_ALL", "TERM", "TZ", "TMPDIR",
+            "PYTHONUNBUFFERED", "http_proxy", "https_proxy", "HTTP_PROXY",
+            "HTTPS_PROXY", "NO_PROXY", "no_proxy", "ALL_PROXY",
+            "SSL_CERT_FILE", "SSL_CERT_DIR",
+        }
+        denied_credentials = {
+            "OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GITHUB_TOKEN", "HF_TOKEN",
+            "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_SESSION_TOKEN",
+            "REDJOHN_API_TOKEN", "SSH_AUTH_SOCK", "KUBECONFIG", "GIT_SSH_COMMAND",
+        }
+        env = {
+            key: value
+            for key, value in env.items()
+            if key not in denied_credentials
+            and (key in base_allowed or key in manifest_env or key.startswith("REDJOHN_"))
+        }
+        # Proxy URLs must not carry embedded basic-auth credentials either.
+        for key in ("http_proxy", "https_proxy", "HTTP_PROXY", "HTTPS_PROXY"):
+            if key in env:
+                env[key] = re.sub(r"(://)[^@/]+@", r"\1", env[key])
         env["HOME"] = workspace
         env["WORKSPACE"] = workspace
         env["PATH"] = _build_enriched_path(env.get("PATH", os.environ.get("PATH", "")))
         _apply_kali_environment_defaults(env, workspace=workspace)
+        if not self._env_scrub_warned:
+            self._env_scrub_warned = True
+            logger.warning(
+                "Local backend is running without a shell boundary: agent commands "
+                "execute on the host with a restricted environment allowlist and no "
+                "network confinement."
+            )
 
         proxy_url = env.get("http_proxy") or env.get("https_proxy") or ""
         if proxy_url.startswith("http://127.0.0.1:"):

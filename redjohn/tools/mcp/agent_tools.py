@@ -66,7 +66,7 @@ _MCP_DISCOVERY_WAIT_SECONDS = 30.0
 async def _catalog_for(ctx: RunContextWrapper, entry: McpConnectionEntry) -> list[Any]:
     context = ctx.context if isinstance(ctx.context, dict) else {}
     owner = legacy_from_context(context)
-    if owner is not None and entry.name != "openviking":
+    if owner is not None:
         return await owner.run(
             f"mcp-catalog:{entry.name}",
             entry.ensure_catalog,
@@ -342,16 +342,19 @@ async def call_mcp(  # noqa: PLR0912, PLR0915 - explicit validation and lifecycl
                 "mcp_target_bound_assessment_required", category="policy", coverage_effect="blocked"
             )
         )
-    if owner is not None and owner.control is not None and connection != "openviking":
+    if owner is not None and owner.control is not None:
         try:
             owner.check_policy()
-            rule = contract_for(entry, tool)
-            authorize_arguments(rule, arguments or {}, owner.control.policy)
-            if rule.effect.startswith("target-"):
-                assert entry._target_adapter is not None
-                return await entry._target_adapter.submit(entry, tool, arguments or {}, surface_id)
-            if surface_id is not None:
-                raise PolicyDenied("mcp_surface_reference_requires_target_contract")  # noqa: TRY301
+            if connection != "openviking":
+                rule = contract_for(entry, tool)
+                authorize_arguments(rule, arguments or {}, owner.control.policy)
+                if rule.effect.startswith("target-"):
+                    assert entry._target_adapter is not None
+                    return await entry._target_adapter.submit(
+                        entry, tool, arguments or {}, surface_id
+                    )
+                if surface_id is not None:
+                    raise PolicyDenied("mcp_surface_reference_requires_target_contract")  # noqa: TRY301
         except (PolicyDenied, ResourceAdmissionError) as exc:
             return _errored_tool_output(
                 error_record(
@@ -398,7 +401,7 @@ async def call_mcp(  # noqa: PLR0912, PLR0915 - explicit validation and lifecycl
 
     timeout = min(110, entry.config.session_timeout_seconds if entry.config else 60)
     try:
-        if owner is not None and connection != "openviking":
+        if owner is not None:
             return await owner.run(
                 f"mcp-call:{connection}:{tool}",
                 dispatch,
