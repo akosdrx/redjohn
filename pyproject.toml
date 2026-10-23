@@ -98,6 +98,12 @@ exclude = [
   "redjohn/interface/tui/target/**",
   "redjohn/interface/tui/Cargo.toml",
   "redjohn/interface/tui/Cargo.lock",
+  # Native sampler crate source; the abi3 cdylib is force-included under
+  # redjohn/_native/ instead.
+  "redjohn/native/src/**",
+  "redjohn/native/target/**",
+  "redjohn/native/Cargo.toml",
+  "redjohn/native/Cargo.lock",
 ]
 
 [tool.hatch.build.targets.wheel.hooks.custom]

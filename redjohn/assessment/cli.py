@@ -316,7 +316,7 @@ def resource_status(
             raise ValueError("host_policy_invalid")
         # A partial policy narrows the CURRENT policy, not the dataclass
         # defaults; keep browsers<=workers instead of rejecting the intent.
-        from dataclasses import asdict
+        from dataclasses import asdict  # noqa: PLC0415 - local to the policy merge
 
         merged = {**asdict(pool.limits), **overrides}
         merged["max_browsers"] = min(merged["max_browsers"], merged["max_workers"])

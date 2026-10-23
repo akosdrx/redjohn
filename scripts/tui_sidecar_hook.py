@@ -50,6 +50,39 @@ class CustomBuildHook(BuildHookInterface):  # type: ignore[type-arg]
 
         build_data["force_include"][str(output)] = f"redjohn/bin/{executable}"
         build_data["pure_python"] = False
+
+        # Native extension module (process-tree sampling): built as an abi3
+        # cdylib and shipped inside the package next to its Python loader.
+        native_dir = root / "redjohn" / "native"
+        if native_dir.is_dir():
+            subprocess.run(
+                ["cargo", "build", "--release", "--features", "extension-module"],
+                cwd=native_dir,
+                check=True,
+                shell=False,
+            )
+            cdylib = next(
+                (
+                    name
+                    for name in (
+                        "libredjohn_native.dylib",
+                        "libredjohn_native.so",
+                        "redjohn_native.dll",
+                    )
+                    if (native_dir / "target" / "release" / name).is_file()
+                ),
+                None,
+            )
+            if cdylib is None:
+                raise RuntimeError("redjohn-native cdylib artifact not found after build")
+            ext_suffix = str(sysconfig.get_config_var("EXT_SUFFIX"))
+            native_out = root / "build" / "native" / f"redjohn_native{ext_suffix}"
+            native_out.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(native_dir / "target" / "release" / cdylib, native_out)
+            build_data["force_include"][str(native_out)] = (
+                f"redjohn/_native/redjohn_native{ext_suffix}"
+            )
+
         platform_tag = os.environ.get("REDJOHN_WHEEL_PLATFORM_TAG")
         if not platform_tag:
             platform_tag = sysconfig.get_platform().replace("-", "_").replace(".", "_")

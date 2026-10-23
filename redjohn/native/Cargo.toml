@@ -1,0 +1,24 @@
+[package]
+name = "redjohn-native"
+version = "0.1.0"
+edition = "2021"
+description = "RedJohn native extension: process-tree memory sampling for the resource governor"
+license = "Apache-2.0"
+
+[lib]
+name = "redjohn_native"
+crate-type = ["cdylib"]
+
+[features]
+# Production cdylib builds pass --features extension-module; plain `cargo test`
+# links the real libpython so the Rust unit tests can run.
+extension-module = ["pyo3/extension-module"]
+
+[dependencies]
+pyo3 = { version = "0.23", features = ["abi3-py312"] }
+sysinfo = "0.33"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+strip = "symbols"

@@ -36,3 +36,6 @@ redjohn_runs/
 .tools/
 redjohn/interface/tui/target/
 /target/
+redjohn/native/target/
+redjohn/_native/*.so
+redjohn/_native/*.dylib

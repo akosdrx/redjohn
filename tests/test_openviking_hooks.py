@@ -63,9 +63,7 @@ def test_remember_pentest_finding_keeps_legacy_poc_key(monkeypatch) -> None:
         recorded.append((uri, content))
 
     monkeypatch.setattr(hooks, "_write_viking_markdown", fake_write)
-    monkeypatch.setattr(
-        hooks, "_schedule_background_coro", lambda coro: asyncio.run(coro)
-    )
+    monkeypatch.setattr(hooks, "_schedule_background_coro", asyncio.run)
 
     hooks.remember_pentest_finding(
         {

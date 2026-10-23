@@ -9,10 +9,10 @@ from redjohn.report.state import ReportState
 def test_update_scan_final_fields_uses_run_id_and_scan_config(monkeypatch, tmp_path):
     captured: dict[str, object] = {}
 
-    def fake_summary(scan_id: str, targets: object, summary: str) -> None:
-        captured["scan_id"] = scan_id
+    def fake_summary(_scan_id: str, targets: object, _summary: str) -> None:
+        captured["scan_id"] = _scan_id
         captured["targets"] = targets
-        captured["summary"] = summary
+        captured["summary"] = _summary
 
     monkeypatch.setattr(hooks, "remember_pentest_summary", fake_summary)
     monkeypatch.chdir(tmp_path)
@@ -29,7 +29,7 @@ def test_update_scan_final_fields_uses_run_id_and_scan_config(monkeypatch, tmp_p
 def test_update_scan_final_fields_defaults_targets_to_empty(monkeypatch, tmp_path):
     captured: dict[str, object] = {}
 
-    def fake_summary(scan_id: str, targets: object, summary: str) -> None:
+    def fake_summary(_scan_id: str, targets: object, _summary: str) -> None:
         captured["targets"] = targets
 
     monkeypatch.setattr(hooks, "remember_pentest_summary", fake_summary)

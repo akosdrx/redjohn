@@ -3,17 +3,20 @@
 from __future__ import annotations
 
 import json
-import os
 import sqlite3
 from dataclasses import asdict
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from redjohn.assessment.host_resources import (
+    _LEGACY_DEFAULT_LIMITS,
     HostResourceLimits,
     HostResourcePool,
     _host_derived_limits,
-    _LEGACY_DEFAULT_LIMITS,
 )
+
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def _write_legacy_policy(pool_path: Path, limits: HostResourceLimits) -> None:
@@ -27,7 +30,7 @@ def _write_legacy_policy(pool_path: Path, limits: HostResourceLimits) -> None:
         db.commit()
     finally:
         db.close()
-    os.chmod(pool_path, 0o600)
+    pool_path.chmod(0o600)
 
 
 def test_first_open_uses_host_derived_default(tmp_path) -> None:

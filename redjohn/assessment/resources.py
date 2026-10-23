@@ -17,6 +17,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Self
 
+from redjohn._native import native_sample_forest, native_sample_tree
+
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -105,9 +107,42 @@ class ProcessTreeMemory:
         return max(self.rss_bytes, self.cgroup_current_bytes - max(0, inactive))
 
 
+def _own_cgroup_memory() -> tuple[int | None, int | None]:
+    """The controller's own cgroup charge, never a system-wide root value."""
+    try:
+        for entry in Path("/proc/self/cgroup").read_text().splitlines():
+            if entry.startswith("0::"):
+                relative = entry.partition("0::")[2].lstrip("/")
+                if not relative:
+                    return None, None  # A system-wide root charge is not this process tree.
+                group = Path("/sys/fs/cgroup") / relative
+                current = int((group / "memory.current").read_text().strip())
+                counters = dict(
+                    line.split() for line in (group / "memory.stat").read_text().splitlines()
+                )
+                return current, int(counters["inactive_file"])
+    except (OSError, ValueError, KeyError):
+        pass
+    return None, None
+
+
 def process_tree_memory(pid: int | None = None) -> ProcessTreeMemory:
     """Read the actual process tree on Linux/macOS without a psutil dependency."""
     root = os.getpid() if pid is None else pid
+    native = native_sample_tree(root)
+    if native is not None and native.get("available"):
+        cgroup_current, cgroup_inactive_file = (
+            _own_cgroup_memory() if root == os.getpid() else (None, None)
+        )
+        return ProcessTreeMemory(
+            root,
+            int(native["rss_bytes"]),
+            int(native["process_count"]),
+            time.time(),
+            cgroup_current_bytes=cgroup_current,
+            available=True,
+            cgroup_inactive_file_bytes=cgroup_inactive_file,
+        )
     try:
         result = subprocess.run(
             ["/bin/ps", "-axo", "pid=,ppid=,rss="],
@@ -130,25 +165,9 @@ def process_tree_memory(pid: int | None = None) -> ProcessTreeMemory:
         if current not in found and current in sizes:
             found.add(current)
             pending.extend(children.get(current, ()))
-    cgroup_current = None
-    cgroup_inactive_file = None
-    # Only use the controller's own cgroup, never a system-wide root cgroup value.
-    if root == os.getpid():
-        try:
-            for entry in Path("/proc/self/cgroup").read_text().splitlines():
-                if entry.startswith("0::"):
-                    relative = entry.partition("0::")[2].lstrip("/")
-                    if not relative:
-                        break  # A system-wide root charge is not this process tree.
-                    group = Path("/sys/fs/cgroup") / relative
-                    cgroup_current = int((group / "memory.current").read_text().strip())
-                    counters = dict(
-                        line.split() for line in (group / "memory.stat").read_text().splitlines()
-                    )
-                    cgroup_inactive_file = int(counters["inactive_file"])
-                    break
-        except (OSError, ValueError, KeyError):
-            pass
+    cgroup_current, cgroup_inactive_file = (
+        _own_cgroup_memory() if root == os.getpid() else (None, None)
+    )
     return ProcessTreeMemory(
         root,
         sum(sizes[item] for item in found),
@@ -162,6 +181,16 @@ def process_tree_memory(pid: int | None = None) -> ProcessTreeMemory:
 
 def process_forest_memory(roots: set[int]) -> ProcessTreeMemory:
     """Measure distinct processes once even when controller trees overlap."""
+    native = native_sample_forest(list(roots))
+    if native is not None:
+        return ProcessTreeMemory(
+            0,
+            int(native["rss_bytes"]),
+            int(native["process_count"]),
+            time.time(),
+            method="deduplicated_process_forest_summed_rss_shared_pages_may_be_counted_multiple_times",
+            available=bool(native.get("available")),
+        )
     try:
         output = subprocess.run(
             ["/bin/ps", "-axo", "pid=,ppid=,rss="],
