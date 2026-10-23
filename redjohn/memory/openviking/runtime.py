@@ -8,6 +8,7 @@ import importlib.util
 import logging
 import math
 import re
+import time
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +18,7 @@ from redjohn.memory.openviking.config import ensure_openviking_configured
 logger = logging.getLogger(__name__)
 
 _TOKEN_RE = re.compile(r"[a-zA-Z0-9_./:-]{2,}")
+_PLACEHOLDER_API_KEYS = frozenset({"local-no-key", "local-key", "grok-subscription"})
 _SERVICE_LOCK = asyncio.Lock()
 _SERVICE_INSTANCE: Any = None
 _PATCHED_LOCAL_EMBEDDER = False
@@ -62,6 +64,10 @@ def install_resilient_vlm_fallback() -> None:
         from openviking.models.vlm import VLMFactory
         from openviking.models.vlm.base import VLMBase
 
+        if not hasattr(VLMFactory, "_create_provider"):
+            logger.warning("openviking VLMFactory API changed; resilient VLM wrapper not installed")
+            return
+
         class _ResilientVLM(VLMBase):  # type: ignore[misc]
             """Single-attempt VLM wrapper with circuit breaker and extractive fallback."""
 
@@ -70,7 +76,27 @@ def install_resilient_vlm_fallback() -> None:
                 self.inner = inner
                 api_key = str(inner.config.get("api_key") or "").strip()
                 api_base = str(inner.config.get("api_base") or "").strip()
-                self._circuit_open = not bool(api_key or api_base)
+                self._opened_at: float | None = None
+                # Placeholder keys from the local inference path mean "unconfigured":
+                # start with the breaker open instead of burning a doomed API call.
+                self._circuit_open = not bool(
+                    (api_key and api_key not in _PLACEHOLDER_API_KEYS) or api_base
+                )
+
+            def _trip(self) -> None:
+                self._circuit_open = True
+                self._opened_at = time.monotonic()
+
+            def _breaker_allows(self) -> bool:
+                if not self._circuit_open:
+                    return True
+                if self._opened_at is not None and time.monotonic() - self._opened_at > 300.0:
+                    # Half-open: allow one probe call after the cooldown; a fresh
+                    # failure trips the breaker again.
+                    self._circuit_open = False
+                    self._opened_at = None
+                    return True
+                return False
 
             def __getattr__(self, name: str) -> Any:
                 return getattr(self.inner, name)
@@ -84,7 +110,7 @@ def install_resilient_vlm_fallback() -> None:
                 messages: list[dict[str, Any]] | None = None,
                 **kwargs: Any,
             ) -> Any:
-                if self._circuit_open:
+                if not self._breaker_allows():
                     return _extractive_vlm_fallback(prompt, messages)
                 try:
                     return self.inner.get_completion(
@@ -96,7 +122,7 @@ def install_resilient_vlm_fallback() -> None:
                         **kwargs,
                     )
                 except Exception:
-                    self._circuit_open = True
+                    self._trip()
                     return _extractive_vlm_fallback(prompt, messages)
 
             async def get_completion_async(
@@ -109,7 +135,7 @@ def install_resilient_vlm_fallback() -> None:
                 max_tokens: int | None = None,
                 **kwargs: Any,
             ) -> Any:
-                if self._circuit_open:
+                if not self._breaker_allows():
                     return _extractive_vlm_fallback(prompt, messages)
                 try:
                     return await asyncio.wait_for(
@@ -125,7 +151,7 @@ def install_resilient_vlm_fallback() -> None:
                         timeout=6.0,
                     )
                 except Exception:
-                    self._circuit_open = True
+                    self._trip()
                     return _extractive_vlm_fallback(prompt, messages)
 
             def get_vision_completion(
@@ -138,7 +164,7 @@ def install_resilient_vlm_fallback() -> None:
                 messages: list[dict[str, Any]] | None = None,
                 **kwargs: Any,
             ) -> Any:
-                if self._circuit_open:
+                if not self._breaker_allows():
                     return _extractive_vlm_fallback(prompt, messages)
                 try:
                     return self.inner.get_vision_completion(
@@ -151,7 +177,7 @@ def install_resilient_vlm_fallback() -> None:
                         **kwargs,
                     )
                 except Exception:
-                    self._circuit_open = True
+                    self._trip()
                     return _extractive_vlm_fallback(prompt, messages)
 
             async def get_vision_completion_async(
@@ -164,7 +190,7 @@ def install_resilient_vlm_fallback() -> None:
                 messages: list[dict[str, Any]] | None = None,
                 **kwargs: Any,
             ) -> Any:
-                if self._circuit_open:
+                if not self._breaker_allows():
                     return _extractive_vlm_fallback(prompt, messages)
                 try:
                     return await asyncio.wait_for(
@@ -180,7 +206,7 @@ def install_resilient_vlm_fallback() -> None:
                         timeout=6.0,
                     )
                 except Exception:
-                    self._circuit_open = True
+                    self._trip()
                     return _extractive_vlm_fallback(prompt, messages)
 
         def _create_resilient(config: dict[str, Any]) -> VLMBase:
@@ -189,7 +215,7 @@ def install_resilient_vlm_fallback() -> None:
         VLMFactory.create = staticmethod(_create_resilient)  # type: ignore[assignment]
         _PATCHED_RESILIENT_VLM = True
     except Exception:
-        logger.debug("Could not install resilient VLM wrapper", exc_info=True)
+        logger.warning("Could not install resilient VLM wrapper", exc_info=True)
 
 
 def compute_deterministic_embedding(text: str, dimension: int = 512) -> list[float]:
@@ -243,6 +269,12 @@ def install_local_embedder_fallback() -> None:
         from openviking.models.embedder import local_embedders
         from openviking.models.embedder.base import DenseEmbedderBase, EmbedResult
 
+        if not hasattr(local_embedders, "LocalDenseEmbedder"):
+            logger.warning(
+                "openviking local embedder API changed; fallback embedder not installed"
+            )
+            return
+
         class _BuiltinLocalDenseEmbedder(DenseEmbedderBase):  # type: ignore[misc]
             """Zero-dependency local dense embedder for OpenViking VikingDB."""
 
@@ -291,7 +323,29 @@ def install_local_embedder_fallback() -> None:
                     getattr(inner, "config", {}) or {},
                 )
                 self.inner = inner
+                self._opened_at: float | None = None
                 self._circuit_open = isinstance(inner, _BuiltinLocalDenseEmbedder)
+                # Assume an API-backed collection may already hold real vectors:
+                # deterministic hash vectors must never mix into it.
+                self._api_vectors_possible = not self._circuit_open
+
+            def _trip(self) -> None:
+                self._circuit_open = True
+                self._opened_at = time.monotonic()
+
+            def _breaker_allows(self) -> bool:
+                if not self._circuit_open:
+                    return True
+                if self._opened_at is not None and time.monotonic() - self._opened_at > 300.0:
+                    self._circuit_open = False
+                    self._opened_at = None
+                    return True
+                return False
+
+            def _fallback_embed_result(self, text: str) -> EmbedResult:
+                return EmbedResult(
+                    dense_vector=compute_deterministic_embedding(text, self.get_dimension())
+                )
 
             def __getattr__(self, name: str) -> Any:
                 return getattr(self.inner, name)
@@ -303,34 +357,44 @@ def install_local_embedder_fallback() -> None:
                     return 512
 
             def embed(self, text: str, is_query: bool = False) -> EmbedResult:
-                if self._circuit_open:
-                    return EmbedResult(
-                        dense_vector=compute_deterministic_embedding(text, self.get_dimension())
-                    )
+                if not self._breaker_allows():
+                    if not is_query and self._api_vectors_possible:
+                        raise RuntimeError("openviking_embedder_fallback_would_mix_vectors")
+                    return self._fallback_embed_result(text)
                 try:
-                    return self.inner.embed(text, is_query=is_query)
+                    result = self.inner.embed(text, is_query=is_query)
+                    if not is_query:
+                        self._api_vectors_possible = True
+                    return result
                 except Exception:
-                    self._circuit_open = True
-                    return EmbedResult(
-                        dense_vector=compute_deterministic_embedding(text, self.get_dimension())
-                    )
+                    self._trip()
+                    if not is_query and self._api_vectors_possible:
+                        logger.warning(
+                            "OpenViking API embedder failed after use; refusing to mix "
+                            "deterministic fallback vectors into the live collection"
+                        )
+                        raise
+                    return self._fallback_embed_result(text)
 
             def embed_batch(self, texts: list[str], is_query: bool = False) -> list[EmbedResult]:
-                if self._circuit_open:
-                    dim = self.get_dimension()
-                    return [
-                        EmbedResult(dense_vector=compute_deterministic_embedding(t, dim))
-                        for t in texts
-                    ]
+                if not self._breaker_allows():
+                    if not is_query and self._api_vectors_possible:
+                        raise RuntimeError("openviking_embedder_fallback_would_mix_vectors")
+                    return [self._fallback_embed_result(t) for t in texts]
                 try:
-                    return self.inner.embed_batch(texts, is_query=is_query)
+                    results = self.inner.embed_batch(texts, is_query=is_query)
+                    if not is_query:
+                        self._api_vectors_possible = True
+                    return results
                 except Exception:
-                    self._circuit_open = True
-                    dim = self.get_dimension()
-                    return [
-                        EmbedResult(dense_vector=compute_deterministic_embedding(t, dim))
-                        for t in texts
-                    ]
+                    self._trip()
+                    if not is_query and self._api_vectors_possible:
+                        logger.warning(
+                            "OpenViking API embedder failed after use; refusing to mix "
+                            "deterministic fallback vectors into the live collection"
+                        )
+                        raise
+                    return [self._fallback_embed_result(t) for t in texts]
 
             def close(self) -> None:
                 try:
@@ -347,7 +411,7 @@ def install_local_embedder_fallback() -> None:
         EmbeddingConfig.get_embedder = _resilient_get_embedder  # type: ignore[assignment]
         _PATCHED_LOCAL_EMBEDDER = True
     except Exception:
-        logger.debug("Could not install local embedder fallback", exc_info=True)
+        logger.warning("Could not install local embedder fallback", exc_info=True)
 
 
 def bind_default_mcp_identity() -> Any:

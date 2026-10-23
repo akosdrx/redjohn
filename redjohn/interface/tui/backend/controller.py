@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import logging
 import math
+import time
 import webbrowser
 from collections.abc import Awaitable, Callable
 from pathlib import Path
@@ -26,6 +28,32 @@ from redjohn.interface.tui.backend.projection import (
     terminal_projection,
 )
 from redjohn.interface.utils import is_subscription_run
+
+
+logger = logging.getLogger(__name__)
+
+_OV_PROBE_TTL_SECONDS = 30.0
+_ov_probe_cache: dict[str, Any] = {}
+_ov_probe_state: dict[str, float] = {"cached_at": 0.0}
+
+
+def _cached_openviking_status() -> dict[str, Any]:
+    """Advisory UI status: probe at most once per TTL instead of every snapshot.
+
+    Snapshots are rebuilt on every broadcast flush, and each probe rewrites
+    ``ov.conf`` and resolves model routing.
+    """
+    now = time.monotonic()
+    if not _ov_probe_cache or now - _ov_probe_state["cached_at"] > _OV_PROBE_TTL_SECONDS:
+        try:
+            from redjohn.memory.openviking.config import probe_openviking_status
+
+            _ov_probe_cache.clear()
+            _ov_probe_cache.update(probe_openviking_status())
+            _ov_probe_state["cached_at"] = now
+        except Exception:
+            logger.debug("OpenViking status probe failed", exc_info=True)
+    return dict(_ov_probe_cache)
 
 
 if TYPE_CHECKING:
@@ -208,9 +236,7 @@ class TuiController:
             if effective_swarm:
                 swarm_spec = resolve_model_effort_spec(effective_swarm)
                 swarm_effort = llm.swarm_reasoning_effort or effort or swarm_spec.default_effort
-            from redjohn.memory.openviking.config import probe_openviking_status
-
-            ov_status = probe_openviking_status()
+            ov_status = _cached_openviking_status()
             ov_online = bool(ov_status.get("online", False))
             ov_model = str(ov_status.get("short_vlm_model") or "auto")
             ov_embed_model = str(ov_status.get("embedding_model") or "local/bge-small")
@@ -298,9 +324,7 @@ class TuiController:
                 ordered.append(name)
         ov_status: dict[str, Any] = {}
         with contextlib.suppress(Exception):
-            from redjohn.memory.openviking.config import probe_openviking_status
-
-            ov_status = probe_openviking_status()
+            ov_status = _cached_openviking_status()
             if ov_status.get("enabled", True) and "openviking" not in ordered:
                 ordered.insert(0, "openviking")
         rows: list[dict[str, Any]] = []

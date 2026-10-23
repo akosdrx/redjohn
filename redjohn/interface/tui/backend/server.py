@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import contextlib
 import json
 import logging
 import struct
@@ -98,8 +97,12 @@ class TuiBackendServer:
         for task in tasks:
             if task is asyncio.current_task():
                 continue
-            with contextlib.suppress(asyncio.CancelledError):
+            try:
                 await task
+            except asyncio.CancelledError:
+                pass
+            except Exception:
+                logger.exception("TUI backend task failed during close")
         self._reader_task = None
         self._broadcast_task = None
         self._close_socket()
@@ -528,4 +531,7 @@ class TuiBackendServer:
             logger.exception("TUI projection could not be framed")
             self._close_socket()
         except (ConnectionError, OSError):
+            self._close_socket()
+        except Exception:
+            logger.exception("TUI broadcast loop crashed; closing socket")
             self._close_socket()

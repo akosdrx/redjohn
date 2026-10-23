@@ -99,12 +99,15 @@ def _prepare_mcp_server() -> Any:
         messages: Any,
         session_id: str | None = None,
         wait: bool = True,
+        **kwargs: Any,
     ) -> dict[str, Any]:
         """Run OpenViking's remember tool, with direct viking:// markdown fallback if VLM is offline."""
         await get_or_init_openviking_service()
         bind_default_mcp_identity()
         try:
-            res = await orig_remember(messages=messages, session_id=session_id, wait=wait)
+            res = await orig_remember(
+                messages=messages, session_id=session_id, wait=wait, **kwargs
+            )
             if isinstance(res, dict) and res.get("status") not in {"failed", "error"}:
                 return res
         except Exception as exc:
@@ -150,6 +153,7 @@ def _prepare_mcp_server() -> Any:
         context_type: Any = None,
         read_content: bool = False,
         events_time_decay_protection: str | None = None,
+        **kwargs: Any,
     ) -> str:
         await get_or_init_openviking_service()
         bind_default_mcp_identity()
@@ -163,6 +167,7 @@ def _prepare_mcp_server() -> Any:
                 context_type=context_type,
                 read_content=read_content,
                 events_time_decay_protection=events_time_decay_protection,
+                **kwargs,
             )
             if (
                 isinstance(res, str)

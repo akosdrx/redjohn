@@ -562,9 +562,12 @@ async def run_redjohn_scan(
             with contextlib.suppress(Exception):
                 from redjohn.memory.openviking.hooks import recall_pentest_memory
 
-                recalled_memory = await recall_pentest_memory(
-                    targets,
-                    str(scan_config.get("user_instructions") or ""),
+                recalled_memory = await asyncio.wait_for(
+                    recall_pentest_memory(
+                        targets,
+                        str(scan_config.get("user_instructions") or ""),
+                    ),
+                    timeout=30.0,
                 )
                 if recalled_memory:
                     scope_context["openviking_memory"] = recalled_memory
@@ -725,7 +728,7 @@ async def run_redjohn_scan(
         ov_entry = mcp_registry.get("openviking")
         if ov_entry is not None:
             with contextlib.suppress(Exception):
-                await ov_entry.ensure_catalog()
+                await asyncio.wait_for(ov_entry.ensure_catalog(), timeout=30.0)
 
         context: dict[str, Any] = {
             "coordinator": coordinator,
@@ -872,6 +875,10 @@ async def run_redjohn_scan(
             if mcp_registry is not None:
                 with contextlib.suppress(Exception):
                     await mcp_registry.close()
+            with contextlib.suppress(Exception):
+                from redjohn.memory.openviking import hooks as _openviking_hooks
+
+                await _openviking_hooks.drain_background_writes(timeout=10.0)
             with contextlib.suppress(Exception):
                 from redjohn.memory.openviking.runtime import close_openviking_service
 

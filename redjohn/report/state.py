@@ -1,3 +1,4 @@
+import asyncio
 import contextlib
 import json
 import logging
@@ -8,7 +9,7 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Optional, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 from uuid import uuid4
 
 from redjohn.config import codex
@@ -646,6 +647,40 @@ class ReportState:
     def get_existing_vulnerabilities(self) -> list[dict[str, Any]]:
         return list(self.vulnerability_reports)
 
+    _DEBOUNCE_SAVE_SECONDS = 2.0
+    _debounced_save_handle: asyncio.TimerHandle | None = None
+    _save_tasks: ClassVar[set[asyncio.Task[None]]] = set()
+
+    def _schedule_debounced_save(self) -> None:
+        """Coalesce per-LLM-call artifact writes into one delayed off-loop save.
+
+        Every model response used to rewrite every artifact synchronously on
+        the event loop (including git subprocesses); a single delayed thread
+        write per burst keeps run.json fresh for the viewer while exact totals
+        still flush on the final save paths.
+        """
+        if self._debounced_save_handle is not None:
+            return
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            self.save_run_data()
+            return
+        self._debounced_save_handle = loop.call_later(
+            self._DEBOUNCE_SAVE_SECONDS, self._flush_debounced_save
+        )
+
+    def _flush_debounced_save(self) -> None:
+        self._debounced_save_handle = None
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            self.save_run_data()
+            return
+        task = loop.create_task(asyncio.to_thread(self.save_run_data))
+        self._save_tasks.add(task)
+        task.add_done_callback(self._save_tasks.discard)
+
     def record_sdk_usage(
         self,
         *,
@@ -661,7 +696,7 @@ class ReportState:
             model=model,
             usage=usage,
         ):
-            self.save_run_data()
+            self._schedule_debounced_save()
 
     def record_observed_llm_cost(self, cost: float) -> None:
         self._llm_usage.record_observed_cost(cost)

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import datetime
 import hashlib
 import logging
@@ -134,22 +135,66 @@ async def _write_viking_markdown(uri: str, content: str) -> None:
     await mcp_endpoint.write(uri=uri, content=content, mode="replace", wait=False)
 
 
+_BACKGROUND_TASKS: set[asyncio.Task[None]] = set()
+_MAIN_LOOP: asyncio.AbstractEventLoop | None = None
+
+
+def _observe_background_task(task: asyncio.Task[None]) -> None:
+    _BACKGROUND_TASKS.discard(task)
+    if not task.cancelled() and task.exception() is not None:
+        logger.warning(
+            "Background OpenViking write failed: %s", task.exception(), exc_info=task.exception()
+        )
+
+
+def _report_threaded_write(future: Any) -> None:
+    if not future.cancelled():
+        exc = future.exception()
+        if exc is not None:
+            logger.warning("Background OpenViking write failed: %s", exc)
+
+
 def _schedule_background_coro(coro: Any) -> None:
-    """Run an OpenViking persistence coroutine without blocking the caller."""
+    """Run an OpenViking persistence coroutine without blocking the caller.
+
+    Tasks are tracked and observed so failures surface in the log, and the
+    thread fallback reuses the scan's event loop (a fresh asyncio.run would
+    bind the module-level service lock to an ephemeral loop and drop writes).
+    """
+    global _MAIN_LOOP  # noqa: PLW0603
     try:
         loop = asyncio.get_running_loop()
-        loop.create_task(coro)
+        if _MAIN_LOOP is None:
+            _MAIN_LOOP = loop
+        task = loop.create_task(coro)
+        _BACKGROUND_TASKS.add(task)
+        task.add_done_callback(_observe_background_task)
         return
     except RuntimeError:
         pass
+
+    target = _MAIN_LOOP
+    if target is not None and not target.is_closed():
+        future = asyncio.run_coroutine_threadsafe(coro, target)
+        future.add_done_callback(_report_threaded_write)
+        return
 
     def _runner() -> None:
         try:
             asyncio.run(coro)
         except Exception:
-            logger.debug("Background OpenViking write failed", exc_info=True)
+            logger.warning("Background OpenViking write failed", exc_info=True)
 
     threading.Thread(target=_runner, daemon=True).start()
+
+
+async def drain_background_writes(timeout: float = 10.0) -> None:
+    """Wait for scheduled memory writes so shutdown cannot silently drop them."""
+    pending = [task for task in _BACKGROUND_TASKS if not task.done()]
+    if not pending:
+        return
+    with contextlib.suppress(TimeoutError):
+        await asyncio.wait_for(asyncio.gather(*pending, return_exceptions=True), timeout=timeout)
 
 
 def remember_pentest_finding(report: dict[str, Any]) -> None:
@@ -166,9 +211,9 @@ def remember_pentest_finding(report: dict[str, Any]) -> None:
         endpoint = str(report.get("endpoint") or "").strip()
         description = str(report.get("description") or report.get("impact") or "").strip()
         poc = str(
-            report.get("poc")
-            or report.get("proof_of_concept")
-            or report.get("reproduction_steps")
+            report.get("poc_description")
+            or report.get("poc_script_code")
+            or report.get("poc")
             or ""
         ).strip()
         slug = _slugify(target)
