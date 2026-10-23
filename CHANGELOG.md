@@ -1,5 +1,50 @@
 # RedJohn változásnapló
 
+## 2026-10-23 — Full audit remediation (crashes, security, tests/CI, native sampler)
+
+- Fix `import contextlib` NameErrors that crashed every vulnerability report,
+  swarm broadcast, and scan finalization; `update_scan_final_fields` now uses
+  the real `run_id` and `scan_config` (audit K1, M1).
+- Fence recalled OpenViking memory as UNTRUSTED data in the scope prompt
+  (fences neutralized, guard line added); the memory skill no longer asks
+  agents to store credentials (K3).
+- Restore MCP governance for the built-in `openviking` connection (policy
+  checks and admission control); remote memory egress now requires
+  `REDJOHN_OPENVIKING_ALLOW_REMOTE=1` and an https URL; `ov.conf` is written
+  0600 with a generated root API key and empty CORS origins (K4).
+- Restrict boundary-less local-backend agent shells to an environment
+  allowlist (no ambient provider credentials, proxy credentials stripped) and
+  refuse bind mounts of sensitive host paths (K2).
+- Stop silently widening operator-narrowed host resource policies (schema 2
+  with source markers); derive first-run host limits from actual RAM/CPU;
+  partial CLI policies merge onto the current policy with browser clamping
+  (M4, M5).
+- Track and drain OpenViking background writes at shutdown; bound recall and
+  catalog warmup with timeouts; debounce per-LLM-call artifact writes off the
+  event loop (M6, M7, M9).
+- Add half-open circuit breakers; refuse to mix deterministic fallback
+  vectors into API-backed embedding collections; version-guard openviking
+  monkey-patches and pin `openviking>=0.5.1.1,<0.6` (M11, M13).
+- Fix the toggle inversion and the `clear_vlm_model` TypeError in the
+  openviking TUI actions; dead Rust status branches removed; embed labels
+  match the real 512d local model (M2, M3).
+- Honest version display (real package version instead of a hardcoded
+  "Enterprise" label); install.sh download org fixed; THIRD_PARTY_NOTICES.md
+  restored with an AGPL-3.0 notice for the OpenViking dependency;
+  CHANGELOG.md and .env.example restored (M15-M17).
+- Medium/low sweep: caido port liveness, sidecar env scrubbing, lock files
+  0600 with O_NOFOLLOW, off-thread model list/login, MCP request logging,
+  vectordb backup-on-dimension-change (no silent deletes), health tool
+  truthfulness, `suppress(BaseException)` removal, Go/Bubble Tea naming
+  cleanup, README truthfulness, runbooks restored for skill contracts.
+- Restore the test suite (20 modules from history plus new regression
+  coverage: 181 passed / 17 skipped) and a minimal CI pipeline (ruff, strict
+  mypy, pytest, cargo fmt/clippy/test on ubuntu + macos). ruff went 110 -> 0
+  and mypy 30 -> 0 on the full package.
+- New native Rust extension (`redjohn-native`, PyO3 abi3 + sysinfo):
+  process-tree memory sampling for the resource governor with the `ps`
+  implementation kept as an automatic fallback, wired into the wheel build.
+
 ## 2026-10-21 — Source/evidence integrity and assessment hardening
 
 - Restore the canonical `` source tree in Git and require a clean

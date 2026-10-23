@@ -53,4 +53,8 @@ ruff check redjohn                                        # lint
 mypy redjohn                                              # strict type check
 pytest tests -q                                           # test suite
 cargo test --manifest-path redjohn/interface/tui/Cargo.toml   # Rust TUI tests
+
+# Optional native sampler (process-tree memory); tests skip without it:
+PYO3_PYTHON=$(which python) cargo build --release --features extension-module \
+  --manifest-path redjohn/native/Cargo.toml
 ```
