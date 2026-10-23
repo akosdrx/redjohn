@@ -1,5 +1,24 @@
 # RedJohn változásnapló
 
+## 2026-10-23 — Model catalog: dedupe + correct effort modes
+
+- Removed the eight duplicated provider entries (same endpoint listed twice):
+  `kimi-for-coding` (≡ kimi.com), `venice-ai` (≡ Recommended "venice"),
+  `z-ai` / `z-ai-coding` (≡ Recommended "zai" / "zai-coding"), `opencode-go`
+  (≡ opencode-zen), the three standalone Xiaomi token-plan entries (≡ the
+  Xiaomi group's children), and `perplexity-agent` (merged into `perplexity`,
+  which now also falls back to sonar-deep-research). Saved connections are
+  unaffected — they persist the endpoint and model, not the catalog id.
+- Fallback model lists now carry `default_effort` / `supported_efforts`
+  (resolved through the entry's route, exactly as the picker resolves the
+  chosen model), so fallback and live listings render identical effort modes.
+- Effort table corrections: claude-haiku-4-5 is a thinking Claude 4 model
+  (none/low/medium/high/max, was forced to none); qwen-max joined the Qwen
+  reasoning group; moonshot-v1, kimi-k2-instruct, llama-3, codestral,
+  sonar-pro and gemini-2.0 are non-reasoning (no effort levels); Nemotron
+  Ultra keeps its reasoning spec via an early check that the plain
+  "llama-3" marker cannot catch.
+
 ## 2026-10-23 — Remaining audit findings, batch 2
 
 - LLM request logging builds events off the event loop: the full-payload

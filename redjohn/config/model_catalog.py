@@ -439,12 +439,8 @@ OTHER: tuple[CatalogEntry, ...] = (
     _provider("jiekou-ai", "Jiekou.AI", "https://api.jiekou.ai/openai/v1"),
     _provider("kilo-gateway", "Kilo Gateway", "https://api.kilo.ai/api/openrouter"),
     _provider(
-        "kimi-for-coding",
-        "Kimi For Coding",
-        "https://api.kimi.com/coding/v1",
-        fallback_models=_KIMI_MODELS,
+        "kuae-coding", "KUAE Cloud Coding Plan", "https://coding-plan-endpoint.kuaecloud.net/v1"
     ),
-    _provider("kuae-coding", "KUAE Cloud Coding Plan", "https://coding-plan-endpoint.kuaecloud.net/v1"),
     _provider("llama-gateway", "Llama (LLM Gateway)", "https://api.llama.com/compat/v1"),
     _provider(
         "lmstudio",
@@ -534,7 +530,6 @@ OTHER: tuple[CatalogEntry, ...] = (
         ),
     ),
     _provider("ollama-cloud", "Ollama Cloud", "https://ollama.com/v1"),
-    _provider("opencode-go", "OpenCode Go", "https://opencode.ai/zen/v1"),
     _provider("opencode-zen", "OpenCode Zen", "https://opencode.ai/zen/v1"),
     _provider(
         "openrouter",
@@ -542,18 +537,19 @@ OTHER: tuple[CatalogEntry, ...] = (
         "https://openrouter.ai/api/v1",
         fallback_models=_OPENROUTER_MODELS,
     ),
-    _provider("ovhcloud", "OVHcloud AI Endpoints", "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1"),
+    _provider(
+        "ovhcloud", "OVHcloud AI Endpoints", "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1"
+    ),
     _provider(
         "perplexity",
         "Perplexity",
         "https://api.perplexity.ai",
-        fallback_models=("sonar-reasoning-pro", "sonar-pro", "r1-1776"),
-    ),
-    _provider(
-        "perplexity-agent",
-        "Perplexity Agent",
-        "https://api.perplexity.ai",
-        fallback_models=("sonar-reasoning-pro", "sonar-deep-research", "sonar-pro"),
+        fallback_models=(
+            "sonar-reasoning-pro",
+            "sonar-deep-research",
+            "sonar-pro",
+            "r1-1776",
+        ),
     ),
     _provider("poe", "Poe", "https://api.poe.com/v1"),
     _provider("privatemode-ai", "Privatemode AI", "https://api.privatemode.ai/v1"),
@@ -565,7 +561,9 @@ OTHER: tuple[CatalogEntry, ...] = (
     _provider("scaleway", "Scaleway", "https://api.scaleway.ai/v1"),
     _provider("siliconflow", "SiliconFlow", "https://api.siliconflow.com/v1"),
     _provider("siliconflow-cn", "SiliconFlow (China)", "https://api.siliconflow.cn/v1"),
-    _provider("stackit", "STACKIT", "https://api.openai-compat.model-serving.eu01.onstackit.cloud/v1"),
+    _provider(
+        "stackit", "STACKIT", "https://api.openai-compat.model-serving.eu01.onstackit.cloud/v1"
+    ),
     _provider(
         "stepfun",
         "StepFun",
@@ -593,12 +591,6 @@ OTHER: tuple[CatalogEntry, ...] = (
         fallback_models=("solar-pro2", "solar-pro", "solar-mini"),
     ),
     _provider("v0", "v0", "https://api.v0.dev/v1", fallback_models=("v0-1.5-lg", "v0-1.5-md")),
-    _provider(
-        "venice-ai",
-        "Venice AI",
-        "https://api.venice.ai/api/v1",
-        fallback_models=("qwen3-235b", "deepseek-r1-671b", "llama-3.3-70b", "venice-uncensored"),
-    ),
     _provider("vercel-ai-gateway", "Vercel AI Gateway", "https://ai-gateway.vercel.sh/v1"),
     _provider(
         "vertex",
@@ -618,20 +610,6 @@ OTHER: tuple[CatalogEntry, ...] = (
     _provider("vultr", "Vultr", "https://api.vultrinference.com/v1"),
     _provider("wafer", "Wafer", "https://api.wafer.ai/v1"),
     _provider("wandb", "Weights & Biases", "https://api.inference.wandb.ai/v1"),
-    _xiaomi("xiaomi-cn", "Xiaomi Token Plan (China)", "https://token-plan-cn.xiaomimimo.com/v1"),
-    _xiaomi("xiaomi-eu", "Xiaomi Token Plan (Europe)", "https://token-plan-ams.xiaomimimo.com/v1"),
-    _xiaomi(
-        "xiaomi-sg",
-        "Xiaomi Token Plan (Singapore)",
-        "https://token-plan-sgp.xiaomimimo.com/v1",
-    ),
-    _provider("z-ai", "Z.AI", "https://api.z.ai/api/paas/v4", fallback_models=_ZAI_MODELS),
-    _provider(
-        "z-ai-coding",
-        "Z.AI Coding Plan",
-        "https://api.z.ai/api/coding/paas/v4",
-        fallback_models=_ZAI_MODELS,
-    ),
     _provider("zenmux", "ZenMux", "https://zenmux.ai/api/v1"),
     _provider(
         "zhipu-ai",
@@ -713,7 +691,7 @@ def connection_clears_base(entry: CatalogEntry) -> bool:
     return entry.id == "openai.api-key"
 
 
-def list_models(entry: CatalogEntry, api_key: str | None) -> tuple[list[dict[str, str]], str]:
+def list_models(entry: CatalogEntry, api_key: str | None) -> tuple[list[dict[str, Any]], str]:
     """Return ``(models, source)`` where source is ``live`` or ``fallback``."""
     if entry.api_base and api_key:
         try:
@@ -724,7 +702,17 @@ def list_models(entry: CatalogEntry, api_key: str | None) -> tuple[list[dict[str
             live = []
         if live:
             return live, "live"
-    fallback = [{"id": model_id, "label": model_id} for model_id in entry.fallback_models]
+    # The fallback list carries the same effort metadata a live list would,
+    # resolved exactly as the picker will resolve the chosen model (through
+    # the entry's route), so both sources render identical effort modes.
+    fallback: list[dict[str, Any]] = []
+    for model_id in entry.fallback_models:
+        item: dict[str, Any] = {"id": model_id, "label": model_id}
+        spec = resolve_model_effort_spec(format_model_setting(entry.route, model_id))
+        if spec.supported_efforts:
+            item["default_effort"] = spec.default_effort
+            item["supported_efforts"] = list(spec.supported_efforts)
+        fallback.append(item)
     if not fallback:
         raise ValueError(f"{entry.label} did not return a model list. Check the key and try again.")
     return fallback, "fallback"
@@ -869,7 +857,6 @@ _NON_REASONING_MARKERS = (
     "gpt-3.5",
     "claude-3-5-haiku",
     "claude-3-haiku",
-    "claude-haiku-4-5",
     "mimo-v2-flash",
     "mimo-v2.6-flash",
     "grok-4-fast",
@@ -882,6 +869,15 @@ _NON_REASONING_MARKERS = (
     "mercury-coder",
     "morph-v3-fast",
     "solar-mini",
+    # Instruct/completion lines without a thinking mode.
+    "moonshot-v1",
+    "kimi-k2-instruct",
+    "llama-3",
+    "codestral",
+    # Perplexity's non-reasoning sonar (does not match sonar-reasoning-*).
+    "sonar-pro",
+    # Pre-thinking Gemini line (2.5/3 stay reasoning).
+    "gemini-2.0",
 )
 
 
@@ -912,13 +908,8 @@ def resolve_model_effort_spec(model_name: str | None) -> ModelEffortSpec:  # noq
         llm = load_settings().llm
         cfg_model = (llm.model or "").strip().lower()
         cfg_slug = cfg_model.rsplit("/", 1)[-1] if cfg_model else ""
-        if (
-            llm.supported_efforts
-            and (lowered == cfg_model or slug == cfg_slug)
-        ):
-            levels = tuple(
-                lvl for lvl in llm.supported_efforts if lvl in EFFORTS
-            )
+        if llm.supported_efforts and (lowered == cfg_model or slug == cfg_slug):
+            levels = tuple(lvl for lvl in llm.supported_efforts if lvl in EFFORTS)
             if levels:
                 default_eff = (
                     llm.reasoning_effort
@@ -937,6 +928,15 @@ def resolve_model_effort_spec(model_name: str | None) -> ModelEffortSpec:  # noq
         return ModelEffortSpec(
             default_effort="high",
             supported_efforts=("low", "high", "max"),
+            supports_reasoning=True,
+        )
+
+    # Nemotron Ultra is a reasoning-capable Llama derivative; this must run
+    # before the plain "llama-3" non-reasoning marker so it is not caught.
+    if "nemotron" in slug:
+        return ModelEffortSpec(
+            default_effort="high",
+            supported_efforts=("none", "low", "medium", "high"),
             supports_reasoning=True,
         )
 
@@ -973,7 +973,14 @@ def resolve_model_effort_spec(model_name: str | None) -> ModelEffortSpec:  # noq
 
     if any(
         marker in slug
-        for marker in ("claude-opus-4", "claude-sonnet-4", "claude-3-7", "opus-4", "sonnet-4")
+        for marker in (
+            "claude-opus-4",
+            "claude-sonnet-4",
+            "claude-haiku-4",
+            "claude-3-7",
+            "opus-4",
+            "sonnet-4",
+        )
     ):
         return ModelEffortSpec(
             default_effort="high",
@@ -1010,6 +1017,7 @@ def resolve_model_effort_spec(model_name: str | None) -> ModelEffortSpec:  # noq
         for marker in (
             "qwen3",
             "qwen-3",
+            "qwen-max",
             "glm-5",
             "glm5",
             "glm-4.6",
@@ -1126,4 +1134,3 @@ def short_model_label(model_name: str | None) -> str:  # noqa: PLR0911
     if len(slug) > 16:
         return slug[:15] + "…"
     return slug
-
