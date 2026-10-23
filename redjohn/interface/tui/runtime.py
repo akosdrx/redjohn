@@ -1,4 +1,4 @@
-"""Launch and supervise the Bubble Tea TUI."""
+"""Launch and supervise the native Rust TUI."""
 
 from __future__ import annotations
 
@@ -55,7 +55,7 @@ def _revision_count(report: dict[str, Any]) -> int:
 
 
 class GoTuiPreActivationError(RuntimeError):
-    """A sidecar failure raised before the Go TUI activates."""
+    """A sidecar failure raised before the Rust TUI activates."""
 
 
 def _open_output_sink() -> TextIO:
@@ -172,7 +172,7 @@ class GoTuiRuntime:
         try:
             await self._preflight_model()
         except Exception as exc:
-            logger.exception("Go TUI setup model preflight failed")
+            logger.exception("Rust TUI setup model preflight failed")
             self.controller.add_message(f"Model connection failed: {exc}", "error")
             return
         self.controller.add_message("Model connection verified")
@@ -187,7 +187,7 @@ class GoTuiRuntime:
         try:
             await self._preflight_model()
         except Exception as exc:
-            logger.exception("Go TUI setup model preflight failed")
+            logger.exception("Rust TUI setup model preflight failed")
             report_error("model_connection_failed", exc)
             raise RuntimeError(f"Model connection failed: {exc}") from exc
 
@@ -276,7 +276,7 @@ class GoTuiRuntime:
             )
             self.controller.scan_state = "completed" if report_status == "completed" else "stopped"
         except Exception as exc:
-            logger.exception("Go TUI scan failed")
+            logger.exception("Rust TUI scan failed")
             report_error("unhandled_exception", exc)
             if self.report_state is not None and self.report_state.scan_ended_exit_reason is None:
                 self.report_state.scan_ended_exit_reason = "error"
@@ -395,7 +395,7 @@ class GoTuiRuntime:
                 try:
                     changed = await self._sync_agent_state()
                 except Exception as exc:
-                    logger.exception("Go TUI agent-state sync failed")
+                    logger.exception("Rust TUI agent-state sync failed")
                     self.controller.error = f"Agent-state sync failed: {exc}"
                     changed = True
                 fingerprint = self._runtime_sync_fingerprint()

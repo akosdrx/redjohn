@@ -298,7 +298,7 @@ class ReportUsageHooks(RunHooks[dict[str, Any]]):
         cursor = int(ctx.get("_skill_scan_cursor", 0))
         if cursor >= len(input_items):
             return
-        new_slice = input_items[cursor:]
+        new_slice: list[Any] = input_items[cursor:]
         ctx["_skill_scan_cursor"] = len(input_items)
 
         snippets: list[str] = []
@@ -311,7 +311,10 @@ class ReportUsageHooks(RunHooks[dict[str, Any]]):
         if not snippets:
             return
 
-        from redjohn.skills import infer_skills_for_agent, load_skills
+        from redjohn.skills import (  # noqa: PLC0415 - lazy: avoids import cycle at module load
+            infer_skills_for_agent,
+            load_skills,
+        )
 
         candidates = infer_skills_for_agent(task="\n".join(snippets), max_skills=6)
         unloaded = [s for s in candidates if s.split("/")[-1] not in agent_skills][:2]

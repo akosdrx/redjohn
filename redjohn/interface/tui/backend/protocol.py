@@ -1,4 +1,4 @@
-"""Versioned JSON protocol shared with the Go TUI."""
+"""Versioned JSON protocol shared with the Rust TUI."""
 
 from __future__ import annotations
 
@@ -21,7 +21,7 @@ MAX_COLLECTION_FRAME_BYTES = 4 * 1024 * 1024
 
 
 class ProtocolHandshakeError(RuntimeError):
-    """Raised before the Go TUI is activated when v3 negotiation fails."""
+    """Raised before the Rust TUI is activated when v3 negotiation fails."""
 
 
 def envelope(

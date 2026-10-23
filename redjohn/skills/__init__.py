@@ -701,7 +701,7 @@ _SKILL_INFERENCE_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("assessment/resilience-recovery", ("resilience", "recovery", "checkpoint")),
     (
         "memory/openviking_memory",
-        ("openviking", "viking://", "memory", "recall", "remember", "prior findings", "pentest"),
+        ("openviking", "viking://", "prior findings", "prior pentest", "pentest memory"),
     ),
 )
 

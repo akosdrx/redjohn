@@ -1,4 +1,4 @@
-"""Private framed IPC connection used by the Go TUI."""
+"""Private framed IPC connection used by the Rust TUI."""
 
 from __future__ import annotations
 

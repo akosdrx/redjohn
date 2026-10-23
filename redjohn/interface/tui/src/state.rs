@@ -1421,13 +1421,6 @@ impl AppState {
         };
         let text = if status == "profile_updated" && !swarm_profile.is_empty() {
             format!("Swarm profile set to {swarm_profile}")
-        } else if status == "openviking_updated" {
-            let m = if !display_model.is_empty() {
-                display_model
-            } else {
-                ov_model
-            };
-            format!("OpenViking Memory VLM set to {m}")
         } else if status == "openviking_inherit" {
             format!("OpenViking Memory set to inherit Orchestrator ({ov_model})")
         } else if status == "openviking_embed_updated" {
@@ -1613,7 +1606,7 @@ impl AppState {
         let ov_embed_label = {
             let raw = self.snapshot.openviking_embed_model.trim();
             if raw.is_empty() {
-                "local/local-fast-384".to_string()
+                "local/local-fast-512".to_string()
             } else {
                 raw.to_string()
             }
@@ -1642,7 +1635,7 @@ impl AppState {
                     PickerEntry {
                         id: "embed:local".to_string(),
                         label: format!(
-                            "Embedding: Local Fast (384d)   · {}",
+                            "Embedding: Local Fast (512d)   · {}",
                             if ov_embed_label.starts_with("local/") {
                                 "active ●"
                             } else {
@@ -2891,7 +2884,7 @@ impl AppState {
                         json!({
                             "action": "openviking_embed",
                             "provider": "local",
-                            "model": "local-fast-384",
+                            "model": "local-fast-512",
                         }),
                     );
                 }

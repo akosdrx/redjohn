@@ -25,10 +25,14 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import dataclasses
+import logging
 import time
 from typing import TYPE_CHECKING, Any, Literal, NamedTuple
 
 from redjohn.tools.mcp.session import McpConnectionUnavailableError, SupervisedMcpSession
+
+
+logger = logging.getLogger(__name__)
 
 
 if TYPE_CHECKING:
@@ -153,6 +157,9 @@ class McpConnectionEntry:
         self.session = None
         self._catalog = None
         self._catalog_task = None
+        # A dead connection advertises zero tools; the unavailable state (not a
+        # stale count) is what the roster prints for it.
+        self.tool_count = 0
         self._retry_after = time.monotonic() + _RETRY_DELAY_SECONDS
         self._set_state("unavailable")
 
@@ -198,8 +205,10 @@ class McpConnectionEntry:
                 and "redjohn.memory.openviking.mcp_server" in (config.args or [])
             )
         ):
-            self._resource_lease = self._governor.acquire(
-                "context", estimated_bytes=self._governor.envelope.worker_memory_budget
+            self._resource_lease = await asyncio.to_thread(
+                self._governor.acquire,
+                "context",
+                estimated_bytes=self._governor.envelope.worker_memory_budget,
             )
         session = SupervisedMcpSession(
             config,
@@ -276,8 +285,13 @@ class McpConnectionEntry:
         for task in tasks:
             task.cancel()
         for task in tasks:
-            with contextlib.suppress(BaseException):
+            try:
                 await task
+            except asyncio.CancelledError:
+                if not task.cancelled():
+                    raise
+            except Exception:
+                logger.debug("MCP close task error", exc_info=True)
         self._catalog_task = None
         self._connect_task = None
         if self.session is not None:
@@ -520,8 +534,12 @@ class McpRegistry:
         """Stop warm-up and close only sessions this registry opened."""
         if self._warmup_task is not None:
             self._warmup_task.cancel()
-            with contextlib.suppress(BaseException):
+            try:
                 await self._warmup_task
+            except asyncio.CancelledError:
+                pass
+            except Exception:
+                logger.debug("MCP warmup task error during close", exc_info=True)
             self._warmup_task = None
         await asyncio.gather(
             *(entry.close() for entry in self._entries.values()),

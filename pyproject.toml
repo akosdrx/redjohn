@@ -90,11 +90,8 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["redjohn"]
 # The prebuilt viewer bundle under redjohn/interface/viewer/static/ ships automatically
-# (hatchling includes non-.py files under the package). The Vite SOURCE lives
-# under the package dir too (redjohn/interface/viewer/frontend/) but must never ship in the wheel.
+# (hatchling includes non-.py files under the package).
 exclude = [
-  "redjohn/interface/viewer/frontend",
-  "redjohn/interface/viewer/frontend/**",
   # Rust TUI SOURCE lives under the package dir but must never ship in the wheel;
   # the compiled sidecar is force-included as redjohn/bin/redjohn-tui instead.
   "redjohn/interface/tui/src/**",
@@ -148,6 +145,12 @@ module = [
 ]
 ignore_missing_imports = true
 disable_error_code = ["import-untyped"]
+
+[[tool.mypy.overrides]]
+# OpenViking ships no type stubs; the memory subsystem version-guards its
+# monkey-patches instead of pinning its (dynamic) tool schemas.
+module = ["openviking.*", "openviking_cli.*"]
+ignore_missing_imports = true
 
 # ============================================================================
 # Ruff Configuration (Fast Python Linter & Formatter)
@@ -234,6 +237,22 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
+# Memory subsystem: hooks fail open by design (a broken memory must never
+# fail a scan) and import the heavy openviking/litellm machinery lazily.
+"redjohn/memory/**" = [
+    "PLC0415", "BLE001", "S110", "S112", "TRY300", "TRY301", "SIM105",
+    "PLR0912", "PLR0915", "PERF401",
+]
+# Display-label heuristics tolerate partial settings; lazy imports avoid
+# circular config loading.
+"redjohn/config/model_catalog.py" = ["PLC0415", "S110", "SIM102", "PLR0912", "PLR0915"]
+"redjohn/config/loader.py" = ["PLR0912"]
+# set_swarm is a flat action dispatcher where splitting would hurt
+# readability; openviking imports stay lazy to match the runtime integration.
+"redjohn/interface/tui/backend/llm_picker.py" = ["PLC0415", "PLR0911", "PLR0912", "PLR0915"]
+# Keyless search tolerates missing optional deps; HTML parser callbacks keep
+# their stdlib signatures.
+"redjohn/tools/web_search/**" = ["PLC0415", "BLE001", "ARG002"]
 "scripts/**" = [
     "E501", "T201", "INP001",
     "BLE001", "E402", "I001", "PIE810", "PLR0912", "PLR0915", "PLW1510",
@@ -332,7 +351,7 @@ ignore = [
 "redjohn/interface/cloud/render.py" = ["ISC004"]
 "redjohn/interface/cloud/session.py" = ["E501"]
 "redjohn/interface/cloud/source_upload.py" = ["E501"]
-# The Go TUI runtime and backend controller import interface modules lazily so
+# The Rust TUI runtime and backend controller import interface modules lazily so
 # the sidecar entry point stays fast and avoids circular imports.
 "redjohn/interface/interactive.py" = ["PLC0415"]
 "redjohn/interface/tui/runtime.py" = ["PLC0415", "E501"]

@@ -97,9 +97,9 @@ async def run_cli(args: Any) -> None:  # noqa: PLR0915
 
     settings_obj = load_settings()
     llm_cfg = settings_obj.llm
-    swarm_profile = (llm_cfg.swarm_profile or "full").strip()
+    swarm_profile = llm_cfg.swarm_profile.strip()
     swarm_model = (llm_cfg.swarm_model or llm_cfg.model or "default").strip()
-    swarm_effort = (llm_cfg.swarm_reasoning_effort or llm_cfg.reasoning_effort or "high").strip()
+    swarm_effort = (llm_cfg.swarm_reasoning_effort or llm_cfg.reasoning_effort).strip()
 
     swarm_text = Text()
     swarm_text.append("Swarm  ", style="dim")

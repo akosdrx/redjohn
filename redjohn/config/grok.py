@@ -13,6 +13,7 @@ import asyncio
 import contextlib
 import json
 import logging
+import os
 import threading
 import time
 from pathlib import Path
@@ -110,7 +111,8 @@ def _refresh_guard() -> Iterator[None]:
 
             lock_path = AUTH_PATH.with_suffix(".lock")
             lock_path.parent.mkdir(parents=True, exist_ok=True)
-            handle = lock_path.open("w")
+            lock_fd = os.open(lock_path, os.O_WRONLY | os.O_CREAT | os.O_NOFOLLOW, 0o600)
+            handle = os.fdopen(lock_fd, "w")
         except (ImportError, OSError):
             yield
             return

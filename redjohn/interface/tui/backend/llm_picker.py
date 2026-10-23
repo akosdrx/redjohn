@@ -1,4 +1,4 @@
-"""Model and effort selection for the Go TUI.
+"""Model and effort selection for the Rust TUI.
 
 OAuth polling runs on a background task so the IPC read loop stays free. The
 device code and API key never go back to the terminal; the TUI only sees the
@@ -77,8 +77,8 @@ class LlmPicker:
             if entry.auth == "api_key":
                 return await self._connect_api_key(entry, payload.get("api_key"))
             if entry.auth == "oauth_browser":
-                return self._connect_browser(entry)
-            return self._connect_device(entry)
+                return await asyncio.to_thread(self._connect_browser, entry)
+            return await asyncio.to_thread(self._connect_device, entry)
         except (codex.CodexAuthError, grok.GrokAuthError) as exc:
             raise RuntimeError(str(exc)) from exc
 
@@ -273,7 +273,12 @@ class LlmPicker:
                 from redjohn.memory.openviking.config import ensure_openviking_configured
 
                 ensure_openviking_configured()
-            return {"status": "openviking_inherit", "applied": "live" if scan_started else "saved"}
+            # The MCP roster is fixed at scan start, so openviking selections
+            # only take effect on the next scan, not live.
+            return {
+                "status": "openviking_inherit",
+                "applied": "next_scan" if scan_started else "saved",
+            }
         if action == "openviking_embed":
             embed_provider = str(payload.get("provider") or "local").strip().lower()
             if embed_provider == "openai":
@@ -297,7 +302,7 @@ class LlmPicker:
             return {
                 "status": "openviking_embed_updated",
                 "embedding_provider": embed_provider,
-                "applied": "live" if scan_started else "saved",
+                "applied": "next_scan" if scan_started else "saved",
             }
         if action == "openviking_toggle":
             requested = payload.get("enabled")
@@ -314,7 +319,7 @@ class LlmPicker:
             return {
                 "status": "openviking_toggled",
                 "enabled": new_enabled,
-                "applied": "live" if scan_started else "saved",
+                "applied": "next_scan" if scan_started else "saved",
             }
         if action == "openviking_set_model":
             model = str(payload.get("model") or "").strip()
@@ -328,7 +333,7 @@ class LlmPicker:
             return {
                 "status": "openviking_model_updated",
                 "model": model,
-                "applied": "live" if scan_started else "saved",
+                "applied": "next_scan" if scan_started else "saved",
             }
         raise ValueError(f"Unknown swarm action: {action}")
 
@@ -357,6 +362,8 @@ class LlmPicker:
         return dict(self._status)
 
     def _connect_device(self, entry: CatalogEntry) -> dict[str, Any]:
+        # Runs inside a worker thread via asyncio.to_thread at the call site,
+        # so blocking device-code requests here never stall the backend loop.
         if entry.route == "grok":
             started = grok.start_device_code()
             poll = _grok_poll(str(started["device_code"]))
@@ -410,7 +417,7 @@ class LlmPicker:
         if generation != self._generation:
             return
         codex.save_record(record)
-        self._ready(entry, generation, api_key=None)
+        await self._ready(entry, generation, api_key=None)
 
     async def _poll_device(
         self,
@@ -440,7 +447,7 @@ class LlmPicker:
                     return
                 self._store_device_record(entry, result)
                 token = None if entry.route == "chatgpt" else _access_token(result)
-                self._ready(entry, generation, api_key=token)
+                await self._ready(entry, generation, api_key=token)
                 return
         except asyncio.CancelledError:
             raise
@@ -462,11 +469,11 @@ class LlmPicker:
             return
         codex.save_record(result)
 
-    def _ready(self, entry: CatalogEntry, generation: int, *, api_key: str | None) -> None:
+    async def _ready(self, entry: CatalogEntry, generation: int, *, api_key: str | None) -> None:
         if generation != self._generation:
             return
         try:
-            models, source = list_models(entry, api_key)
+            models, source = await asyncio.to_thread(list_models, entry, api_key)
         except (OSError, ValueError, RuntimeError) as exc:
             logger.debug("Model list failed after sign-in", exc_info=True)
             self._fail(generation, str(exc))

@@ -1,4 +1,4 @@
-"""Go-TUI event projection layered on the shared base projection."""
+"""Rust-TUI event projection layered on the shared base projection."""
 
 from __future__ import annotations
 

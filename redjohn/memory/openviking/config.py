@@ -7,6 +7,7 @@ import json
 import logging
 import os
 import secrets
+import shutil
 import sys
 from pathlib import Path
 from typing import Any
@@ -114,7 +115,7 @@ def _infer_vlm_from_redjohn() -> dict[str, Any]:
     return entry
 
 
-def _infer_embedding_from_redjohn(vlm_info: dict[str, Any]) -> dict[str, Any]:
+def _infer_embedding_from_redjohn(_vlm_info: dict[str, Any]) -> dict[str, Any]:
     """Resolve OpenViking dense embedding configuration with automatic local fallback."""
     settings = load_settings()
     ov = settings.openviking
@@ -230,16 +231,30 @@ def ensure_openviking_configured() -> Path:
     # If an existing local VikingDB vector index has a different dimension than the active
     # embedding configuration, reset only the vector index cache (markdown files in viking/
     # are untouched) so OpenViking never fails with EmbeddingRebuildRequiredError.
-    collection_meta_path = workspace_dir / "vectordb" / "context" / "collection_meta.json"
+    collection_dir = workspace_dir / "vectordb" / "context"
+    collection_meta_path = collection_dir / "collection_meta.json"
     if collection_meta_path.is_file():
         try:
             meta_obj = json.loads(collection_meta_path.read_text(encoding="utf-8"))
             existing_dim = meta_obj.get("Dimension")
             target_dim = dense_conf.get("dimension")
-            if isinstance(existing_dim, int) and isinstance(target_dim, int) and existing_dim != target_dim:
-                import shutil
-
-                shutil.rmtree(workspace_dir / "vectordb" / "context", ignore_errors=True)
+            if (
+                isinstance(existing_dim, int)
+                and isinstance(target_dim, int)
+                and existing_dim != target_dim
+            ):
+                backup_dir = workspace_dir / "vectordb" / f"context.bak-{existing_dim}"
+                if backup_dir.exists():
+                    shutil.rmtree(backup_dir, ignore_errors=True)
+                collection_dir.rename(backup_dir)
+                logger.warning(
+                    "OpenViking embedding dimension changed (%s -> %s); the vector "
+                    "index was moved to %s and will be rebuilt (markdown memory is "
+                    "untouched)",
+                    existing_dim,
+                    target_dim,
+                    backup_dir.name,
+                )
         except Exception:
             logger.debug("Could not inspect VikingDB collection_meta.json", exc_info=True)
 

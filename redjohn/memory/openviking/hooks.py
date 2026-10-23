@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-import datetime
+import datetime as dt
 import hashlib
 import logging
 import re
@@ -218,7 +218,7 @@ def remember_pentest_finding(report: dict[str, Any]) -> None:
         ).strip()
         slug = _slugify(target)
         uri = f"viking://resources/pentests/{slug}/{_slugify(report_id, 'finding')}.md"
-        ts = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        ts = dt.datetime.now(dt.UTC).isoformat()
         md = (
             f"# [{severity}] {title}\n\n"
             f"- **Finding ID**: `{report_id}`\n"
@@ -249,7 +249,7 @@ def remember_pentest_broadcast(
             :8
         ]
         uri = f"viking://resources/pentests/{slug}/intel-{_slugify(category)}-{digest}.md"
-        ts = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        ts = dt.datetime.now(dt.UTC).isoformat()
         md = (
             f"# Swarm Intelligence [{category.upper()}]: {summary}\n\n"
             f"- **Agent**: `{sender}`\n"
@@ -270,7 +270,7 @@ def remember_pentest_summary(scan_id: str, targets: list[Any], summary: str) -> 
         labels = _extract_target_labels(targets)
         primary = _slugify(labels[0] if labels else scan_id)
         uri = f"viking://resources/pentests/{primary}/summary-{_slugify(scan_id)}.md"
-        ts = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        ts = dt.datetime.now(dt.UTC).isoformat()
         md = (
             f"# Pentest Summary — { ', '.join(labels) if labels else scan_id }\n\n"
             f"- **Scan ID**: `{scan_id}`\n"

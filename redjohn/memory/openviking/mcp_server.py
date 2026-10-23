@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-import datetime
+import asyncio
+import datetime as dt
 import hashlib
 import json
 import logging
@@ -54,7 +55,9 @@ def _fallback_markdown_search(query: str, limit: int = 10, read_content: bool = 
             haystack = f"{uri} {text}".lower()
             if terms:
                 matched = sum(1 for t in terms if t in haystack)
-                score = round(0.35 + 0.60 * (matched / max(len(terms), 1)), 4) if matched > 0 else 0.15
+                score = (
+                    round(0.35 + 0.60 * (matched / max(len(terms), 1)), 4) if matched > 0 else 0.15
+                )
             else:
                 score = 0.50
             lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
@@ -101,7 +104,7 @@ def _prepare_mcp_server() -> Any:
         wait: bool = True,
         **kwargs: Any,
     ) -> dict[str, Any]:
-        """Run OpenViking's remember tool, with direct viking:// markdown fallback if VLM is offline."""
+        """Run OpenViking's remember tool with a direct viking:// markdown fallback if offline."""
         await get_or_init_openviking_service()
         bind_default_mcp_identity()
         try:
@@ -127,7 +130,7 @@ def _prepare_mcp_server() -> Any:
                     text_chunks.append(str(item))
         body = "\n\n".join(text_chunks).strip()
         digest = hashlib.sha256(body.encode("utf-8", errors="ignore")).hexdigest()[:10]
-        ts = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        ts = dt.datetime.now(dt.UTC).strftime("%Y%m%dT%H%M%SZ")
         uri = f"viking://resources/memories/note-{ts}-{digest}.md"
         write_res = await mcp_endpoint.write(
             uri=uri,
@@ -179,7 +182,9 @@ def _prepare_mcp_server() -> Any:
                 return res
         except Exception as exc:
             logger.debug("OpenViking find fallback triggered: %s", exc)
-        return _fallback_markdown_search(query=query, limit=limit, read_content=read_content)
+        return await asyncio.to_thread(
+            _fallback_markdown_search, query=query, limit=limit, read_content=read_content
+        )
 
     async def _resilient_search(
         query: str = "",
@@ -193,7 +198,7 @@ def _prepare_mcp_server() -> Any:
         try:
             res = await orig_search(
                 query=query,
-                *args,
+                *args,  # noqa: B026 - preserves the upstream signature order
                 limit=limit,
                 read_content=read_content,
                 **kwargs,
@@ -208,7 +213,9 @@ def _prepare_mcp_server() -> Any:
                 return res
         except Exception as exc:
             logger.debug("OpenViking search fallback triggered: %s", exc)
-        return _fallback_markdown_search(query=query, limit=limit, read_content=read_content)
+        return await asyncio.to_thread(
+            _fallback_markdown_search, query=query, limit=limit, read_content=read_content
+        )
 
     # Wrap every registered tool so the embedded OpenVikingService & identity context
     # are guaranteed to be initialized before any stdio request executes.
@@ -227,20 +234,24 @@ def _prepare_mcp_server() -> Any:
                 orig_health = tool_obj.fn
 
                 @wraps(orig_health)
-                async def _enhanced_health(*args: Any, **kwargs: Any) -> str:
+                async def _enhanced_health(
+                    *args: Any, _orig: Any = orig_health, **kwargs: Any
+                ) -> str:
                     await get_or_init_openviking_service()
                     bind_default_mcp_identity()
-                    base = await orig_health(*args, **kwargs)
+                    base = await _orig(*args, **kwargs)
                     status = probe_openviking_status()
-                    try:
-                        parsed = json.loads(base) if isinstance(base, str) else {"status": base}
+                    if isinstance(base, str):
+                        try:
+                            parsed = json.loads(base)
+                        except ValueError:
+                            parsed = None
                         if isinstance(parsed, dict):
                             parsed["openviking_config"] = status
                             return json.dumps(parsed, ensure_ascii=False)
-                    except Exception:
-                        pass
+                    # A non-JSON base status is not evidence of health; report it raw.
                     return json.dumps(
-                        {"healthy": True, "raw": str(base), "openviking_config": status},
+                        {"healthy": False, "raw": str(base), "openviking_config": status},
                         ensure_ascii=False,
                     )
 

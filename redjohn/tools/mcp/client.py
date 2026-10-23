@@ -160,7 +160,7 @@ def _build_server(
             and launch is None
             and "redjohn.memory.openviking.mcp_server" in (config.args or [])
         ):
-            from redjohn.memory.openviking.mcp_server import InProcessOpenVikingMCPServer
+            from redjohn.memory.openviking.mcp_server import InProcessOpenVikingMCPServer  # noqa: PLC0415 - lazy heavy import
 
             return BuiltMcpServer(
                 cast("MCPServer", InProcessOpenVikingMCPServer(config)),

@@ -1,4 +1,4 @@
-"""Launch, authenticate, and supervise the Go TUI sidecar process."""
+"""Launch, authenticate, and supervise the native Rust TUI sidecar process."""
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ import contextlib
 import hmac
 import os
 import platform
+import re
 import secrets
 import socket
 import subprocess
@@ -23,11 +24,24 @@ _SENSITIVE_ENV_PARTS = frozenset(
 )
 _SENSITIVE_ENV_NAMES = {
     "AWS_ACCESS_KEY_ID",
+    "DOCKER_CERT_PATH",
+    "GIT_ASKPASS",
+    "GIT_SSH_COMMAND",
     "GOOGLE_APPLICATION_CREDENTIALS",
+    "KUBECONFIG",
     "LLM_API_KEY",
     "REDJOHN_TUI_ADDR",
     "REDJOHN_TUI_FD",
     "REDJOHN_TUI_TOKEN",
+    "SSH_AUTH_SOCK",
+}
+_PROXY_URL_ENV = {
+    "HTTP_PROXY",
+    "HTTPS_PROXY",
+    "ALL_PROXY",
+    "http_proxy",
+    "https_proxy",
+    "all_proxy",
 }
 
 
@@ -74,6 +88,11 @@ def child_environment() -> dict[str, str]:
         if normalized.endswith(_SENSITIVE_ENV_SUFFIXES):
             continue
         if set(normalized.split("_")) & _SENSITIVE_ENV_PARTS:
+            continue
+        if key in _PROXY_URL_ENV:
+            # Proxies are needed by the TUI child, but embedded basic-auth
+            # credentials must not cross the process boundary.
+            child[key] = re.sub(r"(://)[^@/]+@", r"\1", value)
             continue
         child[key] = value
     return child
@@ -200,10 +219,10 @@ async def _launch_windows_tui_process(
 
 
 class TuiProcessExitedError(RuntimeError):
-    """The Go TUI process ended with a non-zero status."""
+    """The Rust TUI process ended with a non-zero status."""
 
     def __init__(self, return_code: int) -> None:
-        super().__init__(f"Bubble Tea TUI exited with status {return_code}")
+        super().__init__(f"Rust TUI exited with status {return_code}")
         self.return_code = return_code
 
 

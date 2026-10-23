@@ -133,7 +133,7 @@ def load_user_mcp_configs(path: Path | None = None) -> list[McpConnectionConfig]
 
     if path is None and not os.environ.get(_PATH_ENV_VAR):
         try:
-            from redjohn.memory.openviking.config import get_openviking_mcp_config
+            from redjohn.memory.openviking.config import get_openviking_mcp_config  # noqa: PLC0415 - lazy heavy import
 
             ov_config = get_openviking_mcp_config()
             if ov_config is not None and not any(c.name == ov_config.name for c in configs):

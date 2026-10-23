@@ -631,7 +631,7 @@ class TuiController:
                     "failed",
                     "interrupted",
                 }
-                posthog.viewer_opened(source="tui", live=live)
+                await asyncio.to_thread(posthog.viewer_opened, source="tui", live=live)
         except Exception:  # noqa: BLE001 - viewer startup failures must not crash the TUI
             self.viewer_status = "failed"
             return {"status": self.viewer_status, "error": "Viewer failed to start"}

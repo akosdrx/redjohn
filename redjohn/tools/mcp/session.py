@@ -427,12 +427,19 @@ class SupervisedMcpSession:
                 supports_images=supports_images,
             )
 
+        started = time.monotonic()
         outcome = await self._run_job(
             job,
             phase="call",
             idempotent=bool(
                 allow_replay and self._config and tool_name in self._config.idempotent_tools
             ),
+        )
+        logger.info(
+            "mcp_call %s duration_ms=%.0f failed=%s",
+            label,
+            (time.monotonic() - started) * 1000.0,
+            bool(outcome.call_failure is not None or outcome.unknown_outcome),
         )
         if outcome.capacity_exhausted:
             from redjohn.tools.mcp.client import _errored_tool_output

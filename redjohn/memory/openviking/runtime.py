@@ -10,7 +10,7 @@ import math
 import re
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from redjohn.memory.openviking.config import ensure_openviking_configured
 
@@ -26,7 +26,7 @@ _PATCHED_RESILIENT_VLM = False
 
 
 def _extractive_vlm_fallback(prompt: str = "", messages: list[dict[str, Any]] | None = None) -> str:
-    """Return a fast extractive summary when the remote VLM endpoint is unreachable or unconfigured."""
+    """Fast extractive summary when the remote VLM endpoint is unreachable or unconfigured."""
     text = prompt or ""
     if not text and messages:
         parts = []
@@ -38,14 +38,21 @@ def _extractive_vlm_fallback(prompt: str = "", messages: list[dict[str, Any]] | 
     cleaned_lines = [
         line.strip()
         for line in text.splitlines()
-        if line.strip() and not line.strip().lower().startswith(("you are", "task:", "instructions:", "output format:"))
+        if line.strip()
+        and not line.strip().lower().startswith(
+            ("you are", "task:", "instructions:", "output format:", "return ", "respond ")
+        )
     ]
-    summary = " ".join(cleaned_lines[-6:]) if cleaned_lines else "Indexed OpenViking pentest memory node."
+    # Documents read top-down: the first content lines carry the substance,
+    # trailing lines are usually instruction boilerplate.
+    summary = (
+        " ".join(cleaned_lines[:6]) if cleaned_lines else "Indexed OpenViking pentest memory node."
+    )
     return summary[:360]
 
 
 def install_resilient_vlm_fallback() -> None:
-    """Wrap OpenViking VLMFactory.create so offline/unconfigured VLM models never block SemanticQueue."""
+    """Wrap VLMFactory.create so offline/unconfigured VLM models never block SemanticQueue."""
     global _PATCHED_RESILIENT_VLM  # noqa: PLW0603
     if _PATCHED_RESILIENT_VLM:
         return
@@ -212,7 +219,7 @@ def install_resilient_vlm_fallback() -> None:
         def _create_resilient(config: dict[str, Any]) -> VLMBase:
             return _ResilientVLM(VLMFactory._create_provider(config))
 
-        VLMFactory.create = staticmethod(_create_resilient)  # type: ignore[assignment]
+        VLMFactory.create = staticmethod(_create_resilient)
         _PATCHED_RESILIENT_VLM = True
     except Exception:
         logger.warning("Could not install resilient VLM wrapper", exc_info=True)
@@ -307,15 +314,15 @@ def install_local_embedder_fallback() -> None:
             def close(self) -> None:
                 return None
 
-        local_embedders.LocalDenseEmbedder = _BuiltinLocalDenseEmbedder  # type: ignore[misc]
-        embedder_pkg.LocalDenseEmbedder = _BuiltinLocalDenseEmbedder  # type: ignore[misc]
+        local_embedders.LocalDenseEmbedder = _BuiltinLocalDenseEmbedder
+        embedder_pkg.LocalDenseEmbedder = _BuiltinLocalDenseEmbedder
 
         from openviking_cli.utils.config.embedding_config import EmbeddingConfig
 
         orig_get_embedder = EmbeddingConfig.get_embedder
 
         class _ResilientDenseEmbedder(DenseEmbedderBase):  # type: ignore[misc]
-            """DenseEmbedder wrapper that falls back to deterministic local vectors on API failure."""
+            """Falls back to deterministic local vectors when the API embedder fails."""
 
             def __init__(self, inner: Any) -> None:
                 super().__init__(
@@ -385,7 +392,7 @@ def install_local_embedder_fallback() -> None:
                     results = self.inner.embed_batch(texts, is_query=is_query)
                     if not is_query:
                         self._api_vectors_possible = True
-                    return results
+                    return cast("list[EmbedResult]", results)
                 except Exception:
                     self._trip()
                     if not is_query and self._api_vectors_possible:
@@ -408,7 +415,7 @@ def install_local_embedder_fallback() -> None:
                 return emb
             return _ResilientDenseEmbedder(emb)
 
-        EmbeddingConfig.get_embedder = _resilient_get_embedder  # type: ignore[assignment]
+        EmbeddingConfig.get_embedder = _resilient_get_embedder
         _PATCHED_LOCAL_EMBEDDER = True
     except Exception:
         logger.warning("Could not install local embedder fallback", exc_info=True)
@@ -449,11 +456,12 @@ async def get_or_init_openviking_service() -> Any:
             or str(Path("~/.redjohn/openviking/data").expanduser().resolve())
         )
 
+        import shutil
+
         from openviking.server.dependencies import set_service
         from openviking.service.core import OpenVikingService
         from openviking.storage.collection_schemas import EmbeddingRebuildRequiredError
         from openviking_cli.session.user_id import UserIdentifier
-        import shutil
 
         service = OpenVikingService(
             path=str(workspace),

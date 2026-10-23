@@ -343,7 +343,7 @@ HEADLESS_HINT = "If RedJohn runs without a terminal (CI, nohup, pipes), pass -n 
 def _fall_back_to_headless(args: argparse.Namespace) -> None:
     """Run headless when there is no terminal for the TUI to attach to.
 
-    CI jobs, ``nohup``, pipes and cron have no tty; the Go TUI exits as soon
+    CI jobs, ``nohup``, pipes and cron have no tty; the Rust TUI exits as soon
     as it tries to take over the screen. With a target the scan can still run
     as if ``-n`` was given. Without one the start screen is the only way to
     enter a target, so stop with the fix instead. A bare ``--resume`` is left

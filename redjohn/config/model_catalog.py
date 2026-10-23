@@ -1039,7 +1039,7 @@ def resolve_model_effort_spec(model_name: str | None) -> ModelEffortSpec:  # noq
     )
 
 
-def short_model_label(model_name: str | None) -> str:  # noqa: PLR0911, PLR0912
+def short_model_label(model_name: str | None) -> str:  # noqa: PLR0911
     """Return a compact display name (e.g. ``Qwen3``, ``GLM5.3``) for the TUI stats box."""
     raw = (model_name or "").strip()
     if not raw:

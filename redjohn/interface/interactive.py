@@ -22,7 +22,7 @@ class InteractiveInterfaceExitedError(RuntimeError):
 
 
 async def run_tui(args: argparse.Namespace) -> None:
-    """Run the Bubble Tea TUI."""
+    """Run the native Rust TUI."""
     from redjohn.interface.tui.runtime import (
         GoTuiPreActivationError,
         run_go_tui,

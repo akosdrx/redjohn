@@ -66,6 +66,17 @@ _KALI_READONLY_RESOURCE_PATHS = (
     "/etc/kali_version",
 )
 
+# Host paths that must never be bind-mounted into an agent workspace.
+_DENIED_BIND_SOURCE_PREFIXES = (
+    Path.home() / ".ssh",
+    Path.home() / ".aws",
+    Path.home() / ".kube",
+    Path.home() / ".gnupg",
+    Path.home() / ".redjohn",
+    Path.home() / ".docker",
+    Path("/etc"),
+)
+
 
 def _is_python_httpx_wrapper(binary_path: Path) -> bool:
     try:
@@ -356,6 +367,14 @@ class RedJohnLocalSandboxSession(UnixLocalSandboxSession):
         return env, workspace
 
     async def _resolve_exposed_port(self, port: int) -> ExposedPortEndpoint:
+        if self.caido_port is not None and (
+            self.caido_process is None
+            or self.caido_process.returncode is not None
+            or not _is_port_listening(self.caido_port)
+        ):
+            # A dead caido sidecar latches a port that loopback recycling can
+            # hand to an unrelated listener; never hand that out as "caido".
+            self.caido_port = None
         resolved_port = self.caido_port if self.caido_port is not None else port
         return ExposedPortEndpoint(host="127.0.0.1", port=resolved_port, tls=False)
 
@@ -403,6 +422,11 @@ class RedJohnLocalSandboxClient(UnixLocalSandboxClient):
             source_path = Path(source_str).expanduser().resolve()
             if not source_path.exists():
                 continue
+            if any(
+                source_path == prefix or prefix in source_path.parents
+                for prefix in _DENIED_BIND_SOURCE_PREFIXES
+            ):
+                raise RuntimeError(f"refusing to bind mount sensitive host path: {source_path}")
             grant_key = source_path.as_posix()
             if grant_key not in seen_grant_paths:
                 seen_grant_paths.add(grant_key)
@@ -478,10 +502,11 @@ class RedJohnLocalSandboxClient(UnixLocalSandboxClient):
 
     async def delete(self, session: SandboxSession) -> SandboxSession:
         inner = session._inner
-        if isinstance(inner, RedJohnLocalSandboxSession) and inner.caido_process is not None:
+        if isinstance(inner, RedJohnLocalSandboxSession):
             proc = inner.caido_process
             inner.caido_process = None
-            if proc.returncode is None:
+            inner.caido_port = None
+            if proc is not None and proc.returncode is None:
                 with contextlib.suppress(ProcessLookupError, OSError):
                     proc.terminate()
                 try:

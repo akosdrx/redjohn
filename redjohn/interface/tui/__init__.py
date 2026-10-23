@@ -1,4 +1,4 @@
-"""Terminal user interface: Go/Bubble Tea frontend plus its Python runtime and backend."""
+"""Terminal user interface: native Rust Ratatui frontend plus its Python runtime and backend."""
 
 from redjohn.interface.tui.live_view import TuiLiveView
 

@@ -195,7 +195,9 @@ _BLOCK_TAGS = frozenset(
         "hr",
     }
 )
-_SKIP_TEXT_TAGS = frozenset({"script", "style", "noscript", "svg", "template", "head", "nav", "footer"})
+_SKIP_TEXT_TAGS = frozenset(
+    {"script", "style", "noscript", "svg", "template", "head", "nav", "footer"}
+)
 
 
 class _DDGResultParser(HTMLParser):
@@ -402,7 +404,10 @@ def _fetch_single_page_local(url: str) -> dict[str, str] | None:
     """Fetch a single URL via HTTP + HTML parser, falling back to Playwright when needed."""
     headers = {
         "User-Agent": _BROWSER_USER_AGENT,
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,text/plain;q=0.8,*/*;q=0.7",
+        "Accept": (
+            "text/html,application/xhtml+xml,application/xml;q=0.9,"
+            "text/plain;q=0.8,*/*;q=0.7"
+        ),
         "Accept-Language": "en-US,en;q=0.9",
     }
     title = url
