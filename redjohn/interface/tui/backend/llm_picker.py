@@ -8,6 +8,7 @@ user code, the verification URL, and the model ids.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import time
 import webbrowser
@@ -16,7 +17,11 @@ from dataclasses import dataclass
 from typing import Any
 
 from redjohn.config import codex, grok, load_settings
-from redjohn.config.loader import save_llm_selection, save_swarm_llm_selection
+from redjohn.config.loader import (
+    save_llm_selection,
+    save_openviking_selection,
+    save_swarm_llm_selection,
+)
 from redjohn.config.model_catalog import (
     EFFORTS,
     CatalogEntry,
@@ -124,6 +129,19 @@ class LlmPicker:
                 clear_swarm_api_key=subscription,
                 clear_swarm_api_base=clear_base,
             )
+        elif normalized_target == "openviking":
+            save_openviking_selection(
+                enabled=True,
+                vlm_model=setting,
+                vlm_api_key=None if subscription else pending.api_key,
+                vlm_api_base=None if clear_base else pending.entry.api_base,
+                clear_vlm_api_key=subscription,
+                clear_vlm_api_base=clear_base,
+            )
+            with contextlib.suppress(Exception):
+                from redjohn.memory.openviking.config import ensure_openviking_configured
+
+                ensure_openviking_configured()
         elif normalized_target == "swarm":
             save_swarm_llm_selection(
                 swarm_model=setting,
@@ -242,6 +260,69 @@ class LlmPicker:
                 "status": "model_updated",
                 "model": model,
                 "role": role or "",
+                "applied": "live" if scan_started else "saved",
+            }
+        if action == "openviking_inherit":
+            save_openviking_selection(
+                enabled=True,
+                clear_vlm_model=True,
+                clear_vlm_api_key=True,
+                clear_vlm_api_base=True,
+            )
+            with contextlib.suppress(Exception):
+                from redjohn.memory.openviking.config import ensure_openviking_configured
+
+                ensure_openviking_configured()
+            return {"status": "openviking_inherit", "applied": "live" if scan_started else "saved"}
+        if action == "openviking_embed":
+            embed_provider = str(payload.get("provider") or "local").strip().lower()
+            if embed_provider == "openai":
+                save_openviking_selection(
+                    enabled=True,
+                    embedding_provider="openai",
+                    embedding_model="text-embedding-3-small",
+                    embedding_dimension=1536,
+                )
+            else:
+                save_openviking_selection(
+                    enabled=True,
+                    embedding_provider="local",
+                    embedding_model="bge-small-zh-v1.5-f16",
+                    embedding_dimension=512,
+                )
+            with contextlib.suppress(Exception):
+                from redjohn.memory.openviking.config import ensure_openviking_configured
+
+                ensure_openviking_configured()
+            return {
+                "status": "openviking_embed_updated",
+                "embedding_provider": embed_provider,
+                "applied": "live" if scan_started else "saved",
+            }
+        if action == "openviking_toggle":
+            new_enabled = not bool(load_settings().openviking.enabled)
+            save_openviking_selection(enabled=new_enabled)
+            with contextlib.suppress(Exception):
+                from redjohn.memory.openviking.config import ensure_openviking_configured
+
+                ensure_openviking_configured()
+            return {
+                "status": "openviking_toggled",
+                "enabled": new_enabled,
+                "applied": "live" if scan_started else "saved",
+            }
+        if action == "openviking_set_model":
+            model = str(payload.get("model") or "").strip()
+            if not model:
+                raise ValueError("model is required")
+            save_openviking_selection(enabled=True, vlm_model=model)
+            with contextlib.suppress(Exception):
+                from redjohn.memory.openviking.config import ensure_openviking_configured
+
+                ensure_openviking_configured()
+            return {
+                "status": "openviking_model_updated",
+                "model": model,
                 "applied": "live" if scan_started else "saved",
             }
         raise ValueError(f"Unknown swarm action: {action}")

@@ -434,6 +434,10 @@ class ReportState:
         scarf.finding(severity, cwe=cwe, is_cve=bool(cve))
 
         self.save_run_data()
+        with contextlib.suppress(Exception):
+            from redjohn.memory.openviking.hooks import remember_pentest_finding
+
+            remember_pentest_finding(report)
         return report_id
 
     def _deleted_vulnerability_reports(self) -> list[dict[str, Any]]:
@@ -550,6 +554,10 @@ class ReportState:
         )
 
         self.save_run_data()
+        with contextlib.suppress(Exception):
+            from redjohn.memory.openviking.hooks import remember_pentest_finding
+
+            remember_pentest_finding(report)
         return report
 
     def delete_vulnerability_report(
@@ -733,6 +741,14 @@ class ReportState:
 
         logger.info("Updated scan final fields")
         self.save_run_data(mark_complete=True)
+        with contextlib.suppress(Exception):
+            from redjohn.memory.openviking.hooks import remember_pentest_summary
+
+            remember_pentest_summary(
+                self.scan_id,
+                (self.run_record.get("scan_config") or {}).get("targets") or [],
+                self.final_scan_result or executive_summary,
+            )
         posthog.end(self, exit_reason="finished_by_tool")
         scarf.end(self, exit_reason="finished_by_tool")
 

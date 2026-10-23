@@ -155,6 +155,18 @@ def _build_server(
     )
 
     if config.transport == "stdio":
+        if (
+            config.name == "openviking"
+            and launch is None
+            and "redjohn.memory.openviking.mcp_server" in (config.args or [])
+        ):
+            from redjohn.memory.openviking.mcp_server import InProcessOpenVikingMCPServer
+
+            return BuiltMcpServer(
+                cast("MCPServer", InProcessOpenVikingMCPServer(config)),
+                None,
+                None,
+            )
         stdio_params: MCPServerStdioParams = {
             "command": cast("str", config.command),
             "args": config.args,

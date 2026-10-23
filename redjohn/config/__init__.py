@@ -19,6 +19,7 @@ from redjohn.config.loader import (
     load_settings,
     persist_current,
     save_llm_selection,
+    save_openviking_selection,
     save_swarm_llm_selection,
 )
 from redjohn.config.settings import (
@@ -26,6 +27,7 @@ from redjohn.config.settings import (
     DedupeSettings,
     IntegrationSettings,
     LlmSettings,
+    OpenVikingSettings,
     RuntimeSettings,
     Settings,
     TelemetrySettings,
@@ -37,6 +39,7 @@ __all__ = [
     "DedupeSettings",
     "IntegrationSettings",
     "LlmSettings",
+    "OpenVikingSettings",
     "RuntimeSettings",
     "Settings",
     "TelemetrySettings",
@@ -45,5 +48,6 @@ __all__ = [
     "load_settings",
     "persist_current",
     "save_llm_selection",
+    "save_openviking_selection",
     "save_swarm_llm_selection",
 ]

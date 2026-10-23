@@ -188,8 +188,12 @@ class TuiController:
         swarm_effort = ""
         swarm_profile = "full"
         swarm_role_models: dict[str, str] = {}
+        ov_online = False
+        ov_model = "auto"
+        ov_embed_model = "local/bge-small"
         with contextlib.suppress(Exception):
-            llm = load_settings().llm
+            settings_obj = load_settings()
+            llm = settings_obj.llm
             model = (llm.model or "").strip()
             swarm_model = (llm.swarm_model or "").strip()
             swarm_profile = llm.swarm_profile.strip() or "full"
@@ -204,6 +208,12 @@ class TuiController:
             if effective_swarm:
                 swarm_spec = resolve_model_effort_spec(effective_swarm)
                 swarm_effort = llm.swarm_reasoning_effort or effort or swarm_spec.default_effort
+            from redjohn.memory.openviking.config import probe_openviking_status
+
+            ov_status = probe_openviking_status()
+            ov_online = bool(ov_status.get("online", False))
+            ov_model = str(ov_status.get("short_vlm_model") or "auto")
+            ov_embed_model = str(ov_status.get("embedding_model") or "local/bge-small")
         usage: dict[str, Any] = {}
         if self.report_state is not None:
             usage = dict(self.report_state.get_total_llm_usage())
@@ -242,6 +252,9 @@ class TuiController:
             "swarm_role_models": terminal_projection(
                 swarm_role_models, max_string=128, max_items=10
             ),
+            "openviking_online": ov_online,
+            "openviking_model": terminal_projection(ov_model, max_string=64),
+            "openviking_embed_model": terminal_projection(ov_embed_model, max_string=64),
             "caido_url": terminal_projection(
                 getattr(self.report_state, "caido_url", None), max_string=1024
             ),
@@ -283,8 +296,29 @@ class TuiController:
         for name in live:
             if name not in ordered:
                 ordered.append(name)
+        ov_status: dict[str, Any] = {}
+        with contextlib.suppress(Exception):
+            from redjohn.memory.openviking.config import probe_openviking_status
+
+            ov_status = probe_openviking_status()
+            if ov_status.get("enabled", True) and "openviking" not in ordered:
+                ordered.insert(0, "openviking")
         rows: list[dict[str, Any]] = []
         for name in ordered[:32]:
+            if name == "openviking" and ov_status:
+                ov_online = bool(ov_status.get("online", False))
+                ov_tools = int(ov_status.get("tool_count", 13)) if ov_online else 0
+                entry = live.get(name)
+                if entry is not None and entry.get("tool_count", 0) > 0:
+                    ov_tools = int(entry["tool_count"])
+                rows.append(
+                    {
+                        "name": "openviking",
+                        "tool_count": ov_tools,
+                        "dead": not ov_online,
+                    }
+                )
+                continue
             entry = live.get(name)
             if entry is None:
                 rows.append(

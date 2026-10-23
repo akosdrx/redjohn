@@ -29,16 +29,16 @@ MIB = 1024 * 1024
 
 @dataclass(frozen=True)
 class ResourceEnvelope:
-    total_memory_budget: int = 1024 * MIB
-    worker_memory_budget: int = 256 * MIB
-    browser_concurrency: int = 1
-    cache_max_bytes: int = 32 * MIB
-    queue_max_items: int = 128
-    artifact_max_bytes: int = 4 * MIB
-    max_model_input_tokens: int = 32768
-    max_workers: int = 2
-    max_pages: int = 2
-    max_contexts: int = 2
+    total_memory_budget: int = 16384 * MIB
+    worker_memory_budget: int = 512 * MIB
+    browser_concurrency: int = 4
+    cache_max_bytes: int = 128 * MIB
+    queue_max_items: int = 512
+    artifact_max_bytes: int = 16 * MIB
+    max_model_input_tokens: int = 131072
+    max_workers: int = 32
+    max_pages: int = 16
+    max_contexts: int = 16
     max_findings: int = 10000
     max_audit_rows: int = 10000
     max_sessions: int = 256

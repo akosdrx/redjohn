@@ -54,8 +54,9 @@ pub fn draw(frame: &mut Frame, state: &mut AppState) {
     }
 }
 
-fn wordmark_lines(version_label: &str) -> Vec<Line<'static>> {
-    let rule = "━".repeat(55);
+fn wordmark_lines(state: &AppState) -> Vec<Line<'static>> {
+    let version_label = state.version_label();
+    let rule = "━".repeat(61);
     let mut rows = Vec::with_capacity(SMILEY_ROWS.len());
 
     for (i, &s_row) in SMILEY_ROWS.iter().enumerate() {
@@ -69,7 +70,7 @@ fn wordmark_lines(version_label: &str) -> Vec<Line<'static>> {
             1 => {
                 spans.push(Span::styled("◈", style_bold(RED)));
                 spans.push(Span::styled(
-                    "  R E D J O H N   O F F E N S I V E   S W A R M  ",
+                    "  S E L F   L E A R N I N G   O F F E N S I V E   S W A R M  ",
                     style_bold(WHITE),
                 ));
                 spans.push(Span::styled("◈", style_bold(RED)));
@@ -88,8 +89,21 @@ fn wordmark_lines(version_label: &str) -> Vec<Line<'static>> {
             }
             9 => {
                 spans.push(Span::styled("▪", style_bold(RED)));
-                spans.push(Span::styled(" Edition : ", style_dim()));
-                spans.push(Span::styled(version_label.to_string(), style_bold(RED)));
+                spans.push(Span::styled(" Version : ", style_dim()));
+                spans.push(Span::styled(
+                    version_label.clone(),
+                    style_bold(BRIGHT_WHITE),
+                ));
+            }
+            10 => {
+                let mem_model = state.display_openviking_model();
+                spans.push(Span::styled("▪", style_bold(RED)));
+                spans.push(Span::styled(" Memory  : ", style_dim()));
+                if state.is_openviking_online() {
+                    spans.push(Span::styled(mem_model, style_bold(BRIGHT_WHITE)));
+                } else {
+                    spans.push(Span::styled(format!("{mem_model} (offline)"), style_dim()));
+                }
             }
             _ => {}
         }
@@ -99,19 +113,20 @@ fn wordmark_lines(version_label: &str) -> Vec<Line<'static>> {
 }
 
 fn draw_splash(frame: &mut Frame, state: &AppState, area: Rect) {
-    let mut lines = wordmark_lines(&state.version_label());
+    let mut lines = wordmark_lines(state);
     lines.push(Line::from(Span::raw("")));
     lines.push(Line::from(vec![
         Span::styled("Welcome to ", style_bold(WHITE)),
         Span::styled("RED", style_bold(RED)),
         Span::styled("JOHN", style_bold(BRIGHT_WHITE)),
     ]));
+    lines.push(Line::from(vec![
+        Span::styled("◈  ", style_bold(RED)),
+        Span::styled(state.version_label(), style_bold(BRIGHT_WHITE)),
+        Span::styled("  ◈", style_bold(RED)),
+    ]));
     lines.push(Line::from(Span::styled(
-        format!("◈  {}  ◈", state.version_label()),
-        style_bold(RED),
-    )));
-    lines.push(Line::from(Span::styled(
-        "Autonomous P2P Multi-Agent Offensive Swarm",
+        "Self Learning Multi-Agent Offensive Swarm",
         style_dim(),
     )));
     lines.push(Line::from(Span::raw("")));
@@ -143,7 +158,7 @@ fn draw_splash(frame: &mut Frame, state: &AppState, area: Rect) {
         style_dim(),
     )));
 
-    let box_w = 98.min(area.width.saturating_sub(2));
+    let box_w = 102.min(area.width.saturating_sub(2));
     let box_h = (lines.len() as u16 + 4).min(area.height);
     let rect = centered_rect(area, box_w, box_h);
 
@@ -165,15 +180,17 @@ fn draw_setup(frame: &mut Frame, state: &AppState, area: Rect) {
         0
     };
     let main_w = area.width.saturating_sub(rail_w);
-    let col_w = if main_w >= 87 {
-        85u16
+    let col_w = if main_w >= 95 {
+        93u16
+    } else if main_w >= 87 {
+        main_w.saturating_sub(2)
     } else {
         main_w.saturating_sub(4).clamp(24, 72)
     };
     let col_x = main_w.saturating_sub(col_w) / 2;
 
     let show_full_logo = col_w >= 85 && area.height >= 24;
-    let logo_h: u16 = if show_full_logo { 13 } else { 2 };
+    let logo_h: u16 = if show_full_logo { 13 } else { 3 };
     let input_lines = composer_lines(state, (col_w.saturating_sub(4)) as usize, true);
     let summary_line = setup_summary_line(state, (col_w.saturating_sub(4)) as usize);
     let target_lines = targets_lines(state, (col_w.saturating_sub(4)) as usize, 6);
@@ -196,25 +213,30 @@ fn draw_setup(frame: &mut Frame, state: &AppState, area: Rect) {
 
     // 1. Logo / Banner
     if show_full_logo && cur_y + logo_h <= area.height {
-        let wm = Paragraph::new(wordmark_lines(&state.version_label()));
+        let wm = Paragraph::new(wordmark_lines(state));
         frame.render_widget(wm, Rect::new(col_x, cur_y, col_w, logo_h));
         cur_y += logo_h + 1;
-    } else if cur_y + 2 <= area.height {
+    } else if cur_y + 3 <= area.height {
+        let mem_model = state.display_openviking_model();
         let compact = vec![
             Line::from(vec![
                 Span::styled("☻ RED", style_bold(RED)),
                 Span::styled("JOHN", style_bold(BRIGHT_WHITE)),
-                Span::styled(" · ", style_dim()),
-                Span::styled(state.version_label(), style_bold(RED)),
+                Span::styled(" · Version : ", style_dim()),
+                Span::styled(state.version_label(), style_bold(BRIGHT_WHITE)),
+            ]),
+            Line::from(vec![
+                Span::styled("Memory : ", style_dim()),
+                Span::styled(mem_model, style_bold(BRIGHT_WHITE)),
             ]),
             Line::from(Span::styled(
-                "Autonomous P2P Multi-Agent Offensive Swarm",
+                "SELF LEARNING OFFENSIVE SWARM",
                 style_dim(),
             )),
         ];
         let p = Paragraph::new(compact).alignment(Alignment::Center);
-        frame.render_widget(p, Rect::new(col_x, cur_y, col_w, 2));
-        cur_y += 3;
+        frame.render_widget(p, Rect::new(col_x, cur_y, col_w, 3));
+        cur_y += 4;
     }
 
     // 2. Composer Panel
@@ -306,14 +328,18 @@ fn setup_summary_line(state: &AppState, width: usize) -> Line<'static> {
         spans.push(Span::styled(" · /models to choose", style_dim()));
     }
 
+    let profile = state.display_swarm_profile();
     spans.push(Span::styled(" · ", style_dim()));
-    spans.push(Span::styled("◈", style_fg(RED)));
+    spans.push(Span::styled("◈ ", style_fg(RED)));
+    spans.push(Span::styled("swarm ", style_dim()));
+    spans.push(Span::styled(format!("[{profile}]"), style_bold(BRIGHT_RED)));
+
     let total_skills = state.registered_skill_count();
     let sel_skills = state.snapshot.selected_skills.len();
     let skill_chip = if sel_skills > 0 {
-        format!(" P2P Swarm · {sel_skills}/{total_skills} skills")
+        format!(" · {sel_skills}/{total_skills} skills")
     } else {
-        format!(" P2P Swarm · {total_skills} skills")
+        format!(" · {total_skills} skills")
     };
     spans.push(Span::styled(skill_chip, style_dim()));
 
@@ -330,6 +356,7 @@ fn setup_hints_line(state: &AppState, width: usize) -> Line<'static> {
         ("enter", "launch"),
         ("/models", "model"),
         ("/swarm", "swarm"),
+        ("/memory", "memory"),
         ("/skills", "skills"),
         ("/rj", "pentest"),
         ("ctrl+c", "quit"),
@@ -352,7 +379,7 @@ fn setup_hints_line(state: &AppState, width: usize) -> Line<'static> {
     if width > used + ver_w + 4 {
         let gap = width - used - ver_w - 2;
         spans.push(Span::raw(" ".repeat(gap)));
-        spans.push(Span::styled(ver, style_bold(RED)));
+        spans.push(Span::styled(ver, style_bold(BRIGHT_WHITE)));
     }
     Line::from(spans)
 }
@@ -541,10 +568,10 @@ fn composer_lines(state: &AppState, width: usize, setup_mode: bool) -> Vec<Line<
 }
 
 fn draw_main(frame: &mut Frame, state: &mut AppState, area: Rect) {
-    let show_sidebar = area.width >= 120 && !state.sidebar_hidden;
+    let show_sidebar = area.width >= 90 && !state.sidebar_hidden;
     let sidebar_w: u16 = if show_sidebar {
         (area.width / 5).max(24)
-    } else if state.sidebar_hidden && area.width >= 120 {
+    } else if state.sidebar_hidden && area.width >= 90 {
         6
     } else {
         0
@@ -660,8 +687,33 @@ fn draw_chat_pane(frame: &mut Frame, state: &mut AppState, rect: Rect) {
     }
 
     let content_w = inner.width.saturating_sub(2).max(1) as usize;
-    let mut all_lines: Vec<Line<'static>> = build_header_lines(state, content_w);
+    let header_lines: Vec<Line<'static>> = build_header_lines(state, content_w)
+        .into_iter()
+        .map(|mut l| {
+            let mut s = vec![Span::raw(" ")];
+            s.append(&mut l.spans);
+            Line::from(s)
+        })
+        .collect();
+    let header_h = (header_lines.len() as u16).min(inner.height);
+    if header_h > 0 {
+        frame.render_widget(
+            Paragraph::new(header_lines),
+            Rect::new(inner.x, inner.y, inner.width, header_h),
+        );
+    }
 
+    let body_rect = Rect::new(
+        inner.x,
+        inner.y + header_h,
+        inner.width,
+        inner.height.saturating_sub(header_h),
+    );
+    if body_rect.height == 0 {
+        return;
+    }
+
+    let mut all_lines: Vec<Line<'static>> = Vec::new();
     let selected_id = state.selected_agent_id();
     let mut events = state.snapshot.events.clone();
     events.sort_by(|a, b| a.timestamp.cmp(&b.timestamp).then_with(|| a.id.cmp(&b.id)));
@@ -707,42 +759,29 @@ fn draw_chat_pane(frame: &mut Frame, state: &mut AppState, rect: Rect) {
         if ev_lines.is_empty() {
             continue;
         }
-        all_lines.push(Line::from(Span::raw("")));
+        if !all_lines.is_empty() {
+            all_lines.push(Line::from(Span::raw("")));
+        }
         all_lines.extend(wrap_styled_lines(ev_lines, content_w));
         event_count += 1;
     }
 
     if event_count == 0 {
-        let header_lines: Vec<Line<'static>> = all_lines
-            .into_iter()
-            .map(|mut l| {
-                let mut s = vec![Span::raw(" ")];
-                s.append(&mut l.spans);
-                Line::from(s)
-            })
-            .collect();
-        let header_h = (header_lines.len() as u16).min(inner.height);
-        if header_h > 0 {
-            frame.render_widget(
-                Paragraph::new(header_lines),
-                Rect::new(inner.x, inner.y, inner.width, header_h),
-            );
-        }
-        let y = (inner.y + inner.height / 2).max(inner.y + header_h);
-        if y < inner.y + inner.height {
+        let y = body_rect.y + body_rect.height / 2;
+        if y < body_rect.y + body_rect.height {
             frame.render_widget(
                 Paragraph::new(Line::from(Span::styled(
                     "Starting agent...",
                     Style::default().fg(DIM).add_modifier(Modifier::ITALIC),
                 )))
                 .alignment(Alignment::Center),
-                Rect::new(inner.x, y, inner.width, 1),
+                Rect::new(body_rect.x, y, body_rect.width, 1),
             );
         }
         return;
     }
 
-    let vis = inner.height as usize;
+    let vis = body_rect.height as usize;
     state.chat_total_lines = all_lines.len();
     state.chat_visible_lines = vis;
     let max_scroll = state.chat_total_lines.saturating_sub(vis);
@@ -761,7 +800,7 @@ fn draw_chat_pane(frame: &mut Frame, state: &mut AppState, rect: Rect) {
         })
         .collect();
 
-    frame.render_widget(Paragraph::new(visible_lines), inner);
+    frame.render_widget(Paragraph::new(visible_lines), body_rect);
 }
 
 fn build_header_lines(state: &AppState, width: usize) -> Vec<Line<'static>> {
@@ -776,16 +815,35 @@ fn build_header_lines(state: &AppState, width: usize) -> Vec<Line<'static>> {
         .filter(|s| !s.is_empty())
         .unwrap_or("Security audit");
 
+    let profile = state.display_swarm_profile();
+    let ov_online = state.is_openviking_online();
+    let ov_model = state.display_openviking_model();
+
     let row1 = Line::from(vec![
         Span::styled("☻ RedJohn", style_bold(RED)),
         Span::styled(" / ", style_dim()),
         Span::styled(target_label.to_string(), style_bold(BRIGHT_WHITE)),
-        Span::styled("  │  RJ-001    ", style_dim()),
-        Span::styled("●", style_bold(BRIGHT_RED)),
-        Span::styled(" API Live", style_bold(BRIGHT_WHITE)),
         Span::styled("  │  ", style_dim()),
         Span::styled("●", style_bold(BRIGHT_RED)),
-        Span::styled(" Swarm Live", style_bold(BRIGHT_WHITE)),
+        Span::styled(format!(" Swarm [{profile}]"), style_bold(BRIGHT_WHITE)),
+        Span::styled("  │  ", style_dim()),
+        if ov_online {
+            Span::styled("●", style_bold(BRIGHT_RED))
+        } else {
+            Span::styled("○", style_fg(DIM))
+        },
+        Span::styled(
+            if ov_online {
+                format!(" Memory [{ov_model}]")
+            } else {
+                " Memory [OFFLINE]".to_string()
+            },
+            if ov_online {
+                style_bold(BRIGHT_WHITE)
+            } else {
+                style_dim()
+            },
+        ),
     ]);
 
     let total_mcp = state.snapshot.connections.len();
@@ -843,6 +901,9 @@ fn build_header_lines(state: &AppState, width: usize) -> Vec<Line<'static>> {
             format!(" {} {} ", i + 1, ag.name),
             if selected { active_tab } else { inactive_tab },
         ));
+    }
+    if state.focus == FocusMode::Agents {
+        tab_spans.push(Span::styled("   ◂ ↑/↓ ←/→ ▸", style_bold(BRIGHT_RED)));
     }
     let row4 = Line::from(tab_spans);
 
@@ -1040,7 +1101,7 @@ fn draw_sidebar(frame: &mut Frame, state: &AppState, rect: Rect) {
     // 2. Stats Box at Bottom
     let stats_lines = build_stats_lines(state);
     let stats_h = ((stats_lines.len() as u16) + 2)
-        .clamp(3, 8)
+        .clamp(3, 10)
         .min(rect.height.saturating_sub(3));
     let stats_top = rect.y + rect.height.saturating_sub(stats_h);
 
@@ -1197,6 +1258,12 @@ fn build_stats_lines(state: &AppState) -> Vec<Line<'static>> {
             ]));
         }
     }
+    let profile = state.display_swarm_profile();
+    lines.push(Line::from(vec![
+        Span::styled("Profile: ", style_dim()),
+        Span::styled(profile, style_bold(BRIGHT_RED)),
+    ]));
+
     if state.snapshot.subscription {
         let label = if state.snapshot.model.starts_with("grok/") {
             "SuperGrok subscription"
@@ -1223,10 +1290,32 @@ fn build_stats_lines(state: &AppState) -> Vec<Line<'static>> {
             Span::styled(state.snapshot.caido_url.clone(), style_fg(WHITE)),
         ]));
     }
-    lines.push(Line::from(Span::styled(
-        state.version_label(),
-        style_bold(RED),
-    )));
+    lines.push(Line::from(vec![
+        Span::styled("Version: ", style_dim()),
+        Span::styled(state.version_label(), style_bold(BRIGHT_WHITE)),
+    ]));
+
+    let ov_online = state.is_openviking_online();
+    let ov_model = state.display_openviking_model();
+    lines.push(Line::from(vec![
+        Span::styled("Memory: ", style_dim()),
+        Span::styled(
+            if ov_online { "● " } else { "○ " },
+            if ov_online {
+                style_bold(BRIGHT_RED)
+            } else {
+                style_fg(DIM)
+            },
+        ),
+        Span::styled(
+            ov_model,
+            if ov_online {
+                style_bold(BRIGHT_WHITE)
+            } else {
+                style_dim()
+            },
+        ),
+    ]));
     lines
 }
 
@@ -1304,12 +1393,20 @@ fn draw_help_modal(frame: &mut Frame, area: Rect) {
         )),
         Line::from(Span::styled("/models      Choose model", style_fg(TEXT))),
         Line::from(Span::styled(
-            "/swarm       Swarm & role model routing",
+            "/swarm       Swarm profile & role routing",
+            style_fg(TEXT),
+        )),
+        Line::from(Span::styled(
+            "/openviking  OpenViking memory & model config",
             style_fg(TEXT),
         )),
         Line::from(Span::styled("/effort      Reasoning effort", style_fg(TEXT))),
         Line::from(Span::styled(
             "/rj <target> Launch pentest swarm",
+            style_fg(TEXT),
+        )),
+        Line::from(Span::styled(
+            "Up / Down    Command history (in input box)",
             style_fg(TEXT),
         )),
         Line::from(Span::styled("F1           Help", style_fg(TEXT))),
@@ -1318,7 +1415,7 @@ fn draw_help_modal(frame: &mut Frame, area: Rect) {
         Line::from(Span::styled("Enter        Send / expand node", style_fg(TEXT))),
         Line::from(Span::styled("Tab          Switch panels", style_fg(TEXT))),
     ];
-    let rect = centered_rect(area, 48.min(area.width), 20.min(area.height));
+    let rect = centered_rect(area, 52.min(area.width), 22.min(area.height));
     render_dialog_box(frame, rect, RED, lines, Alignment::Left);
 }
 
@@ -1418,12 +1515,20 @@ fn modal_header_line(
 }
 
 fn draw_mcp_modal(frame: &mut Frame, state: &AppState, area: Rect) {
-    let w = area.width.saturating_sub(10).clamp(40, 68);
+    let w = area.width.saturating_sub(10).clamp(42, 72);
     let inner_w = w.saturating_sub(6) as usize;
+    let ov_online = state.is_openviking_online();
+    let ov_model = state.display_openviking_model();
+    let ov_embed = if state.snapshot.openviking_embed_model.trim().is_empty() {
+        "local/local-fast-384".to_string()
+    } else {
+        state.snapshot.openviking_embed_model.trim().to_string()
+    };
+
     let mut lines = vec![
         modal_header_line(
             vec![
-                Span::styled("◈ RedJohn MCP Connections", style_bold(BRIGHT_RED)),
+                Span::styled("◈ RedJohn MCP & OpenViking Memory", style_bold(BRIGHT_RED)),
                 Span::styled(
                     format!("  ({} configured)", state.snapshot.connections.len()),
                     style_dim(),
@@ -1432,6 +1537,28 @@ fn draw_mcp_modal(frame: &mut Frame, state: &AppState, area: Rect) {
             "F3 / esc close",
             inner_w,
         ),
+        Line::from(Span::styled("─".repeat(inner_w), style_fg(DARK_BORDER))),
+        Line::from(vec![
+            Span::styled("OpenViking Memory: ", style_bold(WHITE)),
+            Span::styled(
+                if ov_online {
+                    "● ONLINE (viking://)"
+                } else {
+                    "○ OFFLINE"
+                },
+                if ov_online {
+                    style_bold(BRIGHT_RED)
+                } else {
+                    style_fg(DIM)
+                },
+            ),
+        ]),
+        Line::from(vec![
+            Span::styled("  VLM Model:       ", style_dim()),
+            Span::styled(ov_model, style_fg(BRIGHT_WHITE)),
+            Span::styled("   Embedding: ", style_dim()),
+            Span::styled(ov_embed, style_fg(WHITE)),
+        ]),
         Line::from(Span::styled("─".repeat(inner_w), style_fg(DARK_BORDER))),
     ];
     if state.snapshot.connections.is_empty() {
@@ -1463,7 +1590,12 @@ fn draw_mcp_modal(frame: &mut Frame, state: &AppState, area: Rect) {
         }
         lines.push(Line::from(Span::raw("")));
     }
-    lines.push(Line::from(Span::styled("enter / esc close", style_dim())));
+    lines.push(Line::from(vec![
+        Span::styled("/openviking", style_bold(BRIGHT_RED)),
+        Span::styled(" configure memory model   ", style_dim()),
+        Span::styled("enter / esc", style_bold(BRIGHT_RED)),
+        Span::styled(" close", style_dim()),
+    ]));
     let h = (lines.len() as u16 + 4).min(area.height);
     let rect = centered_rect(area, w, h);
     render_dialog_box(frame, rect, CRIMSON, lines, Alignment::Left);

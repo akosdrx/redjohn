@@ -211,7 +211,12 @@ class ReportUsageHooks(RunHooks[dict[str, Any]]):
         except Exception:
             logger.exception("budget/turn warning injection failed")
         if (owner := legacy_from_context(context.context)) is not None:
-            owner.model_start(str(context.context.get("agent_id", "unknown")))
+            try:
+                owner.model_start(str(context.context.get("agent_id", "unknown")))
+            except Exception:
+                if owner.control is not None:
+                    raise
+                logger.debug("Non-fatal model_start resource admission skipped", exc_info=True)
 
     def _age_old_tool_outputs(
         self,

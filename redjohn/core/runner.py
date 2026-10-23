@@ -107,7 +107,11 @@ def _mcp_prompt_roster(registry: McpRegistry) -> list[dict[str, Any]]:
         {
             "name": summary.name,
             "purpose": summary.purpose,
-            "tool_count": summary.tool_count if summary.state == "catalog_ready" else None,
+            "tool_count": (
+                summary.tool_count
+                if (summary.state == "catalog_ready" or summary.tool_count > 0)
+                else None
+            ),
             "state": summary.state,
         }
         for summary in registry.summaries()
@@ -517,6 +521,8 @@ async def run_redjohn_scan(
         diff_scope = scan_config.get("diff_scope")
         is_diff_scoped = bool(isinstance(diff_scope, dict) and diff_scope.get("active"))
         skills = list(scan_config.get("skills") or [])
+        if settings.openviking.enabled and "memory/openviking_memory" not in skills:
+            skills.append("memory/openviking_memory")
         root_task = build_root_task(scan_config)
         model_settings = make_model_settings(
             settings.llm.reasoning_effort,
@@ -551,6 +557,20 @@ async def run_redjohn_scan(
         scope_context = build_scope_context(scan_config)
         if prepared_assessment is not None:
             scope_context["assessment"] = prepared_assessment.metadata()
+
+        if settings.openviking.enabled:
+            with contextlib.suppress(Exception):
+                from redjohn.memory.openviking.hooks import recall_pentest_memory
+
+                recalled_memory = await recall_pentest_memory(
+                    targets,
+                    str(scan_config.get("user_instructions") or ""),
+                )
+                if recalled_memory:
+                    scope_context["openviking_memory"] = (
+                        "OPENVIKING PRIOR PENTEST MEMORY (recalled from viking://):\n"
+                        f"{recalled_memory}"
+                    )
 
         # Attach the run's MCP connections and hold their live sessions in a
         # per-run registry. The connections are source-agnostic: a caller
@@ -705,6 +725,10 @@ async def run_redjohn_scan(
         )
         mcp_registry.bind_governor(shared_governor)
         legacy_execution.bind_mcp_registry(mcp_registry)
+        ov_entry = mcp_registry.get("openviking")
+        if ov_entry is not None:
+            with contextlib.suppress(Exception):
+                await ov_entry.ensure_catalog()
 
         context: dict[str, Any] = {
             "coordinator": coordinator,
@@ -851,6 +875,10 @@ async def run_redjohn_scan(
             if mcp_registry is not None:
                 with contextlib.suppress(Exception):
                     await mcp_registry.close()
+            with contextlib.suppress(Exception):
+                from redjohn.memory.openviking.runtime import close_openviking_service
+
+                await close_openviking_service()
             try:
                 if legacy_execution is not None:
                     await legacy_execution.close()

@@ -290,6 +290,50 @@ class IntegrationSettings(BaseSettings):
     )
 
 
+class OpenVikingSettings(BaseSettings):
+    """OpenViking (volcengine/OpenViking) hierarchical agent memory & MCP settings."""
+
+    model_config = _BASE_CONFIG
+
+    enabled: bool = Field(default=True, alias="REDJOHN_OPENVIKING_ENABLED")
+    url: str | None = Field(default=None, alias="OPENVIKING_URL")
+    workspace: str = Field(
+        default="~/.redjohn/openviking/data",
+        alias="REDJOHN_OPENVIKING_WORKSPACE",
+    )
+    vlm_model: str | None = Field(default=None, alias="REDJOHN_OPENVIKING_MODEL")
+    vlm_provider: str | None = Field(default=None, alias="REDJOHN_OPENVIKING_PROVIDER")
+    vlm_api_key: str | None = Field(
+        default=None,
+        alias="REDJOHN_OPENVIKING_API_KEY",
+        repr=False,
+    )
+    vlm_api_base: str | None = Field(default=None, alias="REDJOHN_OPENVIKING_API_BASE")
+    embedding_model: str | None = Field(
+        default=None,
+        alias="REDJOHN_OPENVIKING_EMBEDDING_MODEL",
+    )
+    embedding_provider: str | None = Field(
+        default=None,
+        alias="REDJOHN_OPENVIKING_EMBEDDING_PROVIDER",
+    )
+    embedding_api_key: str | None = Field(
+        default=None,
+        alias="REDJOHN_OPENVIKING_EMBEDDING_API_KEY",
+        repr=False,
+    )
+    embedding_api_base: str | None = Field(
+        default=None,
+        alias="REDJOHN_OPENVIKING_EMBEDDING_API_BASE",
+    )
+    embedding_dimension: int = Field(
+        default=1024,
+        ge=64,
+        le=8192,
+        alias="REDJOHN_OPENVIKING_EMBEDDING_DIMENSION",
+    )
+
+
 class ViewerSettings(BaseSettings):
     model_config = _BASE_CONFIG
 
@@ -308,4 +352,5 @@ class Settings(BaseSettings):
     context: ContextSettings = Field(default_factory=ContextSettings)
     telemetry: TelemetrySettings = Field(default_factory=TelemetrySettings)
     integrations: IntegrationSettings = Field(default_factory=IntegrationSettings)
+    openviking: OpenVikingSettings = Field(default_factory=OpenVikingSettings)
     viewer: ViewerSettings = Field(default_factory=ViewerSettings)

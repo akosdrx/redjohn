@@ -17,10 +17,22 @@ pub const SLASH_COMMANDS: &[&str] = &[
     "/models",
     "/effort",
     "/swarm",
+    "/openviking",
     "/skills",
     "/findings",
     "/mcp",
     "/rj",
+];
+
+pub const SWARM_PROFILES: &[&str] = &[
+    "full",
+    "balanced",
+    "deep",
+    "recon",
+    "exploit",
+    "whitebox",
+    "fast",
+    "single",
 ];
 
 pub const REPORT_PREV: &str = "‹ Prev";
@@ -326,6 +338,9 @@ pub struct AppState {
     pub snapshot: Snapshot,
     pub input_text: String,
     pub input_cursor: usize,
+    pub input_history: Vec<String>,
+    pub history_cursor: Option<usize>,
+    pub input_draft: String,
     pub modal: ModalMode,
     pub focus: FocusMode,
     pub collapsed_agents: HashSet<String>,
@@ -368,6 +383,53 @@ pub struct AppState {
     pub skill_selected: usize,
 }
 
+fn command_history_path() -> Option<std::path::PathBuf> {
+    if let Ok(custom) = std::env::var("REDJOHN_COMMAND_HISTORY_PATH") {
+        let trimmed = custom.trim();
+        if !trimmed.is_empty() {
+            return Some(std::path::PathBuf::from(trimmed));
+        }
+    }
+    let home = std::env::var("HOME")
+        .ok()
+        .or_else(|| std::env::var("USERPROFILE").ok())?;
+    if home.trim().is_empty() {
+        return None;
+    }
+    Some(
+        std::path::PathBuf::from(home)
+            .join(".redjohn")
+            .join("command_history.json"),
+    )
+}
+
+fn load_command_history() -> Vec<String> {
+    let Some(path) = command_history_path() else {
+        return Vec::new();
+    };
+    let Ok(raw) = std::fs::read_to_string(path) else {
+        return Vec::new();
+    };
+    serde_json::from_str::<Vec<String>>(&raw)
+        .unwrap_or_default()
+        .into_iter()
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .collect()
+}
+
+fn save_command_history(history: &[String]) {
+    let Some(path) = command_history_path() else {
+        return;
+    };
+    if let Some(parent) = path.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    if let Ok(serialized) = serde_json::to_string_pretty(history) {
+        let _ = std::fs::write(path, serialized);
+    }
+}
+
 impl AppState {
     pub fn new(client: Option<Client>, version: Option<String>) -> Self {
         let mut app_version = "Private".to_string();
@@ -385,6 +447,9 @@ impl AppState {
             snapshot: Snapshot::default(),
             input_text: String::new(),
             input_cursor: 0,
+            input_history: load_command_history(),
+            history_cursor: None,
+            input_draft: String::new(),
             modal: ModalMode::None,
             focus: FocusMode::Input,
             collapsed_agents: HashSet::new(),
@@ -428,10 +493,68 @@ impl AppState {
         }
     }
 
+    pub fn record_history(&mut self, value: &str) {
+        let trimmed = value.trim();
+        if trimmed.is_empty() {
+            return;
+        }
+        self.input_history.retain(|item| item != trimmed);
+        self.input_history.push(trimmed.to_string());
+        if self.input_history.len() > 200 {
+            let drain_count = self.input_history.len() - 200;
+            self.input_history.drain(0..drain_count);
+        }
+        self.history_cursor = None;
+        self.input_draft.clear();
+        save_command_history(&self.input_history);
+    }
+
+    pub fn history_prev(&mut self) {
+        if self.input_history.is_empty() {
+            return;
+        }
+        let next_idx = match self.history_cursor {
+            None => {
+                self.input_draft = self.input_text.clone();
+                self.input_history.len() - 1
+            }
+            Some(cur) => cur.saturating_sub(1),
+        };
+        self.history_cursor = Some(next_idx);
+        if let Some(entry) = self.input_history.get(next_idx) {
+            self.input_text = entry.clone();
+            self.input_cursor = self.input_text.len();
+        }
+    }
+
+    pub fn history_next(&mut self) {
+        let Some(cur) = self.history_cursor else {
+            return;
+        };
+        if cur + 1 < self.input_history.len() {
+            let next_idx = cur + 1;
+            self.history_cursor = Some(next_idx);
+            if let Some(entry) = self.input_history.get(next_idx) {
+                self.input_text = entry.clone();
+                self.input_cursor = self.input_text.len();
+            }
+        } else {
+            self.history_cursor = None;
+            self.input_text = std::mem::take(&mut self.input_draft);
+            self.input_cursor = self.input_text.len();
+        }
+    }
+
     pub fn version_label(&self) -> String {
         let v = self.app_version.trim();
-        if v.is_empty() || v == "dev" || v == "1.7.0" || v == "BETA Enterprise" {
-            return "Private".to_string();
+        if v.is_empty()
+            || v == "dev"
+            || v == "1.7.0"
+            || v == "BETA Enterprise"
+            || v == "Private"
+            || v == "Enterprise"
+        {
+            return "Enterprise".to_string();
         }
         if v.chars().next().is_some_and(|c| c.is_ascii_digit()) {
             return format!("v{v}");
@@ -457,6 +580,38 @@ impl AppState {
             return s.to_string();
         }
         short_model_name(&self.snapshot.swarm_model)
+    }
+
+    pub fn display_swarm_profile(&self) -> String {
+        let p = self.snapshot.swarm_profile.trim();
+        if p.is_empty() {
+            "balanced".to_string()
+        } else {
+            p.to_string()
+        }
+    }
+
+    pub fn display_openviking_model(&self) -> String {
+        let m = self.snapshot.openviking_model.trim();
+        if !m.is_empty() {
+            return short_model_name(m);
+        }
+        let orch = self.display_model_name();
+        if !orch.is_empty() {
+            orch
+        } else {
+            "auto".to_string()
+        }
+    }
+
+    pub fn is_openviking_online(&self) -> bool {
+        if self.snapshot.openviking_online {
+            return true;
+        }
+        self.snapshot
+            .connections
+            .iter()
+            .any(|c| c.name == "openviking" && !c.dead)
     }
 
     pub fn selected_agent_id(&self) -> String {
@@ -1104,6 +1259,12 @@ impl AppState {
 
     fn handle_llm_result(&mut self, result: CommandResult) {
         if self.modal != ModalMode::Picker {
+            match result.command.as_str() {
+                "llm.select_model" => self.finish_saved(result.result, "Model saved"),
+                "llm.set_effort" => self.finish_saved(result.result, "Effort saved"),
+                "llm.set_swarm" => self.finish_saved(result.result, "Swarm configuration saved"),
+                _ => {}
+            }
             return;
         }
         self.picker.poll_in_flight = false;
@@ -1236,16 +1397,54 @@ impl AppState {
     }
 
     fn finish_saved(&mut self, raw: Value, fallback: &str) {
+        let status = val_str(raw.get("status"));
         let model = val_str(raw.get("model"));
         let short_model = val_str(raw.get("short_model"));
         let effort = val_str(raw.get("effort"));
         let applied = val_str(raw.get("applied"));
+        let swarm_profile = val_str(raw.get("swarm_profile"));
+        let ov_model = val_str(raw.get("openviking_model"));
+        let ov_embed = val_str(raw.get("openviking_embed_model"));
+        let ov_enabled = raw.get("openviking_enabled").and_then(|v| v.as_bool());
+
+        if !swarm_profile.is_empty() {
+            self.snapshot.swarm_profile = swarm_profile.clone();
+        }
+        if !ov_model.is_empty() {
+            self.snapshot.openviking_model = ov_model.clone();
+        }
+        if !ov_embed.is_empty() {
+            self.snapshot.openviking_embed_model = ov_embed.clone();
+        }
+        if let Some(en) = ov_enabled {
+            self.snapshot.openviking_online = en;
+        }
+
         let display_model = if !short_model.is_empty() {
             short_model
         } else {
             model.clone()
         };
-        let text = if applied == "next_scan" {
+        let text = if status == "profile_updated" && !swarm_profile.is_empty() {
+            format!("Swarm profile set to {swarm_profile}")
+        } else if status == "openviking_updated" {
+            let m = if !display_model.is_empty() {
+                display_model
+            } else {
+                ov_model
+            };
+            format!("OpenViking Memory VLM set to {m}")
+        } else if status == "openviking_inherit" {
+            format!("OpenViking Memory set to inherit Orchestrator ({ov_model})")
+        } else if status == "openviking_embed_updated" {
+            format!("OpenViking Embedding set to {ov_embed}")
+        } else if status == "openviking_toggled" {
+            if ov_enabled.unwrap_or(true) {
+                "OpenViking Memory MCP enabled".to_string()
+            } else {
+                "OpenViking Memory MCP disabled".to_string()
+            }
+        } else if applied == "next_scan" {
             "Saved for the next scan".to_string()
         } else if !model.is_empty() {
             if !effort.is_empty() && effort != "none" {
@@ -1333,6 +1532,8 @@ impl AppState {
             "Select Orchestrator model".to_string()
         } else if scope == "swarm" {
             "Select Swarm default model".to_string()
+        } else if scope == "openviking" {
+            "Select OpenViking Memory VLM model".to_string()
         } else if let Some(role) = scope.strip_prefix("role:") {
             format!("Select Swarm model [{role}]")
         } else {
@@ -1397,6 +1598,102 @@ impl AppState {
         };
     }
 
+    pub fn open_openviking_picker(&mut self) {
+        self.modal = ModalMode::Picker;
+        let orch_label = {
+            let s = self.display_model_name();
+            if s.is_empty() {
+                "Not configured".to_string()
+            } else {
+                s
+            }
+        };
+        let ov_model_label = {
+            let raw = self.snapshot.openviking_model.trim();
+            if raw.is_empty() {
+                format!("Inherits Orchestrator ({orch_label})")
+            } else {
+                format!("{} ({raw})", self.display_openviking_model())
+            }
+        };
+        let ov_embed_label = {
+            let raw = self.snapshot.openviking_embed_model.trim();
+            if raw.is_empty() {
+                "local/local-fast-384".to_string()
+            } else {
+                raw.to_string()
+            }
+        };
+        let ov_status = if self.is_openviking_online() {
+            "ONLINE (13 tools)"
+        } else {
+            "OFFLINE"
+        };
+        let sections = vec![
+            PickerSection {
+                title: format!("OPENVIKING MEMORY MCP · {ov_status}"),
+                entries: vec![
+                    PickerEntry {
+                        id: "openviking".to_string(),
+                        label: format!("Select Memory VLM Model        · {ov_model_label}"),
+                        auth: "swarm_scope".to_string(),
+                        children: Vec::new(),
+                    },
+                    PickerEntry {
+                        id: "openviking_inherit".to_string(),
+                        label: format!("Inherit Orchestrator Model     · {orch_label}"),
+                        auth: "openviking_action".to_string(),
+                        children: Vec::new(),
+                    },
+                    PickerEntry {
+                        id: "embed:local".to_string(),
+                        label: format!(
+                            "Embedding: Local Fast (384d)   · {}",
+                            if ov_embed_label.starts_with("local/") {
+                                "active ●"
+                            } else {
+                                "no API key needed"
+                            }
+                        ),
+                        auth: "openviking_action".to_string(),
+                        children: Vec::new(),
+                    },
+                    PickerEntry {
+                        id: "embed:openai".to_string(),
+                        label: format!(
+                            "Embedding: OpenAI 3-Small      · {}",
+                            if ov_embed_label.starts_with("openai/") {
+                                "active ●"
+                            } else {
+                                "text-embedding-3-small"
+                            }
+                        ),
+                        auth: "openviking_action".to_string(),
+                        children: Vec::new(),
+                    },
+                    PickerEntry {
+                        id: "openviking_toggle".to_string(),
+                        label: format!("Toggle OpenViking MCP          · [{ov_status}]"),
+                        auth: "openviking_action".to_string(),
+                        children: Vec::new(),
+                    },
+                ],
+            },
+        ];
+        let title = "OpenViking Agent Memory & MCP Configuration".to_string();
+        self.picker = PickerState {
+            phase: PickerPhase::List,
+            title: title.clone(),
+            frame: PickerFrame {
+                title,
+                sections,
+                cursor: 0,
+                query: String::new(),
+            },
+            ..Default::default()
+        };
+    }
+
     pub fn open_swarm_picker(&mut self) {
         self.modal = ModalMode::Picker;
         let orch_label = {
@@ -1414,6 +1711,15 @@ impl AppState {
             } else {
                 s
             }
+        };
+        let ov_label = {
+            let m = self.display_openviking_model();
+            let st = if self.is_openviking_online() {
+                "online"
+            } else {
+                "offline"
+            };
+            format!("{m} [{st}]")
         };
         let profile = {
             let p = self.snapshot.swarm_profile.trim();
@@ -1461,6 +1767,12 @@ impl AppState {
                         auth: "swarm_scope".to_string(),
                         children: Vec::new(),
                     },
+                    PickerEntry {
+                        id: "openviking".to_string(),
+                        label: format!("OpenViking Memory VLM          · {ov_label}"),
+                        auth: "swarm_scope".to_string(),
+                        children: Vec::new(),
+                    },
                 ],
             },
             PickerSection {
@@ -1499,7 +1811,25 @@ impl AppState {
                         id: "full".to_string(),
                         label: mark_cur(
                             "full      — Complete multi-agent offensive swarm",
-                            profile == "full" || profile == "balanced",
+                            profile == "full",
+                        ),
+                        auth: "swarm_profile".to_string(),
+                        children: Vec::new(),
+                    },
+                    PickerEntry {
+                        id: "balanced".to_string(),
+                        label: mark_cur(
+                            "balanced  — Balanced recon + exploitation swarm",
+                            profile == "balanced",
+                        ),
+                        auth: "swarm_profile".to_string(),
+                        children: Vec::new(),
+                    },
+                    PickerEntry {
+                        id: "deep".to_string(),
+                        label: mark_cur(
+                            "deep      — Exhaustive multi-stage deep audit swarm",
+                            profile == "deep",
                         ),
                         auth: "swarm_profile".to_string(),
                         children: Vec::new(),
@@ -1552,16 +1882,30 @@ impl AppState {
                 ],
             },
             PickerSection {
-                title: "RESET".to_string(),
-                entries: vec![PickerEntry {
-                    id: "inherit".to_string(),
-                    label: "Reset Swarm to inherit Orchestrator model".to_string(),
-                    auth: "swarm_reset".to_string(),
-                    children: Vec::new(),
-                }],
+                title: "OPENVIKING MEMORY & RESET".to_string(),
+                entries: vec![
+                    PickerEntry {
+                        id: "openviking_inherit".to_string(),
+                        label: "OpenViking Memory: Inherit Orchestrator model".to_string(),
+                        auth: "openviking_action".to_string(),
+                        children: Vec::new(),
+                    },
+                    PickerEntry {
+                        id: "openviking_toggle".to_string(),
+                        label: "OpenViking Memory: Toggle MCP enable/disable".to_string(),
+                        auth: "openviking_action".to_string(),
+                        children: Vec::new(),
+                    },
+                    PickerEntry {
+                        id: "inherit".to_string(),
+                        label: "Reset Swarm to inherit Orchestrator model".to_string(),
+                        auth: "swarm_reset".to_string(),
+                        children: Vec::new(),
+                    },
+                ],
             },
         ];
-        let title = "Swarm & Orchestrator Configuration".to_string();
+        let title = format!("Swarm & Memory Configuration [profile: {profile}]");
         self.picker = PickerState {
             phase: PickerPhase::List,
             title: title.clone(),
@@ -1615,7 +1959,11 @@ impl AppState {
             "/models" => {
                 if let Some(&arg) = fields.get(1) {
                     let lower = arg.trim().to_ascii_lowercase();
-                    if lower == "swarm" || lower == "orchestrator" || lower.starts_with("role:") {
+                    if lower == "swarm"
+                        || lower == "orchestrator"
+                        || lower == "openviking"
+                        || lower.starts_with("role:")
+                    {
                         self.open_model_picker_with_scope(&lower);
                         return true;
                     }
@@ -1628,7 +1976,47 @@ impl AppState {
                 true
             }
             "/swarm" => {
+                if let Some(&arg) = fields.get(1) {
+                    let lower = arg.trim().to_ascii_lowercase();
+                    if SWARM_PROFILES.contains(&lower.as_str()) {
+                        self.snapshot.swarm_profile = lower.clone();
+                        self.send_command(
+                            "llm.set_swarm",
+                            json!({ "action": "profile", "profile": lower }),
+                        );
+                        self.show_toast(format!("Swarm profile set to {lower}"));
+                        return true;
+                    }
+                }
                 self.open_swarm_picker();
+                true
+            }
+            "/openviking" | "/ov" | "/memory" => {
+                if let Some(&arg) = fields.get(1) {
+                    let lower = arg.trim().to_ascii_lowercase();
+                    if lower == "model" || lower == "models" {
+                        self.open_model_picker_with_scope("openviking");
+                        return true;
+                    } else if lower == "inherit" {
+                        self.send_command("llm.set_swarm", json!({ "action": "openviking_inherit" }));
+                        return true;
+                    } else if lower == "toggle" || lower == "on" || lower == "off" {
+                        let enabled = if lower == "on" {
+                            Some(true)
+                        } else if lower == "off" {
+                            Some(false)
+                        } else {
+                            None
+                        };
+                        let mut payload = json!({ "action": "openviking_toggle" });
+                        if let Some(en) = enabled {
+                            payload["enabled"] = json!(en);
+                        }
+                        self.send_command("llm.set_swarm", payload);
+                        return true;
+                    }
+                }
+                self.open_openviking_picker();
                 true
             }
             "/skills" => {
@@ -1672,6 +2060,7 @@ impl AppState {
         if trimmed.is_empty() {
             return;
         }
+        self.record_history(trimmed);
         if self.intercept_slash(trimmed) {
             return;
         }
@@ -1787,6 +2176,20 @@ impl AppState {
                     }
                     return;
                 }
+                KeyCode::Up => {
+                    if !self.snapshot.setup_mode && !self.snapshot.agents.is_empty() {
+                        self.focus = FocusMode::Agents;
+                        self.step_agent_selection(-1, false);
+                    }
+                    return;
+                }
+                KeyCode::Down => {
+                    if !self.snapshot.setup_mode && !self.snapshot.agents.is_empty() {
+                        self.focus = FocusMode::Agents;
+                        self.step_agent_selection(1, false);
+                    }
+                    return;
+                }
                 _ => {}
             }
         }
@@ -1796,6 +2199,7 @@ impl AppState {
                 KeyCode::Char('0') => {
                     if !self.snapshot.setup_mode && !self.snapshot.agents.is_empty() {
                         self.all_agents_view = !self.all_agents_view;
+                        self.follow_output = true;
                     }
                     return;
                 }
@@ -1805,7 +2209,22 @@ impl AppState {
                         if idx < self.snapshot.agents.len() {
                             self.all_agents_view = false;
                             self.selected_agent = idx;
+                            self.follow_output = true;
                         }
+                    }
+                    return;
+                }
+                KeyCode::Up | KeyCode::Left => {
+                    if !self.snapshot.setup_mode && !self.snapshot.agents.is_empty() {
+                        self.focus = FocusMode::Agents;
+                        self.step_agent_selection(-1, key.code == KeyCode::Left);
+                    }
+                    return;
+                }
+                KeyCode::Down | KeyCode::Right => {
+                    if !self.snapshot.setup_mode && !self.snapshot.agents.is_empty() {
+                        self.focus = FocusMode::Agents;
+                        self.step_agent_selection(1, key.code == KeyCode::Right);
                     }
                     return;
                 }
@@ -1831,6 +2250,7 @@ impl AppState {
             KeyCode::F(2) => {
                 if !self.snapshot.setup_mode && !self.snapshot.agents.is_empty() {
                     self.all_agents_view = !self.all_agents_view;
+                    self.follow_output = true;
                 }
                 return;
             }
@@ -1863,6 +2283,7 @@ impl AppState {
             KeyCode::Char('0') if !self.snapshot.setup_mode && self.focus != FocusMode::Input => {
                 if !self.snapshot.agents.is_empty() {
                     self.all_agents_view = !self.all_agents_view;
+                    self.follow_output = true;
                 }
                 return;
             }
@@ -1873,6 +2294,7 @@ impl AppState {
                 if idx < self.snapshot.agents.len() {
                     self.all_agents_view = false;
                     self.selected_agent = idx;
+                    self.follow_output = true;
                 }
                 return;
             }
@@ -1895,18 +2317,12 @@ impl AppState {
                 return;
             }
             KeyCode::Up => {
+                if self.focus == FocusMode::Input {
+                    self.history_prev();
+                    return;
+                }
                 if self.focus == FocusMode::Agents && !self.snapshot.agents.is_empty() {
-                    let entries =
-                        agent_tree_entries(&self.snapshot.agents, &self.collapsed_agents);
-                    let row = entries
-                        .iter()
-                        .position(|e| e.index == self.selected_agent)
-                        .unwrap_or(0);
-                    let next = row.saturating_sub(1);
-                    if let Some(entry) = entries.get(next) {
-                        self.all_agents_view = false;
-                        self.selected_agent = entry.index;
-                    }
+                    self.step_agent_selection(-1, false);
                     return;
                 }
                 if self.focus == FocusMode::Chat {
@@ -1916,18 +2332,12 @@ impl AppState {
                 }
             }
             KeyCode::Down => {
+                if self.focus == FocusMode::Input {
+                    self.history_next();
+                    return;
+                }
                 if self.focus == FocusMode::Agents && !self.snapshot.agents.is_empty() {
-                    let entries =
-                        agent_tree_entries(&self.snapshot.agents, &self.collapsed_agents);
-                    let row = entries
-                        .iter()
-                        .position(|e| e.index == self.selected_agent)
-                        .unwrap_or(0);
-                    let next = (row + 1).min(entries.len().saturating_sub(1));
-                    if let Some(entry) = entries.get(next) {
-                        self.all_agents_view = false;
-                        self.selected_agent = entry.index;
-                    }
+                    self.step_agent_selection(1, false);
                     return;
                 }
                 if self.focus == FocusMode::Chat {
@@ -1940,6 +2350,14 @@ impl AppState {
                     }
                     return;
                 }
+            }
+            KeyCode::Left if self.focus == FocusMode::Agents => {
+                self.step_agent_selection(-1, true);
+                return;
+            }
+            KeyCode::Right if self.focus == FocusMode::Agents => {
+                self.step_agent_selection(1, true);
+                return;
             }
             KeyCode::PageUp => {
                 self.focus = FocusMode::Chat;
@@ -2061,9 +2479,55 @@ impl AppState {
         }
     }
 
+    pub fn step_agent_selection(&mut self, delta: isize, allow_all_agents: bool) {
+        if self.snapshot.agents.is_empty() {
+            return;
+        }
+        let entries = agent_tree_entries(&self.snapshot.agents, &self.collapsed_agents);
+        if entries.is_empty() {
+            return;
+        }
+        if self.all_agents_view {
+            self.all_agents_view = false;
+            self.selected_agent = if delta < 0 {
+                entries[entries.len() - 1].index
+            } else {
+                entries[0].index
+            };
+            self.follow_output = true;
+            return;
+        }
+        let row = entries
+            .iter()
+            .position(|e| e.index == self.selected_agent)
+            .unwrap_or(0);
+        if delta > 0 {
+            if row + 1 < entries.len() {
+                self.selected_agent = entries[row + 1].index;
+                self.all_agents_view = false;
+            } else if allow_all_agents {
+                self.all_agents_view = true;
+            } else {
+                self.selected_agent = entries[0].index;
+                self.all_agents_view = false;
+            }
+        } else if delta < 0 {
+            if row > 0 {
+                self.selected_agent = entries[row - 1].index;
+                self.all_agents_view = false;
+            } else if allow_all_agents {
+                self.all_agents_view = true;
+            } else {
+                self.selected_agent = entries[entries.len() - 1].index;
+                self.all_agents_view = false;
+            }
+        }
+        self.follow_output = true;
+    }
+
     fn cycle_focus(&mut self, delta: isize) {
         let mut available = vec![FocusMode::Input, FocusMode::Chat];
-        if !self.snapshot.setup_mode && self.width >= 120 && !self.sidebar_hidden {
+        if !self.snapshot.setup_mode && !self.snapshot.agents.is_empty() {
             available.push(FocusMode::Agents);
         }
         let cur = available
@@ -2420,6 +2884,35 @@ impl AppState {
             "swarm_reset" => {
                 self.send_command("llm.set_swarm", json!({ "action": "inherit" }));
             }
+            "openviking_action" => match entry.id.as_str() {
+                "openviking_inherit" => {
+                    self.send_command("llm.set_swarm", json!({ "action": "openviking_inherit" }));
+                }
+                "openviking_toggle" => {
+                    self.send_command("llm.set_swarm", json!({ "action": "openviking_toggle" }));
+                }
+                "embed:local" => {
+                    self.send_command(
+                        "llm.set_swarm",
+                        json!({
+                            "action": "openviking_embed",
+                            "provider": "local",
+                            "model": "local-fast-384",
+                        }),
+                    );
+                }
+                "embed:openai" => {
+                    self.send_command(
+                        "llm.set_swarm",
+                        json!({
+                            "action": "openviking_embed",
+                            "provider": "openai",
+                            "model": "text-embedding-3-small",
+                        }),
+                    );
+                }
+                _ => {}
+            },
             "model" => {
                 self.picker.message = "Saving…".to_string();
                 let scope = if self.picker.scope.is_empty() {
@@ -2509,10 +3002,159 @@ impl AppState {
         }
     }
 
+    fn handle_header_virtual_button_click(&mut self, col: u16) -> bool {
+        if col < 2 {
+            return false;
+        }
+        let rel = (col - 2) as usize;
+        let total_mcp = self.snapshot.connections.len();
+        let live_mcp = self
+            .snapshot
+            .connections
+            .iter()
+            .filter(|c| !c.dead)
+            .count();
+        let f2_str = " F2  All Agents   ";
+        let f3_str = format!(" F3  MCPs {live_mcp}/{total_mcp}   ");
+        let f4_str = format!(" F4  Skills {}   ", self.registered_skill_count());
+        let f5_str = format!(
+            " F5 / F  Findings {}   ",
+            self.snapshot.vulnerabilities.len()
+        );
+        let f1_str = " F1  Help    ";
+
+        let mut cursor = 0usize;
+        let f2_end = cursor + unicode_width::UnicodeWidthStr::width(f2_str);
+        if rel < f2_end {
+            if !self.snapshot.agents.is_empty() {
+                self.all_agents_view = !self.all_agents_view;
+                self.follow_output = true;
+            }
+            return true;
+        }
+        cursor = f2_end;
+        let f3_end = cursor + unicode_width::UnicodeWidthStr::width(f3_str.as_str());
+        if rel < f3_end {
+            self.open_modal(ModalMode::Mcp);
+            return true;
+        }
+        cursor = f3_end;
+        let f4_end = cursor + unicode_width::UnicodeWidthStr::width(f4_str.as_str());
+        if rel < f4_end {
+            self.open_skills_modal();
+            return true;
+        }
+        cursor = f4_end;
+        let f5_end = cursor + unicode_width::UnicodeWidthStr::width(f5_str.as_str());
+        if rel < f5_end {
+            self.open_modal(ModalMode::Findings);
+            return true;
+        }
+        cursor = f5_end;
+        let f1_end = cursor + unicode_width::UnicodeWidthStr::width(f1_str);
+        if rel < f1_end {
+            self.open_modal(ModalMode::Help);
+            return true;
+        }
+        false
+    }
+
+    fn handle_top_agent_tab_click(&mut self, col: u16) {
+        self.focus = FocusMode::Agents;
+        if col < 2 || self.snapshot.agents.is_empty() {
+            return;
+        }
+        let rel = (col - 2) as usize;
+        let all_lbl = " 0 All agents ";
+        let mut cursor = unicode_width::UnicodeWidthStr::width(all_lbl);
+        if rel < cursor {
+            self.all_agents_view = true;
+            self.follow_output = true;
+            return;
+        }
+        for (i, ag) in self.snapshot.agents.iter().enumerate() {
+            let sep_w = 3usize; // " │ "
+            let tab_lbl = format!(" {} {} ", i + 1, ag.name);
+            let tab_w = unicode_width::UnicodeWidthStr::width(tab_lbl.as_str());
+            let start = cursor + sep_w;
+            let end = start + tab_w;
+            if rel >= cursor && rel < end {
+                self.all_agents_view = false;
+                self.selected_agent = i;
+                self.follow_output = true;
+                return;
+            }
+            cursor = end;
+        }
+    }
+
+    fn sidebar_agents_bounds(&self, sidebar_w: u16) -> (u16, u16) {
+        let top_h = 3u16.min(self.height);
+        let mut cur_y = top_h;
+        let mut stats_rows = 2usize; // Profile + Version + Memory minimum
+        if !self.display_model_name().is_empty() {
+            stats_rows += 1;
+            let sw = self.display_swarm_model_name();
+            if !sw.is_empty() && sw != self.display_model_name() {
+                stats_rows += 1;
+            }
+        }
+        if self.snapshot.subscription {
+            stats_rows += 1;
+        }
+        if self
+            .snapshot
+            .usage
+            .get("total_tokens")
+            .and_then(|v| v.as_f64())
+            .is_some_and(|t| t as i64 > 0)
+        {
+            stats_rows += 1;
+        }
+        if !self.snapshot.caido_url.is_empty() {
+            stats_rows += 1;
+        }
+        stats_rows += 1; // Memory row
+        let stats_h = ((stats_rows as u16) + 2)
+            .clamp(3, 10)
+            .min(self.height.saturating_sub(3));
+        let stats_top = self.height.saturating_sub(stats_h);
+
+        if !self.snapshot.targets.is_empty() {
+            let total = self
+                .snapshot
+                .target_count
+                .max(self.snapshot.targets.len());
+            let mut visible = self.snapshot.targets.len().min(4).min(5);
+            if visible < total {
+                visible = visible.min(4);
+            }
+            let t_rows = 1 + visible + usize::from(total > visible);
+            if sidebar_w > 4 && stats_top.saturating_sub(cur_y) >= (t_rows as u16 + 7) {
+                cur_y += t_rows as u16 + 2;
+            }
+        }
+        (cur_y, stats_top)
+    }
+
     pub fn handle_mouse(&mut self, mouse: MouseEvent) {
         if self.show_splash || !self.ready {
             return;
         }
+        let show_sidebar = self.width >= 90 && !self.sidebar_hidden;
+        let sidebar_w: u16 = if show_sidebar {
+            (self.width / 5).max(24)
+        } else if self.sidebar_hidden && self.width >= 90 {
+            6
+        } else {
+            0
+        };
+        let chat_w = if sidebar_w > 0 {
+            self.width.saturating_sub(sidebar_w + 1)
+        } else {
+            self.width
+        };
+
         match mouse.kind {
             MouseEventKind::ScrollUp => {
                 if self.modal == ModalMode::Picker {
@@ -2523,6 +3165,12 @@ impl AppState {
                     self.move_vulnerability_selection(-3);
                 } else if self.modal == ModalMode::Vulnerability {
                     self.vuln_report_scroll = self.vuln_report_scroll.saturating_sub(3);
+                } else if !self.snapshot.setup_mode
+                    && ((show_sidebar && mouse.column >= chat_w)
+                        || (mouse.column < chat_w && (3..=5).contains(&mouse.row)))
+                {
+                    self.focus = FocusMode::Agents;
+                    self.step_agent_selection(-1, false);
                 } else {
                     self.follow_output = false;
                     self.chat_scroll = self.chat_scroll.saturating_sub(3);
@@ -2537,6 +3185,12 @@ impl AppState {
                     self.move_vulnerability_selection(3);
                 } else if self.modal == ModalMode::Vulnerability {
                     self.vuln_report_scroll = self.vuln_report_scroll.saturating_add(3);
+                } else if !self.snapshot.setup_mode
+                    && ((show_sidebar && mouse.column >= chat_w)
+                        || (mouse.column < chat_w && (3..=5).contains(&mouse.row)))
+                {
+                    self.focus = FocusMode::Agents;
+                    self.step_agent_selection(1, false);
                 } else {
                     let max_scroll = self
                         .chat_total_lines
@@ -2548,25 +3202,69 @@ impl AppState {
                 }
             }
             MouseEventKind::Down(MouseButton::Left) => {
-                if self.modal == ModalMode::None && !self.snapshot.setup_mode {
-                    let sidebar_w = if self.width >= 120 && !self.sidebar_hidden {
-                        (self.width / 5).max(24)
+                if self.modal != ModalMode::None {
+                    if self.modal == ModalMode::Help || self.modal == ModalMode::Mcp {
+                        self.close_modal();
+                    }
+                    return;
+                }
+                if self.snapshot.setup_mode {
+                    self.focus = FocusMode::Input;
+                    return;
+                }
+                if mouse.column < chat_w {
+                    if mouse.row == 2 && self.handle_header_virtual_button_click(mouse.column) {
+                        return;
+                    }
+                    if mouse.row == 4 {
+                        self.handle_top_agent_tab_click(mouse.column);
+                        return;
+                    }
+                    if mouse.row == 5 {
+                        self.focus = FocusMode::Agents;
+                        return;
+                    }
+                    if mouse.row >= self.height.saturating_sub(5) {
+                        self.focus = FocusMode::Input;
                     } else {
-                        0
-                    };
-                    let chat_w = self.width.saturating_sub(sidebar_w);
-                    if mouse.column < chat_w {
-                        if mouse.row >= self.height.saturating_sub(5) {
-                            self.focus = FocusMode::Input;
-                        } else {
-                            self.focus = FocusMode::Chat;
+                        self.focus = FocusMode::Chat;
+                    }
+                } else if sidebar_w > 0 {
+                    if self.sidebar_hidden {
+                        if mouse.row < 3 && mouse.column >= self.width.saturating_sub(6) {
+                            self.sidebar_hidden = false;
                         }
-                    } else if sidebar_w > 0 && mouse.row < 3 {
+                        return;
+                    }
+                    if mouse.row < 3 {
                         if mouse.column >= self.width.saturating_sub(5) {
                             self.sidebar_hidden = !self.sidebar_hidden;
                         } else {
                             self.open_modal(ModalMode::Findings);
                         }
+                        return;
+                    }
+                    let (agents_top, stats_top) = self.sidebar_agents_bounds(sidebar_w);
+                    if mouse.row >= agents_top && mouse.row < stats_top {
+                        self.focus = FocusMode::Agents;
+                        let list_first_row = agents_top.saturating_add(3);
+                        if mouse.row >= list_first_row {
+                            let row_idx = (mouse.row - list_first_row) as usize;
+                            let entries = agent_tree_entries(
+                                &self.snapshot.agents,
+                                &self.collapsed_agents,
+                            );
+                            if let Some(entry) = entries.get(row_idx) {
+                                self.all_agents_view = false;
+                                self.selected_agent = entry.index;
+                                self.follow_output = true;
+                            }
+                        } else {
+                            self.all_agents_view = false;
+                            self.follow_output = true;
+                        }
+                    } else if mouse.row >= stats_top {
+                        self.open_swarm_picker();
                     }
                 }
             }
@@ -2874,6 +3572,34 @@ mod tests {
         assert_eq!(env.msg_type, "pentest.run");
         assert_eq!(env.payload["target"], "https://target.local");
         assert_eq!(env.payload["instruction"], "focus on auth");
+
+        // /swarm <profile> updates swarm_profile and sends llm.set_swarm
+        s.submit("/swarm recon");
+        assert_eq!(s.snapshot.swarm_profile, "recon");
+        let env2 = peer.read().expect("read llm.set_swarm");
+        assert_eq!(env2.msg_type, "llm.set_swarm");
+        assert_eq!(env2.payload["action"], "profile");
+        assert_eq!(env2.payload["profile"], "recon");
+
+        // /openviking opens OpenViking picker
+        s.submit("/openviking");
+        assert_eq!(s.modal, ModalMode::Picker);
+        assert!(s.picker.title.contains("OpenViking"));
+        s.close_modal();
+
+        // Up/Down arrow keys cycle command history in FocusMode::Input
+        s.focus = FocusMode::Input;
+        s.input_text = "draft in progress".to_string();
+        s.input_cursor = s.input_text.len();
+
+        s.handle_key(KeyEvent::new(KeyCode::Up, KeyModifiers::NONE));
+        assert_eq!(s.input_text, "/openviking");
+        s.handle_key(KeyEvent::new(KeyCode::Up, KeyModifiers::NONE));
+        assert_eq!(s.input_text, "/swarm recon");
+        s.handle_key(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE));
+        assert_eq!(s.input_text, "/openviking");
+        s.handle_key(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE));
+        assert_eq!(s.input_text, "draft in progress");
     }
 
     #[test]
@@ -2895,5 +3621,75 @@ mod tests {
         );
         let report = vulnerability_markdown_report(&v);
         assert!(report.contains("`````python\nprint('owned')\n````\n# injected heading\n`````"));
+    }
+
+    #[test]
+    fn test_mouse_virtual_buttons_and_agent_switching() {
+        let mut s = sized_state();
+        s.ready = true;
+        s.snapshot.setup_mode = false;
+        s.snapshot.agents = vec![
+            Agent {
+                id: "root".to_string(),
+                name: "RedJohn".to_string(),
+                status: "running".to_string(),
+                ..Default::default()
+            },
+            Agent {
+                id: "recon".to_string(),
+                name: "ReconAgent".to_string(),
+                parent_id: Some("root".to_string()),
+                status: "running".to_string(),
+                ..Default::default()
+            },
+            Agent {
+                id: "exploit".to_string(),
+                name: "ExploitAgent".to_string(),
+                parent_id: Some("root".to_string()),
+                status: "running".to_string(),
+                ..Default::default()
+            },
+        ];
+
+        let left_click = |col: u16, row: u16| MouseEvent {
+            kind: MouseEventKind::Down(MouseButton::Left),
+            column: col,
+            row,
+            modifiers: KeyModifiers::NONE,
+        };
+
+        // Click F2 virtual button on row 2 -> toggles all_agents_view
+        assert!(!s.all_agents_view);
+        s.handle_mouse(left_click(4, 2));
+        assert!(s.all_agents_view);
+
+        // Click F3 virtual button on row 2 -> opens MCP modal
+        s.handle_mouse(left_click(22, 2));
+        assert_eq!(s.modal, ModalMode::Mcp);
+        s.close_modal();
+
+        // Click top agent tab "2 ReconAgent" on row 4 -> focuses Agents and selects agent 1
+        s.handle_mouse(left_click(34, 4));
+        assert_eq!(s.focus, FocusMode::Agents);
+        assert!(!s.all_agents_view);
+        assert_eq!(s.selected_agent, 1);
+
+        // Pressing Down arrow in FocusMode::Agents moves to agent 2 (ExploitAgent)
+        s.handle_key(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE));
+        assert_eq!(s.selected_agent, 2);
+
+        // Pressing Up arrow in FocusMode::Agents moves back to agent 1 (ReconAgent)
+        s.handle_key(KeyEvent::new(KeyCode::Up, KeyModifiers::NONE));
+        assert_eq!(s.selected_agent, 1);
+
+        // Click on the right sidebar Agents panel row for agent 0 (RedJohn) -> row = 6
+        s.handle_mouse(left_click(105, 6));
+        assert_eq!(s.focus, FocusMode::Agents);
+        assert_eq!(s.selected_agent, 0);
+
+        // Click on the right sidebar Agents panel row for agent 2 (ExploitAgent) -> row = 8
+        s.handle_mouse(left_click(105, 8));
+        assert_eq!(s.focus, FocusMode::Agents);
+        assert_eq!(s.selected_agent, 2);
     }
 }

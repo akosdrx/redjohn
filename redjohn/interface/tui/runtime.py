@@ -85,18 +85,33 @@ class GoTuiRuntime:
             on_quit=self.quit,
         )
         with contextlib.suppress(Exception):
+            from redjohn.memory.openviking.config import probe_openviking_status
             from redjohn.tools.mcp import load_user_mcp_configs
 
-            initial_mcp_roster = [
-                {
-                    "name": cfg.name,
-                    "provider": None,
-                    "tool_count": 0,
-                    "dead": False,
-                    "state": "configured",
-                }
-                for cfg in load_user_mcp_configs()
-            ]
+            ov_status = probe_openviking_status()
+            initial_mcp_roster = []
+            for cfg in load_user_mcp_configs():
+                if cfg.name == "openviking":
+                    ov_online = bool(ov_status.get("online", True))
+                    initial_mcp_roster.append(
+                        {
+                            "name": cfg.name,
+                            "provider": "openviking",
+                            "tool_count": int(ov_status.get("tool_count", 13)) if ov_online else 0,
+                            "dead": not ov_online,
+                            "state": "catalog_ready" if ov_online else "unavailable",
+                        }
+                    )
+                else:
+                    initial_mcp_roster.append(
+                        {
+                            "name": cfg.name,
+                            "provider": None,
+                            "tool_count": len(cfg.active_tools) if cfg.active_tools else 0,
+                            "dead": False,
+                            "state": "configured",
+                        }
+                    )
             if initial_mcp_roster:
                 self.controller.set_mcp_connections(initial_mcp_roster)
         self.server = TuiBackendServer(self.controller)

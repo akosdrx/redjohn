@@ -154,6 +154,12 @@ pub struct Snapshot {
     #[serde(default, deserialize_with = "null_to_default")]
     pub swarm_role_models: HashMap<String, String>,
     #[serde(default, deserialize_with = "null_to_default")]
+    pub openviking_online: bool,
+    #[serde(default, deserialize_with = "null_to_default")]
+    pub openviking_model: String,
+    #[serde(default, deserialize_with = "null_to_default")]
+    pub openviking_embed_model: String,
+    #[serde(default, deserialize_with = "null_to_default")]
     pub selected_skills: Vec<String>,
     #[serde(default, deserialize_with = "null_to_default")]
     pub caido_url: String,

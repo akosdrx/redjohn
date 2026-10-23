@@ -699,6 +699,10 @@ _SKILL_INFERENCE_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("assessment/memory-context-budgeting", ("context budget", "memory budget", "compaction")),
     ("assessment/performance-regression", ("performance regression", "latency benchmark")),
     ("assessment/resilience-recovery", ("resilience", "recovery", "checkpoint")),
+    (
+        "memory/openviking_memory",
+        ("openviking", "viking://", "memory", "recall", "remember", "prior findings", "pentest"),
+    ),
 )
 
 

@@ -648,6 +648,16 @@ class AgentCoordinator:
             if was_caught_up:
                 self.swarm_read_cursor[sender_id] = len(self.swarm_bus)
         await self._maybe_snapshot()
+        with contextlib.suppress(Exception):
+            from redjohn.memory.openviking.hooks import remember_pentest_broadcast
+
+            remember_pentest_broadcast(
+                sender=sender_name,
+                category=signal["category"],
+                summary=signal["summary"],
+                details=signal["details"],
+                target=signal["target"],
+            )
         return signal
 
     def drain_unseen_swarm_signals(self, agent_id: str) -> list[dict[str, Any]]:

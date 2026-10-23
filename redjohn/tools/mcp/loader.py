@@ -110,25 +110,35 @@ def load_user_mcp_configs(path: Path | None = None) -> list[McpConnectionConfig]
     optional per-run include/exclude selection is applied last.
     """
     source = _resolve_path(path)
-    if not source.exists():
-        return []
-
-    try:
-        raw = json.loads(source.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        logger.exception("Could not read MCP config at %s; ignoring it", source)
-        return []
-
-    if not isinstance(raw, list):
-        logger.warning("MCP config at %s is not a JSON list; ignoring it", source)
-        return []
-
-    entries = cast("list[object]", raw)
     configs: list[McpConnectionConfig] = []
-    for index, entry in enumerate(entries):
+    if source.exists():
         try:
-            configs.append(McpConnectionConfig.model_validate(entry))
-        except ValidationError as exc:
-            logger.warning("Skipping invalid MCP server entry #%d in %s: %s", index, source, exc)
+            raw = json.loads(source.read_text(encoding="utf-8"))
+            if isinstance(raw, list):
+                entries = cast("list[object]", raw)
+                for index, entry in enumerate(entries):
+                    try:
+                        configs.append(McpConnectionConfig.model_validate(entry))
+                    except ValidationError as exc:
+                        logger.warning(
+                            "Skipping invalid MCP server entry #%d in %s: %s",
+                            index,
+                            source,
+                            exc,
+                        )
+            else:
+                logger.warning("MCP config at %s is not a JSON list; ignoring it", source)
+        except (OSError, json.JSONDecodeError):
+            logger.exception("Could not read MCP config at %s; ignoring it", source)
+
+    if path is None and not os.environ.get(_PATH_ENV_VAR):
+        try:
+            from redjohn.memory.openviking.config import get_openviking_mcp_config
+
+            ov_config = get_openviking_mcp_config()
+            if ov_config is not None and not any(c.name == ov_config.name for c in configs):
+                configs.insert(0, ov_config)
+        except Exception:
+            logger.debug("OpenViking MCP auto-registration skipped", exc_info=True)
 
     return _apply_run_selection(_dedupe_by_name(configs))

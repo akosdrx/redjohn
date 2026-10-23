@@ -163,6 +163,64 @@ def save_swarm_llm_selection(
     persist_current()
 
 
+def save_openviking_selection(
+    *,
+    enabled: bool | None = None,
+    vlm_model: str | None = None,
+    vlm_provider: str | None = None,
+    vlm_api_key: str | None = None,
+    vlm_api_base: str | None = None,
+    embedding_model: str | None = None,
+    embedding_provider: str | None = None,
+    embedding_api_key: str | None = None,
+    embedding_api_base: str | None = None,
+    embedding_dimension: int | None = None,
+    clear_vlm: bool = False,
+    clear_vlm_api_key: bool = False,
+    clear_vlm_api_base: bool = False,
+    clear_embedding: bool = False,
+) -> None:
+    """Persist OpenViking memory model & embedding configuration."""
+    if enabled is not None:
+        os.environ["REDJOHN_OPENVIKING_ENABLED"] = "true" if enabled else "false"
+    if clear_vlm:
+        os.environ["REDJOHN_OPENVIKING_MODEL"] = ""
+        os.environ["REDJOHN_OPENVIKING_PROVIDER"] = ""
+        os.environ["REDJOHN_OPENVIKING_API_KEY"] = ""
+        os.environ["REDJOHN_OPENVIKING_API_BASE"] = ""
+    else:
+        if vlm_model is not None:
+            os.environ["REDJOHN_OPENVIKING_MODEL"] = vlm_model
+        if vlm_provider is not None:
+            os.environ["REDJOHN_OPENVIKING_PROVIDER"] = vlm_provider
+        if vlm_api_key is not None:
+            os.environ["REDJOHN_OPENVIKING_API_KEY"] = vlm_api_key
+        elif clear_vlm_api_key:
+            os.environ["REDJOHN_OPENVIKING_API_KEY"] = ""
+        if vlm_api_base is not None:
+            os.environ["REDJOHN_OPENVIKING_API_BASE"] = vlm_api_base
+        elif clear_vlm_api_base:
+            os.environ["REDJOHN_OPENVIKING_API_BASE"] = ""
+    if clear_embedding:
+        os.environ["REDJOHN_OPENVIKING_EMBEDDING_MODEL"] = ""
+        os.environ["REDJOHN_OPENVIKING_EMBEDDING_PROVIDER"] = ""
+        os.environ["REDJOHN_OPENVIKING_EMBEDDING_API_KEY"] = ""
+        os.environ["REDJOHN_OPENVIKING_EMBEDDING_API_BASE"] = ""
+    else:
+        if embedding_model is not None:
+            os.environ["REDJOHN_OPENVIKING_EMBEDDING_MODEL"] = embedding_model
+        if embedding_provider is not None:
+            os.environ["REDJOHN_OPENVIKING_EMBEDDING_PROVIDER"] = embedding_provider
+        if embedding_api_key is not None:
+            os.environ["REDJOHN_OPENVIKING_EMBEDDING_API_KEY"] = embedding_api_key
+        if embedding_api_base is not None:
+            os.environ["REDJOHN_OPENVIKING_EMBEDDING_API_BASE"] = embedding_api_base
+        if embedding_dimension is not None:
+            os.environ["REDJOHN_OPENVIKING_EMBEDDING_DIMENSION"] = str(embedding_dimension)
+    invalidate_settings_cache()
+    persist_current()
+
+
 def persist_current() -> None:
     """Merge currently-set env vars into the active config file (0o600).
 

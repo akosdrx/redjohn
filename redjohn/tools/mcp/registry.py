@@ -190,7 +190,14 @@ class McpConnectionEntry:
             )
         self._set_state("connecting")
         await self._close_retired()
-        if self._governor is not None and config.transport == "stdio":
+        if (
+            self._governor is not None
+            and config.transport == "stdio"
+            and not (
+                config.name == "openviking"
+                and "redjohn.memory.openviking.mcp_server" in (config.args or [])
+            )
+        ):
             self._resource_lease = self._governor.acquire(
                 "context", estimated_bytes=self._governor.envelope.worker_memory_budget
             )
@@ -379,10 +386,12 @@ class McpRegistry:
 
     def register(self, request: McpConnectionRequest) -> McpConnectionEntry:
         """Register an inert request without opening a network connection."""
+        initial_tools = len(request.config.active_tools) if request.config.active_tools else 0
         entry = McpConnectionEntry(
             name=request.config.name,
             connection_config=request.config,
             purpose=request.purpose or request.config.notes,
+            tool_count=initial_tools,
             result_transform=request.result_transform,
             provider=request.provider,
             _governor=self._governor,

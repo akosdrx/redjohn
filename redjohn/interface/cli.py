@@ -45,11 +45,37 @@ async def run_cli(args: Any) -> None:  # noqa: PLR0915
     console = Console()
 
     start_text = Text()
+    start_text.append("SELF LEARNING OFFENSIVE SWARM", style="bold white")
+    start_text.append(" · ", style="dim")
     start_text.append("Penetration test initiated", style="bold #ef4444")
 
+    version_text = Text()
+    version_text.append("Version", style="dim")
+    version_text.append(" ")
+    version_text.append("Enterprise", style="bold white")
+
+    memory_text = Text()
+    memory_text.append("Memory ", style="dim")
+    memory_text.append(" ")
+    try:
+        from redjohn.memory.openviking.config import probe_openviking_status
+
+        ov_status = probe_openviking_status()
+        ov_model_label = str(ov_status.get("short_vlm_model") or "auto")
+        if ov_status.get("online"):
+            memory_text.append(ov_model_label, style="bold white")
+            memory_text.append(
+                f" · MCP ONLINE ({ov_status.get('tool_count', 13)} tools)",
+                style="dim",
+            )
+        else:
+            memory_text.append(f"{ov_model_label} (offline)", style="dim")
+    except Exception:
+        memory_text.append("offline", style="dim")
+
     target_text = Text()
-    target_text.append("Target", style="dim")
-    target_text.append("  ")
+    target_text.append("Target ", style="dim")
+    target_text.append(" ")
     if len(args.targets_info) == 1:
         target_text.append(args.targets_info[0]["original"], style="bold white")
     else:
@@ -59,9 +85,21 @@ async def run_cli(args: Any) -> None:  # noqa: PLR0915
             target_text.append(target_info["original"], style="white")
 
     results_text = Text()
-    results_text.append("Output", style="dim")
-    results_text.append("  ")
+    results_text.append("Output ", style="dim")
+    results_text.append(" ")
     results_text.append(f"redjohn_runs/{args.run_name}", style="#f87171")
+
+    settings_obj = load_settings()
+    llm_cfg = settings_obj.llm
+    swarm_profile = (llm_cfg.swarm_profile or "full").strip()
+    swarm_model = (llm_cfg.swarm_model or llm_cfg.model or "default").strip()
+    swarm_effort = (llm_cfg.swarm_reasoning_effort or llm_cfg.reasoning_effort or "high").strip()
+
+    swarm_text = Text()
+    swarm_text.append("Swarm  ", style="dim")
+    swarm_text.append(" ")
+    swarm_text.append(f"{swarm_profile}", style="bold #ef4444")
+    swarm_text.append(f" ({swarm_model} · {swarm_effort})", style="white")
 
     note_text = Text()
     note_text.append("\n\n", style="dim")
@@ -71,7 +109,13 @@ async def run_cli(args: Any) -> None:  # noqa: PLR0915
         Text.assemble(
             start_text,
             "\n\n",
+            version_text,
+            "\n",
+            memory_text,
+            "\n",
             target_text,
+            "\n",
+            swarm_text,
             "\n",
             results_text,
             note_text,

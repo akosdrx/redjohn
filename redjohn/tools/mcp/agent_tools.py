@@ -66,7 +66,7 @@ _MCP_DISCOVERY_WAIT_SECONDS = 30.0
 async def _catalog_for(ctx: RunContextWrapper, entry: McpConnectionEntry) -> list[Any]:
     context = ctx.context if isinstance(ctx.context, dict) else {}
     owner = legacy_from_context(context)
-    if owner is not None:
+    if owner is not None and entry.name != "openviking":
         return await owner.run(
             f"mcp-catalog:{entry.name}",
             entry.ensure_catalog,
@@ -342,7 +342,7 @@ async def call_mcp(  # noqa: PLR0912, PLR0915 - explicit validation and lifecycl
                 "mcp_target_bound_assessment_required", category="policy", coverage_effect="blocked"
             )
         )
-    if owner is not None and owner.control is not None:
+    if owner is not None and owner.control is not None and connection != "openviking":
         try:
             owner.check_policy()
             rule = contract_for(entry, tool)
@@ -398,7 +398,7 @@ async def call_mcp(  # noqa: PLR0912, PLR0915 - explicit validation and lifecycl
 
     timeout = min(110, entry.config.session_timeout_seconds if entry.config else 60)
     try:
-        if owner is not None:
+        if owner is not None and connection != "openviking":
             return await owner.run(
                 f"mcp-call:{connection}:{tool}",
                 dispatch,

@@ -32,18 +32,18 @@ if TYPE_CHECKING:
 
 _IDENTIFIER = re.compile(r"[a-f0-9]{32}")
 _KINDS = frozenset({"worker", "scanner", "browser", "page", "context"})
-_MAX_LEASES = 256
+_MAX_LEASES = 512
 
 
 @dataclass(frozen=True)
 class HostResourceLimits:
     """Explicit host policy, independent of each campaign's narrower envelope."""
 
-    memory_budget_bytes: int = 4096 * MIB
-    max_workers: int = 4
-    max_browsers: int = 1
-    max_pages: int = 4
-    max_contexts: int = 4
+    memory_budget_bytes: int = 16384 * MIB
+    max_workers: int = 32
+    max_browsers: int = 4
+    max_pages: int = 16
+    max_contexts: int = 16
 
     def __post_init__(self) -> None:
         if (
@@ -164,7 +164,25 @@ class HostResourcePool:
                 )
             else:
                 self.limits = self._read_limits(db)
-                if limits is not None and limits != self.limits:
+                if limits is None:
+                    default_limits = HostResourceLimits()
+                    if (
+                        self.limits.memory_budget_bytes < default_limits.memory_budget_bytes
+                        or self.limits.max_workers < default_limits.max_workers
+                        or self.limits.max_browsers < default_limits.max_browsers
+                        or self.limits.max_pages < default_limits.max_pages
+                        or self.limits.max_contexts < default_limits.max_contexts
+                    ):
+                        self.limits = default_limits
+                        db.execute(
+                            "UPDATE metadata SET value=? WHERE key='policy'",
+                            (
+                                json.dumps(
+                                    {"schema": 1, "limits": asdict(self.limits)}, sort_keys=True
+                                ),
+                            ),
+                        )
+                elif limits != self.limits:
                     raise ValueError("host_resource_policy_mismatch")
 
     @staticmethod
