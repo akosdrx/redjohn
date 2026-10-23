@@ -65,9 +65,16 @@ def _iter_run_dirs(base_dir: Path) -> list[Path]:
     """Every run directory under ``base_dir``, newest first by record mtime."""
     if not base_dir.is_dir():
         return []
-    run_dirs = [child for child in base_dir.iterdir() if run_record_path(child).is_file()]
-    run_dirs.sort(key=lambda child: run_record_path(child).stat().st_mtime, reverse=True)
-    return run_dirs
+    stamped: list[tuple[float, Path]] = []
+    for child in base_dir.iterdir():
+        record = run_record_path(child)
+        try:
+            if record.is_file():
+                stamped.append((record.stat().st_mtime, child))
+        except OSError:
+            continue  # run vanished between is_file() and stat()
+    stamped.sort(key=lambda item: item[0], reverse=True)
+    return [child for _, child in stamped]
 
 
 def run_list_entry(run_dir: Path) -> dict[str, Any]:
@@ -660,7 +667,9 @@ def _make_handler(state: _ViewerState) -> type[BaseHTTPRequestHandler]:
             candidate = (root / rel).resolve()
             # Path-traversal guard: never serve outside the bundle root.
             if root != candidate and root not in candidate.parents:
-                logger.warning("viewer rejected traversal attempt: %s", path)
+                # ascii() blocks CRLF in the fully attacker-controlled path
+                # from forging extra log lines.
+                logger.warning("viewer rejected traversal attempt: %s", ascii(path))
                 return None
             return candidate if candidate.is_file() else None
 

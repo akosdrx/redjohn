@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import os
 import time
@@ -265,7 +266,7 @@ def parse_raw_request(raw_content: str) -> dict[str, Any]:
     method, url_path = request_line[0], request_line[1]
 
     parsed_headers: dict[str, str] = {}
-    body_start = 0
+    body_start: int | None = None
     for i, line in enumerate(lines[1:], 1):
         if line.strip() == "":
             body_start = i + 1
@@ -274,7 +275,12 @@ def parse_raw_request(raw_content: str) -> dict[str, Any]:
             key, value = line.split(":", 1)
             parsed_headers[key.strip()] = value.strip()
 
-    body = "\n".join(lines[body_start:]).strip() if body_start < len(lines) else ""
+    # Byte-faithful body: a replayed payload must not lose leading/trailing
+    # whitespace (signatures, multipart boundaries, length-sensitive JSON), and
+    # a request with no header/body separator has no body at all.
+    body = (
+        "\n".join(lines[body_start:]) if body_start is not None and body_start < len(lines) else ""
+    )
     return {"method": method, "url_path": url_path, "headers": parsed_headers, "body": body}
 
 
@@ -355,6 +361,10 @@ async def replay_send_raw(
             timeout=_REPLAY_SEND_TIMEOUT_SECONDS,
         )
     except TimeoutError:
+        # The dispatch died but the server-side session lives until deleted;
+        # without this cleanup every timed-out replay leaks one session.
+        with contextlib.suppress(Exception):
+            await client.replay.sessions.delete([session.id])
         elapsed_ms = int((time.time() - started) * 1000)
         return {
             "session_id": str(session.id),
@@ -368,6 +378,10 @@ async def replay_send_raw(
             "elapsed_ms": elapsed_ms,
             "response_raw": None,
         }
+    except BaseException:
+        with contextlib.suppress(Exception):
+            await client.replay.sessions.delete([session.id])
+        raise
     elapsed_ms = int((time.time() - started) * 1000)
     response = getattr(result.entry, "response", None)
     response_raw = getattr(response, "raw", None) if response is not None else None

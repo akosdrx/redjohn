@@ -262,6 +262,21 @@ async def _bounded_request(
         )
 
 
+def _safe_json_or_none(resp: httpx.Response) -> dict[str, Any] | None:
+    """Parse a 200 body as a JSON object, or return None.
+
+    A non-JSON 200 body (captive portal, WAF interstitial — realistic on
+    pentest networks) must degrade to "provider unavailable" instead of
+    raising and discarding the sources that did answer.
+    """
+    try:
+        data = resp.json()
+    except ValueError:
+        logger.warning("non-JSON 200 body from %s; skipping provider", resp.request.url)
+        return None
+    return data if isinstance(data, dict) else None
+
+
 async def _get_kev_catalog(client: httpx.AsyncClient) -> dict[str, dict[str, Any]]:
     async def fetch() -> dict[str, dict[str, Any]]:
         response = await _bounded_request(
@@ -532,18 +547,19 @@ async def _fetch_single_cve(clean: str) -> dict[str, Any]:
             osv_req, nvd_req, kev_req, epss_req, return_exceptions=True
         )
         if isinstance(osv_resp, httpx.Response) and osv_resp.status_code == 200:
-            osv_data = osv_resp.json()
-            if not isinstance(osv_data, dict) or not isinstance(osv_data.get("id"), str):
-                raise TypeError("invalid_osv_advisory")
+            osv_body = _safe_json_or_none(osv_resp)
+            if osv_body is not None:
+                if not isinstance(osv_body.get("id"), str):
+                    raise TypeError("invalid_osv_advisory")
+                osv_data = osv_body
         if isinstance(nvd_resp, httpx.Response) and nvd_resp.status_code == 200:
-            nvd_body = nvd_resp.json()
-            if not isinstance(nvd_body, dict) or not isinstance(
-                nvd_body.get("vulnerabilities"), list
-            ):
-                raise TypeError("invalid_nvd_advisory_collection")
-            vulns = nvd_body["vulnerabilities"]
-            if vulns and isinstance(vulns[0], dict):
-                nvd_item = vulns[0].get("cve") or {}
+            nvd_body = _safe_json_or_none(nvd_resp)
+            if nvd_body is not None:
+                if not isinstance(nvd_body.get("vulnerabilities"), list):
+                    raise TypeError("invalid_nvd_advisory_collection")
+                vulns = nvd_body["vulnerabilities"]
+                if vulns and isinstance(vulns[0], dict):
+                    nvd_item = vulns[0].get("cve") or {}
         if not isinstance(kev_map, dict):
             kev_map = {}
         if not isinstance(epss_map, dict):
@@ -658,9 +674,9 @@ async def _fetch_product_or_package(pkg: str, ver: str, eco_norm: str) -> dict[s
         for eco, resp in zip(ecosystems_to_try, osv_responses, strict=True):
             if not isinstance(resp, httpx.Response) or resp.status_code != 200:
                 continue
-            body = resp.json()
-            if not isinstance(body, dict):
-                raise TypeError("invalid_osv_query_response")
+            body = _safe_json_or_none(resp)
+            if body is None:
+                continue
             if not isinstance(body.get("vulns", []), list):
                 raise TypeError("invalid_osv_query_collection")
             sources_available.append(f"osv:{eco}")
@@ -677,23 +693,22 @@ async def _fetch_product_or_package(pkg: str, ver: str, eco_norm: str) -> dict[s
                 records.append(_extract_osv_item(raw))
 
         if isinstance(nvd_resp, httpx.Response) and nvd_resp.status_code == 200:
-            nvd_body = nvd_resp.json()
-            if not isinstance(nvd_body, dict) or not isinstance(
-                nvd_body.get("vulnerabilities"), list
-            ):
-                raise TypeError("invalid_nvd_query_collection")
-            sources_available.append("nvd")
-            for item in nvd_body["vulnerabilities"]:
-                if not isinstance(item, dict):
-                    continue
-                cve_obj = item.get("cve") or {}
-                cid = str(cve_obj.get("id") or "").upper()
-                if not cid or cid in seen_ids:
-                    continue
-                if any(cid in (r.get("cve_ids") or []) for r in records):
-                    continue
-                seen_ids.add(cid)
-                records.append(_extract_nvd_cve_item(cve_obj))
+            nvd_body = _safe_json_or_none(nvd_resp)
+            if nvd_body is not None:
+                if not isinstance(nvd_body.get("vulnerabilities"), list):
+                    raise TypeError("invalid_nvd_query_collection")
+                sources_available.append("nvd")
+                for item in nvd_body["vulnerabilities"]:
+                    if not isinstance(item, dict):
+                        continue
+                    cve_obj = item.get("cve") or {}
+                    cid = str(cve_obj.get("id") or "").upper()
+                    if not cid or cid in seen_ids:
+                        continue
+                    if any(cid in (r.get("cve_ids") or []) for r in records):
+                        continue
+                    seen_ids.add(cid)
+                    records.append(_extract_nvd_cve_item(cve_obj))
 
         all_cves: list[str] = []
         for r in records:

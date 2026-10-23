@@ -5,6 +5,7 @@ from __future__ import annotations
 import contextlib
 import functools
 import logging
+import logging.handlers
 import os
 import sys
 import warnings
@@ -181,7 +182,15 @@ def setup_scan_logging(run_dir: Path, *, debug: bool | None = None) -> Callable[
     run_dir.mkdir(parents=True, exist_ok=True)
     log_path = run_dir / "redjohn.log"
 
-    file_handler = logging.FileHandler(log_path, mode="a", encoding="utf-8")
+    # DEBUG-level output (one line per LLM attempt, agents SDK tracing) grows
+    # to multi-GB on long autonomous scans; rotate instead of growing forever.
+    file_handler = logging.handlers.RotatingFileHandler(
+        log_path,
+        mode="a",
+        encoding="utf-8",
+        maxBytes=50 * 1024 * 1024,
+        backupCount=3,
+    )
     file_handler.setLevel(logging.DEBUG)
     file_handler.setFormatter(logging.Formatter(_FORMAT, datefmt=_DATEFMT))
     file_handler.addFilter(_RedJohnContextFilter())

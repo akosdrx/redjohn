@@ -864,21 +864,26 @@ def _build_litellm_logger() -> Any:
         async def async_log_success_event(
             self, kwargs: dict[str, Any], response_obj: Any, start_time: Any, end_time: Any
         ) -> None:
-            _dispatch(kwargs, response_obj, start_time, end_time, outcome="success")
+            await _dispatch(kwargs, response_obj, start_time, end_time, outcome="success")
 
         async def async_log_failure_event(
             self, kwargs: dict[str, Any], response_obj: Any, start_time: Any, end_time: Any
         ) -> None:
-            _dispatch(kwargs, response_obj, start_time, end_time, outcome="error")
+            await _dispatch(kwargs, response_obj, start_time, end_time, outcome="error")
 
     return _RedJohnRequestLogger()
 
 
-def _dispatch(
+async def _dispatch(
     kwargs: Mapping[str, Any], response: object, start: object, end: object, *, outcome: Outcome
 ) -> None:
     try:
-        event = event_from_litellm(kwargs, response, start, end, outcome=outcome)
+        # Building the event re-serializes the full request/response payload
+        # (json_size over every message) for size telemetry; a large context is
+        # ~1 MB per call, so keep that off the event loop every agent shares.
+        event = await asyncio.to_thread(
+            event_from_litellm, kwargs, response, start, end, outcome=outcome
+        )
     except Exception:
         logger.exception("could not build LLM request event from LiteLLM callback")
         return
@@ -1189,8 +1194,9 @@ class RequestLoggingModel(Model):
             )
 
         # The LiteLLM route serializes the request only for the rare abandoned
-        # attempt; the native route sizes it before the SDK sees it.
-        eager = None if self._abandoned_only else request()
+        # attempt; the native route sizes it before the SDK sees it. The sizing
+        # serializes the whole payload, so it runs off the event loop.
+        eager = None if self._abandoned_only else await asyncio.to_thread(request)
         reply = HttpReply()
         token = _http_reply.set(reply)
         try:
@@ -1209,13 +1215,14 @@ class RequestLoggingModel(Model):
         except BaseException as exc:
             if self._should_emit(exc):
                 emit(
-                    self._event(
+                    await asyncio.to_thread(
+                        self._event,
                         started=started,
                         started_mono=started_mono,
                         streaming=False,
                         response=None,
                         exc=exc,
-                        request=eager or request(),
+                        request=eager if eager is not None else await asyncio.to_thread(request),
                         reply=reply,
                     )
                 )
@@ -1224,13 +1231,14 @@ class RequestLoggingModel(Model):
             _reset_http_reply(token)
         if self._should_emit(None):
             emit(
-                self._event(
+                await asyncio.to_thread(
+                    self._event,
                     started=started,
                     started_mono=started_mono,
                     streaming=False,
                     response=response,
                     exc=None,
-                    request=eager or request(),
+                    request=eager if eager is not None else await asyncio.to_thread(request),
                     reply=reply,
                 )
             )
@@ -1262,7 +1270,7 @@ class RequestLoggingModel(Model):
                 conversation_id=conversation_id,
             )
 
-        eager = None if self._abandoned_only else request()
+        eager = None if self._abandoned_only else await asyncio.to_thread(request)
         completed: ModelResponse | None = None
         raw_response: object = None
         first_event_mono: float | None = None
@@ -1303,13 +1311,14 @@ class RequestLoggingModel(Model):
         except BaseException as exc:
             if self._should_emit(exc):
                 emit(
-                    self._event(
+                    await asyncio.to_thread(
+                        self._event,
                         started=started,
                         started_mono=started_mono,
                         streaming=True,
                         response=None,
                         exc=exc,
-                        request=eager or request(),
+                        request=eager if eager is not None else await asyncio.to_thread(request),
                         reply=reply,
                         first_event_mono=first_event_mono,
                     )
@@ -1319,13 +1328,14 @@ class RequestLoggingModel(Model):
             _reset_http_reply(token)
         if self._should_emit(None):
             emit(
-                self._event(
+                await asyncio.to_thread(
+                    self._event,
                     started=started,
                     started_mono=started_mono,
                     streaming=True,
                     response=completed,
                     exc=None,
-                    request=eager or request(),
+                    request=eager if eager is not None else await asyncio.to_thread(request),
                     reply=reply,
                     first_event_mono=first_event_mono,
                     finish_reason=finish_reason,

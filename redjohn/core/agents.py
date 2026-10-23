@@ -29,6 +29,11 @@ BudgetPolicy = Literal["stop", "pause"]
 
 TERMINAL_STATUSES: frozenset[str] = frozenset({"completed", "stopped", "crashed", "failed"})
 
+# Retained swarm-bus window; older signals are dropped and read cursors shift.
+_SWARM_BUS_MAX = 500
+# Snapshot coalescing window: bursts of state changes produce one write.
+_SNAPSHOT_DEBOUNCE_SECONDS = 1.0
+
 # Agents that still have work to do or to wake up for. A parked agent is mid-task:
 # a scan is not finished while one exists, and it can be stopped like any other.
 ACTIVE_STATUSES: frozenset[str] = frozenset({"running", "waiting", "budget_paused"})
@@ -70,6 +75,9 @@ class AgentCoordinator:
         self.runtimes: dict[str, AgentRuntime] = {}
         self.swarm_bus: list[dict[str, Any]] = []
         self.swarm_read_cursor: dict[str, int] = {}
+        self._swarm_seq = 0
+        self._snapshot_dirty = False
+        self._snapshot_task: asyncio.Task[None] | None = None
         self._parent_notified: set[str] = set()
         self._lock = asyncio.Lock()
         self._snapshot_path: Path | None = None
@@ -88,6 +96,21 @@ class AgentCoordinator:
 
     def mark_shutting_down(self) -> None:
         self.is_shutting_down = True
+
+    async def status_of(self, agent_id: str) -> Status | None:
+        """Current status of one agent, under the state lock."""
+        async with self._lock:
+            return self.statuses.get(agent_id)
+
+    async def name_of(self, agent_id: str) -> str:
+        """Display name of one agent (falls back to its id), under the state lock."""
+        async with self._lock:
+            return self.names.get(agent_id, agent_id)
+
+    async def parent_of_agent(self, agent_id: str) -> str | None:
+        """Parent of one agent (None for the root), under the state lock."""
+        async with self._lock:
+            return self.parent_of.get(agent_id)
 
     @property
     def budget_stopped(self) -> bool:
@@ -612,9 +635,7 @@ class AgentCoordinator:
         for aid, name in self.names.items():
             if name.strip().lower() == lowered:
                 return aid
-        matches = [
-            aid for aid, name in self.names.items() if lowered in name.strip().lower()
-        ]
+        matches = [aid for aid, name in self.names.items() if lowered in name.strip().lower()]
         if len(matches) == 1:
             return matches[0]
         return None
@@ -635,8 +656,9 @@ class AgentCoordinator:
             sender_name = self.names.get(sender_id, sender_id)
             prev_cursor = self.swarm_read_cursor.get(sender_id, 0)
             was_caught_up = prev_cursor == len(self.swarm_bus)
+            self._swarm_seq += 1
             signal = {
-                "id": f"sig_{len(self.swarm_bus) + 1:03d}",
+                "id": f"sig_{self._swarm_seq:03d}",
                 "from_id": sender_id,
                 "from_name": sender_name,
                 "category": (category or "recon").strip().lower(),
@@ -646,6 +668,14 @@ class AgentCoordinator:
                 "timestamp": datetime.now(UTC).isoformat(),
             }
             self.swarm_bus.append(signal)
+            # Bound the bus: a long chatty scan otherwise grows it (and every
+            # snapshot) without limit. Cursors shift with the retained window.
+            if len(self.swarm_bus) > _SWARM_BUS_MAX:
+                dropped = len(self.swarm_bus) - _SWARM_BUS_MAX
+                del self.swarm_bus[:dropped]
+                self.swarm_read_cursor = {
+                    aid: max(0, cursor - dropped) for aid, cursor in self.swarm_read_cursor.items()
+                }
             if was_caught_up:
                 self.swarm_read_cursor[sender_id] = len(self.swarm_bus)
         await self._maybe_snapshot()
@@ -668,9 +698,7 @@ class AgentCoordinator:
         if cursor >= total:
             return []
         unseen = [
-            dict(sig)
-            for sig in self.swarm_bus[cursor:total]
-            if sig.get("from_id") != agent_id
+            dict(sig) for sig in self.swarm_bus[cursor:total] if sig.get("from_id") != agent_id
         ]
         self.swarm_read_cursor[agent_id] = total
         return unseen
@@ -683,11 +711,7 @@ class AgentCoordinator:
     ) -> list[dict[str, Any]]:
         """Return recent signals from the shared Swarm Bus."""
         cat = (category or "").strip().lower()
-        items = [
-            dict(sig)
-            for sig in self.swarm_bus
-            if not cat or sig.get("category") == cat
-        ]
+        items = [dict(sig) for sig in self.swarm_bus if not cat or sig.get("category") == cat]
         if limit > 0:
             items = items[-limit:]
         return items
@@ -733,6 +757,7 @@ class AgentCoordinator:
                 "wait_kinds": dict(self.wait_kinds),
                 "swarm_bus": [dict(s) for s in self.swarm_bus],
                 "swarm_read_cursor": dict(self.swarm_read_cursor),
+                "swarm_seq": self._swarm_seq,
                 "mailboxes": {
                     aid: [dict(m) for m in runtime.mailbox]
                     for aid, runtime in self.runtimes.items()
@@ -765,6 +790,21 @@ class AgentCoordinator:
                     for key, value in raw_cursors.items()
                     if isinstance(value, int)
                 }
+
+            def _signal_number(sig: dict[str, Any]) -> int:
+                digits = str(sig.get("id", "")).removeprefix("sig_")
+                try:
+                    return int(digits)
+                except ValueError:
+                    return 0
+
+            # Keep signal ids unique across a resume even when the bus window
+            # was trimmed while the scan was running.
+            self._swarm_seq = max(
+                self._swarm_seq,
+                max((_signal_number(sig) for sig in self.swarm_bus), default=0),
+                int(snap.get("swarm_seq", 0) or 0),
+            )
             mailboxes = snap.get("mailboxes", {})
             if isinstance(mailboxes, dict):
                 for aid, msgs in mailboxes.items():
@@ -778,12 +818,45 @@ class AgentCoordinator:
                 self.runtimes.setdefault(aid, AgentRuntime())
 
     async def _maybe_snapshot(self) -> None:
+        """Mark state dirty; a background flusher coalesces bursts into one
+        write per debounce interval instead of one blocking write per message."""
+        if self._snapshot_path is None:
+            return
+        self._snapshot_dirty = True
+        if self._snapshot_task is None or self._snapshot_task.done():
+            self._snapshot_task = asyncio.create_task(
+                self._snapshot_flusher(), name="coordinator-snapshot"
+            )
+
+    async def flush_snapshot(self) -> None:
+        """Write the pending snapshot synchronously; the shutdown path calls this."""
+        if self._snapshot_path is None or not self._snapshot_dirty:
+            return
+        self._snapshot_dirty = False
+        try:
+            await self._write_snapshot()
+        except Exception:
+            logger.exception("coordinator snapshot to %s failed", self._snapshot_path)
+
+    async def _snapshot_flusher(self) -> None:
+        while self._snapshot_dirty:
+            self._snapshot_dirty = False
+            try:
+                await self._write_snapshot()
+            except Exception:
+                logger.exception("coordinator snapshot to %s failed", self._snapshot_path)
+                return  # a later state change restarts the flusher
+            # Coalesce state changes arriving while the write was in flight.
+            await asyncio.sleep(_SNAPSHOT_DEBOUNCE_SECONDS)
+
+    async def _write_snapshot(self) -> None:
         path = self._snapshot_path
         if path is None:
             return
-        try:
-            data = await self.snapshot()
-            payload = json.dumps(data, ensure_ascii=False, default=str)
+        data = await self.snapshot()
+        payload = json.dumps(data, ensure_ascii=False, default=str)
+
+        def _atomic_write() -> None:
             path.parent.mkdir(parents=True, exist_ok=True)
             with tempfile.NamedTemporaryFile(
                 mode="w",
@@ -796,8 +869,10 @@ class AgentCoordinator:
                 tmp.write(payload)
                 tmp_path = Path(tmp.name)
             tmp_path.replace(path)
-        except Exception:
-            logger.exception("coordinator snapshot to %s failed", path)
+
+        # The payload grows with the bus/mailboxes; keep serialization and the
+        # disk write off the event loop every agent shares.
+        await asyncio.to_thread(_atomic_write)
 
 
 def coordinator_from_context(ctx: dict[str, Any]) -> AgentCoordinator | None:

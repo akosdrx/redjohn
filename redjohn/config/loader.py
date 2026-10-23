@@ -287,9 +287,7 @@ def _value_from_sources(
     return None
 
 
-def _is_llm_connection_changed(
-    raw_llm: Mapping[str, Any], env_block: Mapping[str, Any]
-) -> bool:
+def _is_llm_connection_changed(raw_llm: Mapping[str, Any], env_block: Mapping[str, Any]) -> bool:
     upper_env = {k.upper(): v for k, v in os.environ.items()}
     for name in _LINKED_LLM_FIELDS:
         finfo = LlmSettings.model_fields[name]
@@ -312,7 +310,10 @@ def _read_json_overrides(path: Path) -> dict[str, dict[str, Any]]:
         return {}
     try:
         raw_data = json.loads(path.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError):
+    except (json.JSONDecodeError, OSError) as exc:
+        # A truncated config silently reverts the model/provider to defaults;
+        # the user would later see a confusing provider 401 instead of the cause.
+        logger.warning("config file %s unreadable; using env/defaults only: %s", path, exc)
         return {}
     if not isinstance(raw_data, dict):
         return {}
@@ -377,7 +378,8 @@ def _read_env_block(path: Path) -> dict[str, Any]:
         return {}
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError):
+    except (json.JSONDecodeError, OSError) as exc:
+        logger.warning("config file %s unreadable; env block ignored: %s", path, exc)
         return {}
     env_block = data.get("env", {}) if isinstance(data, dict) else {}
     if not isinstance(env_block, dict):

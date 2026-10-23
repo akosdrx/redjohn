@@ -891,7 +891,7 @@ async def run_redjohn_scan(
             finally:
                 if topology_ready and coordinator is not None:
                     with contextlib.suppress(Exception):
-                        await coordinator._maybe_snapshot()
+                        await coordinator.flush_snapshot()
                 if cleanup_on_exit and sandbox_ready:
                     logger.info("Tearing down sandbox session for scan %s", scan_id)
                     await session_manager.cleanup(scan_id)

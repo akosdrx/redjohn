@@ -1,5 +1,37 @@
 # RedJohn változásnapló
 
+## 2026-10-23 — Remaining audit findings, batch 2
+
+- LLM request logging builds events off the event loop: the full-payload
+  `json_size` serialization moved to a worker thread on the LiteLLM and native
+  routes (a 200k-token context no longer stalls every agent per call).
+- Swarm bus is bounded (500-signal window; read cursors shift with the window;
+  monotonic signal ids persist across resume), coordinator snapshots are
+  debounced and written off-loop with a synchronous flush at shutdown, and
+  `agents_graph` uses new `status_of`/`name_of`/`parent_of_agent` accessors
+  instead of reaching into `coordinator._lock`.
+- Caido replay bodies are byte-faithful (no `.strip()`; a request without a
+  header/body separator has no body), and timed-out replays delete their
+  leaked server-side replay session.
+- Threat-model target identity is memoized (no git subprocess fan-out per
+  call); todo persistence serializes under its lock, a second in-process run
+  hydrating todos logs a loud warning, and todo ids are 96-bit with a
+  collision retry.
+- Viewer: the run listing tolerates runs vanishing mid-enumeration (no more
+  HTTP 500 during cleanup) and the traversal-rejection log line is
+  ascii-escaped against log forging.
+- CVE lookups: a non-JSON 200 body (captive portal / WAF interstitial)
+  degrades to "provider unavailable" instead of discarding the sources that
+  did answer.
+- Unreadable config files log a warning instead of silently reverting the
+  model/provider to defaults; `redjohn.log` rotates (50 MiB × 3 backups)
+  instead of growing unbounded.
+- Audit corrections: the local-backend host-exec opt-in gate was verified
+  already present (`REDJOHN_ALLOW_UNCONFINED_LOCAL`, fail-closed on
+  non-darwin), and the MCP quarantine "counter race" was re-evaluated as a
+  false positive (the mutations run in await-free blocks, atomic under a
+  single event loop).
+
 ## 2026-10-23 — Full audit remediation (crashes, security, tests/CI, native sampler)
 
 - Fix `import contextlib` NameErrors that crashed every vulnerability report,

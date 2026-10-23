@@ -40,8 +40,19 @@ _todos_io_lock = threading.RLock()
 
 def hydrate_todos_from_disk(state_dir: Path) -> None:
     global _todos_path  # noqa: PLW0603
-    _todos_path = state_dir / "todos.json"
+    new_path = state_dir / "todos.json"
     with _todos_io_lock:
+        if _todos_path is not None and _todos_path != new_path and _todos_storage:
+            # One process owns one scan's todos; a second hydrate here would
+            # silently wipe the first run's in-memory state. Surface it loudly
+            # instead of losing data quietly.
+            logger.warning(
+                "hydrating todos for run state %s while %d todo(s) from another run are "
+                "still in memory — concurrent scans in one process are not supported",
+                state_dir,
+                sum(len(by_id) for by_id in _todos_storage.values()),
+            )
+        _todos_path = new_path
         _todos_storage.clear()
         if not _todos_path.exists():
             return
@@ -80,7 +91,6 @@ def _persist() -> None:
     if path is None:
         return
     try:
-        payload = json.dumps(_todos_storage, ensure_ascii=False, default=str)
         path.parent.mkdir(parents=True, exist_ok=True)
         with (
             _todos_io_lock,
@@ -93,7 +103,9 @@ def _persist() -> None:
                 delete=False,
             ) as tmp,
         ):
-            tmp.write(payload)
+            # Serialize inside the lock: a concurrent mutation during an
+            # unlocked dumps raises RuntimeError and would lose the persist.
+            tmp.write(json.dumps(_todos_storage, ensure_ascii=False, default=str))
             tmp_path = Path(tmp.name)
         tmp_path.replace(path)
     except Exception:
@@ -325,7 +337,11 @@ async def create_todo(ctx: RunContextWrapper, todos: str) -> str:
                 continue
             seen.add(key)
             task_priority = _coerce_priority(task.get("priority"))
-            todo_id = str(uuid.uuid4())[:6]
+            # 96-bit ids with a collision retry: uuid4()[:6] is a 24-bit space
+            # (~50% collision after ~4800 todos) and would overwrite silently.
+            todo_id = uuid.uuid4().hex[:12]
+            while todo_id in agent_todos:
+                todo_id = uuid.uuid4().hex[:12]
             timestamp = datetime.now(UTC).isoformat()
             agent_todos[todo_id] = {
                 "title": title,

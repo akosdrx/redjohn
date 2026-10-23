@@ -363,7 +363,9 @@ async def read_swarm_bus(
             ensure_ascii=False,
             default=str,
         )
-    signals = coordinator.get_swarm_signals(category=category or None, limit=max(1, min(limit, 100)))
+    signals = coordinator.get_swarm_signals(
+        category=category or None, limit=max(1, min(limit, 100))
+    )
     return json.dumps(
         {
             "success": True,
@@ -482,8 +484,7 @@ async def wait_for_agents(  # noqa: PLR0911
         )
     inner[_WAITED_TURN_KEY] = turn
 
-    async with coordinator._lock:
-        stopped = coordinator.statuses.get(me) == "stopped"
+    stopped = await coordinator.status_of(me) == "stopped"
     if stopped:
         return json.dumps(
             {
@@ -566,8 +567,7 @@ async def wait_for_agents(  # noqa: PLR0911
             default=str,
         )
 
-    async with coordinator._lock:
-        stopped = coordinator.statuses.get(me) == "stopped"
+    stopped = await coordinator.status_of(me) == "stopped"
     if stopped:
         return json.dumps(
             {
@@ -809,8 +809,7 @@ async def agent_finish(
 
     parent_notified = False
     if report_to_parent and await coordinator.claim_parent_notice(me):
-        async with coordinator._lock:
-            agent_name = coordinator.names.get(me, me)
+        agent_name = await coordinator.name_of(me)
         report = _render_completion_report(
             agent_name=agent_name,
             agent_id=me,
@@ -947,8 +946,7 @@ async def stop_agent(
         stopped = [target_agent_id]
 
     # The stopper knows what it just did; anyone else waiting on those agents does not.
-    async with coordinator._lock:
-        orphaned = [aid for aid in stopped if coordinator.parent_of.get(aid) not in (None, me)]
+    orphaned = [aid for aid in stopped if await coordinator.parent_of_agent(aid) not in (None, me)]
     for aid in orphaned:
         await notify_parent_on_terminal(coordinator, aid, "stopped")
 

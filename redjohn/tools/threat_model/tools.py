@@ -45,6 +45,10 @@ _DEFAULT_PORTS = {"http": "80", "https": "443"}
 
 _store_lock = threading.RLock()
 
+# Memoized _target_identity results, keyed on the raw target spelling. The
+# computation shells out to git; identities are stable for a process lifetime.
+_IDENTITY_CACHE: dict[str, str] = {}
+
 # The whole store: target identity -> model. It holds exactly the models this
 # scan derived, and is mirrored to the run's state directory for resume.
 _MODELS: dict[str, dict[str, Any]] = {}
@@ -144,7 +148,21 @@ def _target_identity(target: str) -> str:
     Everything else — a host, a URL, an API base, a named scope — is keyed on
     its normalized form. Both routes run through the same normalization, so a
     checkout and the URL it was cloned from land on one key.
+
+    Results are memoized: resolving one identity can spawn up to two git
+    subprocesses (remote.origin.url, rev-parse) with a 10s timeout each, and a
+    single get/update call resolves it once per scan target plus the raw target.
     """
+    key = target.strip()
+    cached = _IDENTITY_CACHE.get(key)
+    if cached is not None:
+        return cached
+    computed = _compute_target_identity(key)
+    _IDENTITY_CACHE[key] = computed
+    return computed
+
+
+def _compute_target_identity(target: str) -> str:
     directory = _local_directory(target)
     if directory is None:
         return _normalize_remote_target(target).removesuffix(".git")
