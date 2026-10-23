@@ -1,3 +1,4 @@
+import contextlib
 import json
 import logging
 import re
@@ -745,8 +746,8 @@ class ReportState:
             from redjohn.memory.openviking.hooks import remember_pentest_summary
 
             remember_pentest_summary(
-                self.scan_id,
-                (self.run_record.get("scan_config") or {}).get("targets") or [],
+                self.run_id,
+                (self.scan_config or {}).get("targets") or [],
                 self.final_scan_result or executive_summary,
             )
         posthog.end(self, exit_reason="finished_by_tool")

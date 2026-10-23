@@ -265,7 +265,7 @@ class LlmPicker:
         if action == "openviking_inherit":
             save_openviking_selection(
                 enabled=True,
-                clear_vlm_model=True,
+                clear_vlm=True,
                 clear_vlm_api_key=True,
                 clear_vlm_api_base=True,
             )
@@ -300,7 +300,12 @@ class LlmPicker:
                 "applied": "live" if scan_started else "saved",
             }
         if action == "openviking_toggle":
-            new_enabled = not bool(load_settings().openviking.enabled)
+            requested = payload.get("enabled")
+            new_enabled = (
+                bool(requested)
+                if isinstance(requested, bool)
+                else not bool(load_settings().openviking.enabled)
+            )
             save_openviking_selection(enabled=new_enabled)
             with contextlib.suppress(Exception):
                 from redjohn.memory.openviking.config import ensure_openviking_configured
