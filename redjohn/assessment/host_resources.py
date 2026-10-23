@@ -17,6 +17,7 @@ import re
 import sqlite3
 import stat
 import subprocess
+import sys
 from collections import Counter
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -56,6 +57,61 @@ class HostResourceLimits:
                 raise ValueError("invalid_host_resource_capacity")
         if self.max_browsers > self.max_workers:
             raise ValueError("host_browser_capacity_exceeds_workers")
+
+
+_LEGACY_DEFAULT_LIMITS = HostResourceLimits(
+    memory_budget_bytes=4096 * MIB,
+    max_workers=4,
+    max_browsers=1,
+    max_pages=4,
+    max_contexts=4,
+)
+_FIXED_DEFAULT_LIMITS = HostResourceLimits()
+
+
+def _is_darwin() -> bool:
+    # Keep runtime capability detection independent of mypy's platform target:
+    # a direct `sys.platform == "darwin"` comparison makes the Linux branch
+    # unreachable under platform narrowing.
+    return sys.platform == "darwin"
+
+
+def _host_total_ram_bytes() -> int:
+    """Total physical RAM, best-effort on macOS and Linux."""
+    try:
+        if _is_darwin():
+            result = subprocess.run(
+                ["/usr/sbin/sysctl", "-n", "hw.memsize"],
+                capture_output=True,
+                text=True,
+                timeout=3,
+                check=True,
+            )
+            return int(result.stdout.strip())
+        meminfo = Path("/proc/meminfo")
+        if meminfo.is_file():
+            for line in meminfo.read_text(encoding="utf-8").splitlines():
+                if line.startswith("MemTotal:"):
+                    return int(line.split()[1]) * 1024
+    except (OSError, ValueError, subprocess.SubprocessError):
+        pass
+    return 8 * 1024 * MIB
+
+
+def _host_derived_limits() -> HostResourceLimits:
+    """Scale the default host policy from the actual machine.
+
+    Fixed 16 GiB / 32-worker defaults over-commit a typical laptop with no
+    cgroup backstop; derive the first-run policy from RAM and CPU count
+    instead, still capped by the shipped ceilings.
+    """
+    total = _host_total_ram_bytes()
+    cpus = os.cpu_count() or 4
+    return HostResourceLimits(
+        memory_budget_bytes=min(16384 * MIB, max(2048 * MIB, total // 2)),
+        max_workers=min(32, max(4, cpus)),
+        max_browsers=min(4, max(1, cpus // 4)),
+    )
 
 
 def process_identity(pid: int) -> str | None:
@@ -156,34 +212,58 @@ class HostResourcePool:
                     "INTEGER NOT NULL DEFAULT 0 CHECK (cleanup_unverified IN (0, 1))"
                 )
             saved = db.execute("SELECT value FROM metadata WHERE key='policy'").fetchone()
-            if saved is None:
-                self.limits = limits or HostResourceLimits()
-                db.execute(
-                    "INSERT INTO metadata VALUES ('policy', ?)",
-                    (json.dumps({"schema": 1, "limits": asdict(self.limits)}, sort_keys=True),),
-                )
-            else:
-                self.limits = self._read_limits(db)
-                if limits is None:
-                    default_limits = HostResourceLimits()
-                    if (
-                        self.limits.memory_budget_bytes < default_limits.memory_budget_bytes
-                        or self.limits.max_workers < default_limits.max_workers
-                        or self.limits.max_browsers < default_limits.max_browsers
-                        or self.limits.max_pages < default_limits.max_pages
-                        or self.limits.max_contexts < default_limits.max_contexts
-                    ):
-                        self.limits = default_limits
-                        db.execute(
-                            "UPDATE metadata SET value=? WHERE key='policy'",
-                            (
-                                json.dumps(
-                                    {"schema": 1, "limits": asdict(self.limits)}, sort_keys=True
-                                ),
-                            ),
-                        )
-                elif limits != self.limits:
-                    raise ValueError("host_resource_policy_mismatch")
+            self.limits = self._load_or_migrate_policy(db, saved, limits)
+
+    def _load_or_migrate_policy(
+        self,
+        db: sqlite3.Connection,
+        saved: Any,
+        limits: HostResourceLimits | None,
+    ) -> HostResourceLimits:
+        """Load the persisted host policy, migrating only untouched legacy defaults.
+
+        An operator-tuned policy (any configure() write) survives every reopen
+        without being silently widened; a schema-1 row that still equals a
+        shipped default migrates once to host-derived defaults.
+        """
+        if saved is None:
+            policy = limits or _host_derived_limits()
+            db.execute(
+                "INSERT INTO metadata VALUES ('policy', ?)",
+                (
+                    json.dumps(
+                        {
+                            "schema": 2,
+                            "source": "operator" if limits is not None else "default",
+                            "limits": asdict(policy),
+                        },
+                        sort_keys=True,
+                    ),
+                ),
+            )
+            return policy
+        policy = self._read_limits(db)
+        if limits is not None:
+            if limits != policy:
+                raise ValueError("host_resource_policy_mismatch")
+            return policy
+        try:
+            record = json.loads(saved[0])
+        except (TypeError, ValueError):
+            record = {}
+        schema = record.get("schema", 1) if isinstance(record, dict) else 1
+        if schema == 1 and policy in (_LEGACY_DEFAULT_LIMITS, _FIXED_DEFAULT_LIMITS):
+            policy = _host_derived_limits()
+            db.execute(
+                "UPDATE metadata SET value=? WHERE key='policy'",
+                (
+                    json.dumps(
+                        {"schema": 2, "source": "default", "limits": asdict(policy)},
+                        sort_keys=True,
+                    ),
+                ),
+            )
+        return policy
 
     @staticmethod
     def _read_limits(db: sqlite3.Connection) -> HostResourceLimits:
@@ -192,8 +272,9 @@ class HostResourcePool:
             policy = json.loads(saved[0]) if saved is not None else None
             if (
                 not isinstance(policy, dict)
-                or set(policy) != {"schema", "limits"}
-                or policy["schema"] != 1
+                or "schema" not in policy
+                or "limits" not in policy
+                or policy["schema"] not in {1, 2}
             ):
                 raise ValueError("invalid_host_resource_policy")  # noqa: TRY301 - trusted store validation
             return HostResourceLimits(**policy["limits"])
@@ -207,7 +288,12 @@ class HostResourcePool:
                 raise ResourceAdmissionError("host_resource_policy_busy")
             db.execute(
                 "UPDATE metadata SET value=? WHERE key='policy'",
-                (json.dumps({"schema": 1, "limits": asdict(limits)}, sort_keys=True),),
+                (
+                    json.dumps(
+                        {"schema": 2, "source": "operator", "limits": asdict(limits)},
+                        sort_keys=True,
+                    ),
+                ),
             )
             self.limits = limits
 
