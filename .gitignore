@@ -39,3 +39,4 @@ redjohn/interface/tui/target/
 redjohn/native/target/
 redjohn/_native/*.so
 redjohn/_native/*.dylib
+redjohn/bin/
