@@ -5,6 +5,8 @@ import signal
 import sys
 import threading
 import time
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _package_version
 from typing import Any
 
 from rich.console import Console
@@ -49,10 +51,14 @@ async def run_cli(args: Any) -> None:  # noqa: PLR0915
     start_text.append(" · ", style="dim")
     start_text.append("Penetration test initiated", style="bold #ef4444")
 
+    try:
+        app_version = f"v{_package_version('redjohn-agent')}"
+    except PackageNotFoundError:
+        app_version = "dev"
     version_text = Text()
     version_text.append("Version", style="dim")
     version_text.append(" ")
-    version_text.append("Enterprise", style="bold white")
+    version_text.append(app_version, style="bold white")
 
     memory_text = Text()
     memory_text.append("Memory ", style="dim")

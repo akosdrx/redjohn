@@ -37,7 +37,7 @@ INSTALL_DIR="${HOME}/.redjohn/bin"
 mkdir -p "$INSTALL_DIR"
 
 FILENAME="redjohn-${VERSION}-${TARGET}.tar.gz"
-DOWNLOAD_URL="https://github.com/redjohn-ai/redjohn/releases/download/${VERSION}/${FILENAME}"
+DOWNLOAD_URL="https://github.com/akosdrx/redjohn/releases/download/${VERSION}/${FILENAME}"
 
 TMP_DIR="${TMPDIR:-/tmp}"
 ARCHIVE="${TMP_DIR}/${FILENAME}"

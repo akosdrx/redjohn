@@ -432,10 +432,10 @@ fn save_command_history(history: &[String]) {
 
 impl AppState {
     pub fn new(client: Option<Client>, version: Option<String>) -> Self {
-        let mut app_version = "Private".to_string();
+        let mut app_version = "dev".to_string();
         if let Some(v) = version {
             let t = v.trim();
-            if !t.is_empty() && t != "dev" && t != "1.7.0" && t != "BETA Enterprise" {
+            if !t.is_empty() {
                 app_version = t.to_string();
             }
         }
@@ -547,14 +547,8 @@ impl AppState {
 
     pub fn version_label(&self) -> String {
         let v = self.app_version.trim();
-        if v.is_empty()
-            || v == "dev"
-            || v == "1.7.0"
-            || v == "BETA Enterprise"
-            || v == "Private"
-            || v == "Enterprise"
-        {
-            return "Enterprise".to_string();
+        if v.is_empty() || v == "dev" {
+            return "dev".to_string();
         }
         if v.chars().next().is_some_and(|c| c.is_ascii_digit()) {
             return format!("v{v}");
