@@ -12,7 +12,7 @@ import importlib.util
 import sys
 from importlib.machinery import ExtensionFileLoader
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 
 if TYPE_CHECKING:
@@ -53,7 +53,7 @@ def _load_native() -> ModuleType | None:
         from . import redjohn_native as module  # type: ignore[attr-defined]  # noqa: PLC0415
     except ImportError:
         return _load_dev_artifact()
-    return module
+    return cast("ModuleType", module)
 
 
 _native = _load_native()
